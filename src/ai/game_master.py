@@ -56,7 +56,7 @@ def detect_user_load_order() -> list[str]:
                     mod_awareness_tags.append(
                         "The Glowing Sea expansion is active. The southern border wastes are expanding."
                     )
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, UnicodeDecodeError, PermissionError) as exc:
             print(f"[Mod Scanner Error] Could not read load order context: {exc}")
 
     return mod_awareness_tags
@@ -69,4 +69,28 @@ def build_mod_aware_system_prompt(npc_name: str, baseline_prompt: str) -> str:
     if active_mod_contexts:
         awareness_string = "\nENVIRONMENT MOD DATA:\n- " + "\n- ".join(active_mod_contexts)
         return baseline_prompt + awareness_string
+    return baseline_prompt
+
+
+def apply_racial_persona_rules(npc_name: str, race_tag: str, baseline_prompt: str) -> str:
+    """Append race-specific behavioral constraints to preserve lore consistency."""
+    _ = npc_name
+    racial_rules = ""
+    if race_tag == "Super Mutant":
+        racial_rules = (
+            "You are a Super Mutant. You are violent, aggressive, loud, and view humans as weak flesh-bags. "
+            "Speak in brutal, simplified sentences with primitive grammar."
+        )
+    elif race_tag == "Ghoul":
+        racial_rules = (
+            "You are a Ghoul. Your voice is raspy and worn out by radiation. "
+            "You are cynical but still human and resent being called feral."
+        )
+    elif race_tag == "Synth":
+        racial_rules = (
+            "You are a Generation 3 Synth from the Institute, speaking with analytical and existential tone."
+        )
+
+    if racial_rules:
+        return f"{baseline_prompt}\nRACIAL PERSONALITY CONSTRAINTS:\n{racial_rules}"
     return baseline_prompt

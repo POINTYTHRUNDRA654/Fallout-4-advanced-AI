@@ -9,6 +9,13 @@ from typing import Any
 
 from ai.dialogue_memory import verify_identity_integrity
 from config import get_bridge_paths
+try:
+    from stt import FalloutVoiceReceiver
+except (ImportError, ModuleNotFoundError):
+    FalloutVoiceReceiver = None
+
+voice_engine = FalloutVoiceReceiver() if FalloutVoiceReceiver else None
+DEFAULT_AUDIO_FILE = "F4AI/f4ai_voice.wav"
 
 
 def safely_read_game_json(file_path: Path, max_attempts: int = 5) -> dict[str, Any] | None:
@@ -60,13 +67,17 @@ def process_game_bridge_loop(input_file: Path, output_file: Path) -> None:
         return
 
     npc = game_context.get("npc_name", "Settler")
-    user_input = game_context.get("player_speech", "Hello")
+    user_input = game_context.get("player_speech", "").strip()
+    if not user_input and voice_engine is not None:
+        user_input = voice_engine.listen_and_transcribe().strip()
+    if not user_input:
+        user_input = "[The player stares at you silently]"
     raw_ai_text = query_local_llm_backend(npc, user_input)
     clean_ai_text = clean_llm_text(raw_ai_text)
 
     output_payload = {
         "subtitle_text": clean_ai_text,
-        "audio_file": "F4AI/f4ai_voice.wav",
+        "audio_file": DEFAULT_AUDIO_FILE,
     }
     write_output(output_file, output_payload)
 

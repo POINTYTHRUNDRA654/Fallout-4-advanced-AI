@@ -49,7 +49,7 @@ def check_for_updates(
         print(f"[Updater] New build available ({current_version} -> {latest_version}).")
         execute_hot_update(download_url, executable_path=executable_path)
         return True
-    except Exception as exc:  # noqa: BLE001
+    except (requests.RequestException, ValueError) as exc:
         print(f"[Updater Scan Failed] Operating in offline mode: {exc}")
         return False
 

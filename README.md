@@ -26,8 +26,8 @@ A 100% free, fully offline artificial intelligence framework that replaces vanil
 ## 🛠️ Step-by-Step Setup Guide
 
 ### 1. Prerequisite Installations
-* Download and install the <a href="https://silverlock.org">Fallout 4 Script Extender (F4SE)</a>.
-* Download and run the standalone server utility <a href="https://github.com">KoboldCPP</a>.
+* Download and install the <a href="https://f4se.silverlock.org/">Fallout 4 Script Extender (F4SE)</a>.
+* Download and run the standalone server utility <a href="https://github.com/LostRuins/koboldcpp">KoboldCPP</a>.
 
 ### 2. Model Acquisition (Free)
 * Download any text generation model in **GGUF format**. We highly recommend the **Llama-3-8B-Instruct-Q4_K_M.gguf** model file from HuggingFace.
@@ -43,9 +43,9 @@ A 100% free, fully offline artificial intelligence framework that replaces vanil
 ## 🤝 Open Source & Attributions
 
 This framework stands on the shoulders of the open-source community:
-* **LLM API Interface Framework**: Built using the API design parameters established by <a href="https://github.com">KoboldCPP</a>.
-* **TTS Pipeline Logic**: Developed utilizing open asset components matching the <a href="https://github.com">Piper TTS Engine</a>.
-* **Bethesda Engine Mod Bridges**: Inspired by structural C++ and Papyrus translation work managed via <a href="https://github.com">The Mantella Project Framework</a>.
+* **LLM API Interface Framework**: Built using API design parameters established by <a href="https://github.com/LostRuins/koboldcpp">KoboldCPP</a>.
+* **TTS Pipeline Logic**: Developed using open components from <a href="https://github.com/rhasspy/piper">Piper TTS</a>.
+* **Bethesda Engine Mod Bridges**: Inspired by C++/Papyrus bridge architecture in <a href="https://github.com/art-from-the-machine/Mantella">Mantella</a>.
 ```
 
 ## Creation Kit alpha build walkthrough
@@ -127,3 +127,37 @@ This avoids stale packets and repeated playback loops.
 - Mod-aware prompt conditioning from active plugin load order.
 - Dynamic tactical routing and spatial response synthesis.
 - Local LoRA adaptation for long-play personality drift.
+
+## STT noise filtering and alpha build checklist
+
+- Install STT stack: `pip install faster-whisper SpeechRecognition pyaudio`.
+- Install noise-filter dependency: `pip install scipy`.
+- `src/stt.py` includes an acoustic noise gate (`numpy`) that:
+  - mutes low-energy microphone noise floor,
+  - clamps high-amplitude spikes (gunshots/explosions cross-talk),
+  - then transcribes filtered audio with Faster-Whisper in CPU `int8` mode.
+
+Build command for one-file executable:
+
+```bash
+pyinstaller --onefile --noconsole --collect-all faster_whisper --name="Fallout4_AI_Engine" main.py
+```
+
+Final distribution verification (high level):
+- `Data/F4AI_Core.esp`
+- `Data/Scripts/F4AI_QueueManager.pex`
+- `Data/Scripts/F4AI_CrowdNPC.pex`
+- `Data/Scripts/F4AI_PushToTalkTrigger.pex`
+- `Data/Scripts/F4AI_VisionWidgetManager.pex`
+- `Data/F4AI/Fallout4_AI_Engine.exe`
+- `Data/F4AI/config.json`
+- `Data/F4AI/en_US-lessac-medium.onnx`
+- `Data/F4AI/en_US-lessac-medium.onnx.json`
+
+## Emotional voice rendering (offline)
+
+- `src/ai/emotion_tts.py` includes:
+  - `build_emotional_system_prompt(...)` for strict `[NORMAL|ANGRY|SAD|WHISPER]` tag output,
+  - `render_emotional_speech_piper(...)` for tag-driven `length_scale`/`noise_scale`,
+  - `render_emotional_speech_xvasynth(...)` for native xVASynth emotion sliders.
+- Feed `mental_state` from gameplay context (combat, stealth, panic) so the model emits a matching tag.

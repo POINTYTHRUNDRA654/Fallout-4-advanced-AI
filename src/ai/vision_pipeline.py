@@ -14,7 +14,7 @@ try:  # Optional dependencies for Windows capture.
     import win32con  # type: ignore
     import win32gui  # type: ignore
     import win32ui  # type: ignore
-except Exception:  # noqa: BLE001
+except (ImportError, ModuleNotFoundError):
     cv2 = None
     np = None
     win32con = None
@@ -115,7 +115,7 @@ def query_local_vision_model(
         response = requests.post(vision_url, json=payload, timeout=10)
         if response.status_code == 200:
             return response.json().get("response", "")
-    except Exception as exc:  # noqa: BLE001
+    except (requests.RequestException, ValueError) as exc:
         return f"My visual receptors are blurred: {exc}"
     return ""
 
@@ -124,7 +124,7 @@ def execute_optimized_vision_loop(image_path: str, npc_name: str) -> str:
     """Serialize LLM and VLM work to reduce VRAM pressure."""
     try:
         requests.post(f"{KOBOLD_CONTROL_URL}/unload", json={"unload": True}, timeout=1)
-    except Exception:  # noqa: BLE001
+    except requests.RequestException:
         pass
 
     time.sleep(0.1)
