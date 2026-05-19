@@ -1,0 +1,6 @@
+# HTTP client used for local KoboldCPP API calls in src/main.py and src/ai/*
+requests>=2.31.0
+# Numeric arrays used by STT noise gating and WAV normalization helpers
+numpy>=1.26.0
+# Audio I/O utilities used by src/tts.py for lipgen-ready WAV conversion
+scipy>=1.11.0
