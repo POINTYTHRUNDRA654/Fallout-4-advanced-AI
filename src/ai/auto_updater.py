@@ -56,6 +56,10 @@ def check_for_updates(
 
 def execute_hot_update(download_url: str, executable_path: str | None = None) -> None:
     """Download and atomically replace the running executable on Windows."""
+    if not download_url.lower().startswith("https://"):
+        print("[Updater] Refusing non-HTTPS update URL.")
+        return
+
     exe_path = Path(executable_path or sys.executable).resolve()
     update_file_path = exe_path.with_suffix(exe_path.suffix + ".tmp")
 

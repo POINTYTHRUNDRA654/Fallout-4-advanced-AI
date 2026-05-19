@@ -13,9 +13,16 @@ def query_local_llm(prompt: str) -> str:
 
 def process_split_script_to_audio(raw_script: str, actor_a: str, actor_b: str) -> dict[str, str]:
     """Placeholder split step for two-speaker script output."""
+    line_a = raw_script
+    line_b = raw_script
+    for line in raw_script.splitlines():
+        if line.strip().startswith(f"{actor_a}:"):
+            line_a = line.split(":", 1)[1].strip()
+        elif line.strip().startswith(f"{actor_b}:"):
+            line_b = line.split(":", 1)[1].strip()
     return {
-        "actor_a": f"{actor_a}: {raw_script}",
-        "actor_b": f"{actor_b}: {raw_script}",
+        "actor_a": f"{actor_a}: {line_a}",
+        "actor_b": f"{actor_b}: {line_b}",
     }
 
 

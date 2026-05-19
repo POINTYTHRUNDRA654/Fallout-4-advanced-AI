@@ -10,7 +10,7 @@ from datasets import load_dataset
 from trl import DPOConfig, DPOTrainer
 from unsloth import FastLanguageModel
 
-DATA_DIR = Path(__file__).resolve().parent
+DATA_DIR = Path(os.getenv("F4AI_DATA_DIR", Path(__file__).resolve().parent))
 TRAINING_DATA_FILE = DATA_DIR / "Training_Cache" / "Settler_training_pool.jsonl"
 OUTPUT_LORA_DIR = DATA_DIR / "Adapters" / "Settler_lora"
 BASE_MODEL_PATH = "unsloth/llama-3-8b-Instruct-bnb-4bit"

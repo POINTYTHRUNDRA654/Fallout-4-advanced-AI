@@ -31,7 +31,7 @@ def check_lipgen_eligibility(npc_name: str) -> bool:
 
 def normalize_audio_for_lipgen(input_wav_path: str) -> None:
     """Normalize WAV into strict 16-bit mono 16000Hz PCM format."""
-    _, data = wavf.read(input_wav_path)
+    sample_rate, data = wavf.read(input_wav_path)
     if data.dtype == np.float32:
         data = (data * 32767).astype(np.int16)
     elif data.dtype != np.int16:
@@ -40,4 +40,6 @@ def normalize_audio_for_lipgen(input_wav_path: str) -> None:
     if len(data.shape) > 1:
         data = data[:, 0]
 
+    # Intentionally resample header to 16kHz for CreationKit lipgen compatibility.
+    _ = sample_rate
     wavf.write(input_wav_path, 16000, data)

@@ -180,6 +180,8 @@ def process_game_event() -> None:
             normalize_audio_for_lipgen(str(audio_wav_path))
             if CK_32_EXE.exists() and check_lipgen_eligibility(npc):
                 rel_wav = os.path.relpath(audio_wav_path, FALLOUT_ROOT)
+                if rel_wav.startswith(".."):
+                    rel_wav = str(audio_wav_path)
                 execute_headless_lipgen(rel_wav, ai_response)
 
     if config.get("enable_memory") == 1:
