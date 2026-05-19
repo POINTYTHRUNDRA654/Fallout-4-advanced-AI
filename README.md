@@ -64,8 +64,8 @@ Open terminal #2:
 
 ```bash
 cd src
-python -c "import json; json.dump({'npc_name':'Codsworth','location':'Sanctuary','player_speech':'Status report.'}, open('bridge_input.json','w',encoding='utf-8'))"
-python -c "import json; print(json.load(open('bridge_output.json','r',encoding='utf-8')))"
+python -c "import json, pathlib; pathlib.Path('bridge_input.json').write_text(json.dumps({'npc_name':'Codsworth','location':'Sanctuary','player_speech':'Status report.'}), encoding='utf-8')"
+python -c "import json, pathlib; print(json.loads(pathlib.Path('bridge_output.json').read_text(encoding='utf-8')))"
 ```
 
 Expected result: `bridge_output.json` contains `subtitle_text`, `audio_file`, `emotion_id`, and `display_duration`.
