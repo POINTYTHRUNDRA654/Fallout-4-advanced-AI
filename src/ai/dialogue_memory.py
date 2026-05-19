@@ -11,6 +11,8 @@ MAX_TURNS = 5
 
 def load_long_term_history(npc_name: str) -> dict[str, Any]:
     """Load persisted history; placeholder implementation."""
+    if "Curie" in npc_name:
+        npc_name = "Curie"
     _ = npc_name
     return {"history": []}
 

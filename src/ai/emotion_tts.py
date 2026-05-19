@@ -88,4 +88,8 @@ def render_emotional_speech_xvasynth(
         "emotions": emotion_matrix,
         "pace": 1.0,
     }
-    requests.post(api_url, json=payload, timeout=10)
+    try:
+        response = requests.post(api_url, json=payload, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"[xVASynth Error] {exc}")

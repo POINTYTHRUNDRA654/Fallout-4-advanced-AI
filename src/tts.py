@@ -20,9 +20,18 @@ def execute_headless_lipgen(wav_relative_path: str, subtitle_string: str) -> Non
         print(f"[LipGen Error] CreationKit32.exe returned code {result.returncode}.")
 
 
+def check_lipgen_eligibility(npc_name: str) -> bool:
+    """Bypass lip generation for non-human/mechanical companions."""
+    blacklist = {"Codsworth", "Curie", "Nick Valentine", "Strong"}
+    if npc_name in blacklist:
+        print(f"[Vision/Lip Guard] Bypassing lip generation for actor: {npc_name}")
+        return False
+    return True
+
+
 def normalize_audio_for_lipgen(input_wav_path: str) -> None:
     """Normalize WAV into strict 16-bit mono 16000Hz PCM format."""
-    sample_rate, data = wavf.read(input_wav_path)
+    _, data = wavf.read(input_wav_path)
     if data.dtype == np.float32:
         data = (data * 32767).astype(np.int16)
     elif data.dtype != np.int16:
@@ -31,5 +40,4 @@ def normalize_audio_for_lipgen(input_wav_path: str) -> None:
     if len(data.shape) > 1:
         data = data[:, 0]
 
-    _ = sample_rate
     wavf.write(input_wav_path, 16000, data)

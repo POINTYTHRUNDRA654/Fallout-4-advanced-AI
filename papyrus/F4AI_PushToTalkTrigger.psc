@@ -2,6 +2,7 @@ Scriptname F4AI_PushToTalkTrigger extends ReferenceAlias
 
 String Property InputPath = "Data/F4AI/bridge_input.json" Auto Const
 Int Property ActivationKey = 56 Auto Const ; Left Alt
+Bool Property EnableF4SERaycast = true Auto
 Actor ActiveTarget
 
 Event OnInit()
@@ -10,6 +11,11 @@ EndEvent
 
 Event OnKeyDown(Int aiKeyCode)
     if (aiKeyCode == ActivationKey)
+        if (!EnableF4SERaycast)
+            Debug.Notification("[F4AI] F4SE raycast unavailable.")
+            return
+        endif
+
         ObjectReference lookTargetRef = F4SE_InternalRaycastUtils.GetPlayerCurrentCrosshairTarget()
         Actor lookTarget = lookTargetRef as Actor
 
@@ -23,6 +29,10 @@ Event OnKeyDown(Int aiKeyCode)
 
         Race turretRace = Game.GetForm(0x0001337B) as Race
         if (lookTarget.IsRace(turretRace))
+            return
+        endif
+        if (lookTarget.IsInScene())
+            Debug.Notification(lookTarget.GetActorBase().GetName() + " is currently busy.")
             return
         endif
 
@@ -64,6 +74,7 @@ EndFunction
 Function RestrainMovementOnly(Actor targetNPC)
     targetNPC.SetLookAt(Game.GetPlayer(), abForce = true)
     targetNPC.StopCombatAlarm()
+    ; Zero offset is intentional here: keep actor anchored near current position while still animating.
     targetNPC.KeepOffsetFromActor(Game.GetPlayer(), 0.0, 0.0, 0.0)
 EndFunction
 

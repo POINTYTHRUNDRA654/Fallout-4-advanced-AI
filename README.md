@@ -161,3 +161,32 @@ Final distribution verification (high level):
   - `render_emotional_speech_piper(...)` for tag-driven `length_scale`/`noise_scale`,
   - `render_emotional_speech_xvasynth(...)` for native xVASynth emotion sliders.
 - Feed `mental_state` from gameplay context (combat, stealth, panic) so the model emits a matching tag.
+
+## Alpha deployment package blueprint
+
+Recommended release archive layout:
+
+```text
+F4AI_Advanced_System_v0.1.0-Alpha.zip
+├── fomod/
+├── F4AI_Core_Files/
+│   ├── F4AI_Core.esp
+│   ├── Scripts/
+│   │   ├── F4AI_QueueManager.pex
+│   │   ├── F4AI_CrowdNPC.pex
+│   │   ├── F4AI_FeedbackMonitor.pex
+│   │   └── F4AI_VisionWidgetManager.pex
+│   └── F4AI/
+│       ├── Fallout4_AI_Engine.exe
+│       ├── train_lora.py
+│       ├── config.json
+│       ├── Training_Cache/
+│       └── Adapters/
+└── Optional_Voices/
+```
+
+Final checks:
+- Include only compiled `.pex` in release package (keep `.psc` in source repo).
+- Build executable with required collected runtime dependencies.
+- Ship default `config.json`.
+- Ensure testers run local Kobold backend before game launch.

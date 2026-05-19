@@ -62,9 +62,8 @@ def detect_user_load_order() -> list[str]:
     return mod_awareness_tags
 
 
-def build_mod_aware_system_prompt(npc_name: str, baseline_prompt: str) -> str:
+def build_mod_aware_system_prompt(baseline_prompt: str) -> str:
     """Append load-order context notes to baseline prompt."""
-    _ = npc_name
     active_mod_contexts = detect_user_load_order()
     if active_mod_contexts:
         awareness_string = "\nENVIRONMENT MOD DATA:\n- " + "\n- ".join(active_mod_contexts)
@@ -72,9 +71,8 @@ def build_mod_aware_system_prompt(npc_name: str, baseline_prompt: str) -> str:
     return baseline_prompt
 
 
-def apply_racial_persona_rules(npc_name: str, race_tag: str, baseline_prompt: str) -> str:
+def apply_racial_persona_rules(race_tag: str, baseline_prompt: str) -> str:
     """Append race-specific behavioral constraints to preserve lore consistency."""
-    _ = npc_name
     racial_rules = ""
     if race_tag == "Super Mutant":
         racial_rules = (
