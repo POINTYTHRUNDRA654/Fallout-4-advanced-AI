@@ -63,6 +63,11 @@ def execute_hot_update(download_url: str, executable_path: str | None = None) ->
     exe_path = Path(executable_path or sys.executable).resolve()
     update_file_path = exe_path.with_suffix(exe_path.suffix + ".tmp")
 
+    disallowed_batch_chars = {"%", "^", "&", "|", "<", ">"}
+    if any(ch in str(exe_path) for ch in disallowed_batch_chars):
+        print("[Updater] Refusing update due to unsupported path characters.")
+        return
+
     print("[Updater] Downloading patch release packet...")
     response = requests.get(download_url, stream=True, timeout=20)
     response.raise_for_status()

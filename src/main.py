@@ -181,6 +181,7 @@ def process_game_event() -> None:
             if CK_32_EXE.exists() and check_lipgen_eligibility(npc):
                 rel_wav = os.path.relpath(audio_wav_path, FALLOUT_ROOT)
                 if rel_wav.startswith(".."):
+                    print("[LipGen Warning] WAV path is outside Fallout root; using absolute path fallback.")
                     rel_wav = str(audio_wav_path)
                 execute_headless_lipgen(rel_wav, ai_response)
 

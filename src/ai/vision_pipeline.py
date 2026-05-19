@@ -21,6 +21,8 @@ except (ImportError, ModuleNotFoundError):
     win32gui = None
     win32ui = None
 
+VISION_AVAILABLE = bool(win32gui and win32ui and win32con and np and cv2)
+
 OLLAMA_VISION_URL = "http://localhost:11434/api/generate"
 KOBOLD_CONTROL_URL = "http://localhost:5001/api/v1/model"
 
@@ -48,7 +50,7 @@ def capture_fallout4_window(
     frame_path: str = "Data/F4AI/live_vision_frame.jpg",
 ) -> str | None:
     """Capture the Fallout 4 window to an image file."""
-    if not all([win32gui, win32ui, win32con, np, cv2]):
+    if not VISION_AVAILABLE:
         print("[Vision Error] Missing capture dependencies (pywin32/opencv/numpy).")
         return None
 

@@ -99,7 +99,13 @@ Function ExecuteAITranslationThread(Actor targetNPC)
         Int durStart = StringUtil.Find(rawJson, "\"display_duration\": ") + 20
         Float displayTime = 2.5
         if (durStart > 19)
-            displayTime = StringUtil.Substring(rawJson, durStart, StringUtil.GetLength(rawJson) - durStart - 1) as Float
+            Int durEnd = StringUtil.Find(rawJson, ",", durStart)
+            if (durEnd == -1)
+                durEnd = StringUtil.Find(rawJson, "}", durStart)
+            endif
+            if (durEnd > durStart)
+                displayTime = StringUtil.Substring(rawJson, durStart, durEnd - durStart) as Float
+            endif
         endif
 
         Int emotionID = 0
