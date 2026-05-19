@@ -71,3 +71,59 @@ This framework stands on the shoulders of the open-source community:
 
 - **Semantic vision raycast path (fast):** Papyrus sends detected object metadata to Python; Python builds contextual NPC prompt text.
 - **True multimodal path (heavy):** Python captures `Fallout4` window frame and sends it to a local VLM endpoint (for example Ollama + Moondream).
+
+## Public repository formatting
+
+Recommended layout:
+
+```text
+fallout4-ai-bridge/
+├── src/
+│   ├── main.py
+│   ├── vision.py
+│   ├── tts.py
+│   └── config.py
+├── papyrus/
+│   ├── F4AI_QueueManager.psc
+│   ├── F4AI_CrowdNPC.psc
+│   └── F4AI_VisionWidgetManager.psc
+├── .gitignore
+├── LICENSE
+└── README.md
+```
+
+Notes:
+- Keep heavy binaries (`.exe`, `.onnx`, `.wav`) out of Git; ship them in release archives.
+- Keep Papyrus source in Git (`.psc`) and package compiled `.pex` from CK output separately.
+
+## Closed alpha process (Nexus Mods)
+
+- Keep page visibility hidden during early QA.
+- Require structured bug reports (hardware, FPS overhead, crash log, latency timing).
+- Use a dedicated issue thread/Discord channel and require attached logs/artifacts.
+
+## Script location + compilation
+
+- Author `.psc` files in `Data/Scripts/Source/User/` inside your game install for CK compilation.
+- CK compiles to `Data/Scripts/*.pex`; do not rename generated `.pex` files manually.
+
+## Robust runtime file paths
+
+`src/config.py` includes runtime-relative path detection so installed users are not tied to one absolute drive path.
+
+## Required file handoff sequence
+
+1. Game writes `bridge_input.json`.
+2. Python reads and immediately deletes `bridge_input.json`.
+3. Python generates output and writes `bridge_output.json`.
+4. Game reads and immediately deletes `bridge_output.json`.
+
+This avoids stale packets and repeated playback loops.
+
+## Advanced roadmap: Game Master agent
+
+- Inter-NPC multi-agent conversations in settlements.
+- Autonomous objective trees from settlement telemetry.
+- Mod-aware prompt conditioning from active plugin load order.
+- Dynamic tactical routing and spatial response synthesis.
+- Local LoRA adaptation for long-play personality drift.

@@ -1,0 +1,16 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.spec
+
+# Fallout 4 engine artifacts and logs
+*.pex
+*.esp
+*.tmp
+*.jpg
+*.wav
+f4ai_crash_log.txt
+f4ai_patcher.bat
