@@ -2,6 +2,86 @@
 
 Reference materials and starter modules for an offline Fallout 4 AI mod pipeline.
 
+## Free/offline baseline stack (no paid APIs)
+
+This repository is designed to run fully local with free/open tools:
+
+- **Text generation backend:** [KoboldCPP](https://github.com/LostRuins/koboldcpp)
+- **LLM model format:** local **GGUF** model file (example: Llama-3 Instruct quant)
+- **Voice synthesis:** [Piper](https://github.com/rhasspy/piper) local ONNX voice model
+- **Speech-to-text (optional):** `faster-whisper` local CPU transcription
+- **Bridge runtime:** `src/main.py` file loop (`bridge_input.json` -> `bridge_output.json`)
+
+No cloud API keys are required for the baseline flow.
+
+## Quick start (one-command Python setup)
+
+From the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Optional local STT extras:
+
+```bash
+python -m pip install faster-whisper SpeechRecognition pyaudio
+```
+
+## First-run config template
+
+A default config is provided at `src/config.json`:
+
+```json
+{
+  "ai_temperature": 0.7,
+  "enable_memory": 1,
+  "speech_speed": 1.0
+}
+```
+
+When packaging for game runtime, place this as `Data/F4AI/config.json` beside the engine executable.
+
+## Startup checklist before launching Fallout 4
+
+- [ ] KoboldCPP is running and serving `http://localhost:5001/api/v1/generate`.
+- [ ] A GGUF model is loaded in KoboldCPP.
+- [ ] `piper` is installed and available on `PATH`.
+- [ ] At least one voice model `.onnx` file exists in the runtime folder (`Data/F4AI/` in packaged install, `src/` in local run).
+- [ ] `bridge_input.json` and `bridge_output.json` paths are writable in the runtime folder.
+- [ ] If using STT, microphone access is enabled and optional STT dependencies are installed.
+
+## Quick smoke test (bridge read/write loop)
+
+Open terminal #1:
+
+```bash
+cd src
+python main.py
+```
+
+Open terminal #2:
+
+```bash
+cd src
+python -c "import json; json.dump({'npc_name':'Codsworth','location':'Sanctuary','player_speech':'Status report.'}, open('bridge_input.json','w',encoding='utf-8'))"
+python -c "import json; print(json.load(open('bridge_output.json','r',encoding='utf-8')))"
+```
+
+Expected result: `bridge_output.json` contains `subtitle_text`, `audio_file`, `emotion_id`, and `display_duration`.
+
+## Troubleshooting (common local failures)
+
+- **`piper` command not found**
+  - Install Piper and ensure the binary is on your system `PATH`.
+- **No `.onnx` voice model found**
+  - Place the Piper voice model file in the runtime directory used by `main.py`.
+- **Kobold backend not reachable on localhost:5001**
+  - Start KoboldCPP, load a GGUF model, and verify the API endpoint is active.
+  - If using a custom URL, set environment variable `F4AI_KOBOLD_API_URL`.
+- **Firewall/connection errors**
+  - Allow the executable/Python process through local firewall prompts so it can reach the local backend.
+
 ## Nexus Mods landing page template
 
 Copy/paste into Nexus description editor:
