@@ -70,8 +70,11 @@ def ensure_required_files(root: Path) -> None:
         raise FileNotFoundError(f"Missing required core files:\n{message}")
 
     config_path = root / "Data/F4AI/config.json"
-    with config_path.open("r", encoding="utf-8") as handle:
-        config = json.load(handle)
+    try:
+        with config_path.open("r", encoding="utf-8") as handle:
+            config = json.load(handle)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Failed to parse JSON in {config_path}: {exc}") from exc
 
     for key in REQUIRED_CONFIG_KEYS:
         if key not in config:
