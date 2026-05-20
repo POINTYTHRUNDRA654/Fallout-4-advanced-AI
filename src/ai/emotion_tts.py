@@ -4,11 +4,20 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import requests
 
 XVASYNTH_API_URL = "http://localhost:8002/synthesize"
+
+# Determine bundled piper path
+if hasattr(sys, "_MEIPASS"):
+    DATA_DIR = Path(sys.executable).resolve().parent
+else:
+    DATA_DIR = Path(__file__).resolve().parents[1]
+
+PIPER_EXE = DATA_DIR / "piper.exe"
 
 
 def build_emotional_system_prompt(npc_name: str, location: str, mental_state: str) -> str:
@@ -53,7 +62,7 @@ def render_emotional_speech_piper(
         noise_scale = 0.50
 
     command = [
-        "piper",
+        str(PIPER_EXE),
         "--model",
         model_path,
         "--length_scale",

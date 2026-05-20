@@ -1,6 +1,20 @@
-# Fallout-4-advanced-AI
+# Fallout 4 Advanced AI - Mossy Industries
 
-Reference materials and starter modules for an offline Fallout 4 AI mod pipeline.
+**A subsidiary of Mossy Industries**
+
+Advanced AI-powered NPC dialogue system for Fallout 4, part of the Mossy Industries ecosystem.
+
+---
+
+## About Mossy Industries
+
+**Mossy Industries** is an open-source AI modding platform providing advanced AI dialogue, voice synthesis, and cross-game integration. This mod is the Fallout 4 implementation of Mossy Industries technology.
+
+**Works in two modes:**
+- **Standalone** (default) - Fully offline with local AI
+- **Mossy Integrated** (optional) - Connect to Mossy platform for advanced features
+
+---
 
 ## Free/offline baseline stack (no paid APIs)
 

@@ -1,18 +1,30 @@
-Fallout 4 Advanced AI - First Run
+Fallout 4 Advanced AI - Mossy Industries
+A subsidiary of Mossy Industries
+
+First Run Guide
 
 Required (free):
 - Fallout 4
-- F4SE
-- KoboldCPP with a GGUF model loaded
-- This core package files in Data/
+- F4SE (https://f4se.silverlock.org/)
+- KoboldCPP with a GGUF model loaded (https://github.com/LostRuins/koboldcpp/releases)
+- This core package (includes Piper TTS - no separate install needed!)
 
+Installation:
 1) Install this archive with Mod Organizer 2 or Vortex (FOMOD handles paths automatically).
-2) Start KoboldCPP and load a GGUF model.
-3) Launch Data/F4AI/Launch_F4AI_Bridge.bat (or run Fallout4_AI_Engine.exe directly).
-4) Start Fallout 4 with F4SE.
-5) Talk to an NPC and verify subtitles/audio are generated.
-6) For alpha updates, install new versions over the existing mod (overwrite in MO2/Vortex; no uninstall required).
+2) Download KoboldCPP: https://github.com/LostRuins/koboldcpp/releases
+3) Download a GGUF model (3-8GB recommended):
+   - Llama 3 8B Instruct: https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF
+   - Mistral 7B Instruct: https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
+4) Start KoboldCPP and load the GGUF model.
+5) Launch Data/F4AI/Launch_F4AI_Bridge.bat (starts the AI bridge).
+6) Start Fallout 4 with F4SE.
+7) Talk to an NPC and verify subtitles/audio are generated.
+
+For alpha updates:
+Install new versions over the existing mod (overwrite in MO2/Vortex; no uninstall required).
 
 If audio is missing:
 - Confirm Data/F4AI/en_US-lessac-medium.onnx and .onnx.json are present.
-- Confirm the core package includes all required runtime binaries for your release build.
+- Confirm Data/F4AI/piper.exe exists (should be included in mod package).
+- Confirm KoboldCPP is running on localhost:5001.
+- Check Data/F4AI/bridge_output.json for error messages.

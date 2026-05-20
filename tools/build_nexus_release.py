@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Build Nexus-ready Fallout 4 release archives with FOMOD structure."""
+"""Build Nexus-ready Fallout 4 release archives with FOMOD structure.
+
+Part of Mossy Industries - Advancing AI in Gaming
+"""
 
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ REQUIRED_CORE_FILES = [
     "Data/Scripts/F4AI_VisionWidgetManager.pex",
     "Data/Scripts/F4AI_InterNpcManager.pex",
     "Data/F4AI/Fallout4_AI_Engine.exe",
+    "Data/F4AI/piper.exe",
     "Data/F4AI/config.json",
     "Data/F4AI/en_US-lessac-medium.onnx",
     "Data/F4AI/en_US-lessac-medium.onnx.json",

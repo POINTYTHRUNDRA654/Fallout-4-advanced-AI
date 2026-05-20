@@ -18,3 +18,9 @@ f4ai_patcher.bat
 # Local release staging artifacts (keep guide only)
 release_staging/*
 !release_staging/README.md
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.sln.docstates

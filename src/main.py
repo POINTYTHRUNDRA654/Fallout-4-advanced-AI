@@ -1,4 +1,8 @@
-"""Production-style standalone bridge loop for Fallout 4 AI integration."""
+"""Production-style standalone bridge loop for Fallout 4 AI integration.
+
+Part of Mossy Industries - Advancing AI in Gaming
+A subsidiary of Mossy Industries open source project
+"""
 
 from __future__ import annotations
 
@@ -29,6 +33,7 @@ CONFIG_FILE = DATA_DIR / "config.json"
 MEMORY_DIR = DATA_DIR / "NPC_Memories"
 FALLOUT_ROOT = DATA_DIR.parent.parent.resolve()
 CK_32_EXE = FALLOUT_ROOT / "CreationKit32.exe"
+PIPER_EXE = DATA_DIR / "piper.exe"
 KOBOLD_API_URL = os.getenv("F4AI_KOBOLD_API_URL", "http://localhost:5001/api/v1/generate")
 MOSSY_DEFAULT_ENDPOINT = "http://127.0.0.1:8765/f4ai/bridge"
 
@@ -314,7 +319,7 @@ def process_game_event() -> None:
     audio_wav_path = DATA_DIR / "f4ai_voice.wav"
     if voice_model:
         cmd = [
-            "piper",
+            str(PIPER_EXE),
             "--model",
             voice_model,
             "--length_scale",

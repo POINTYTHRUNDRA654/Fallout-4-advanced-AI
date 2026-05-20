@@ -1,4 +1,7 @@
-Troubleshooting (External prerequisites only)
+Fallout 4 Advanced AI - Mossy Industries
+Troubleshooting Guide
+
+A subsidiary of Mossy Industries
 
 Required free prerequisites:
 - F4SE
