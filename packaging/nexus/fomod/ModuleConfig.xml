@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
+  <moduleName>Fallout 4 Advanced AI</moduleName>
+  <installSteps order="Explicit">
+    <installStep name="Core Runtime (Required)">
+      <optionalFileGroups order="Explicit">
+        <group name="Core Files" type="SelectExactlyOne">
+          <plugins>
+            <plugin name="Recommended - Core Runtime">
+              <description>Required files that install directly to Fallout 4 Data/. Includes plugin, compiled scripts, bridge runtime entrypoint, default config, and baseline voice pair.</description>
+              <files>
+                <folder source="00 Core" destination="" priority="0" />
+              </files>
+              <typeDescriptor>
+                <type name="Recommended" />
+              </typeDescriptor>
+            </plugin>
+          </plugins>
+        </group>
+      </optionalFileGroups>
+    </installStep>
+  </installSteps>
+</config>

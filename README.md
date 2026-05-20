@@ -89,43 +89,36 @@ Copy/paste into Nexus description editor:
 ```markdown
 # Fallout 4 Advanced Local AI System (Alpha 0.1)
 
-A 100% free, fully offline artificial intelligence framework that replaces vanilla dialogue scripts with open-source Large Language Models (LLMs) and neural Text-to-Speech (TTS). Characters remember your actions, coordinate tactical shout responses during combat, and procedurally generate completely automated lipsync data on your machine.
+A 100% free, fully offline Fallout 4 AI framework with automatic mod-manager install support.
 
 ---
 
 ## 🚀 Key Features
 
-* **Local Dialogue Processing**: Infinite unscripted interactions running completely free via local Llama-3 models.
-* **Persistent Memory Stores**: Companions and settlers log your past choices and evaluate your moral alignment over time.
-* **Smart Crowd Control**: Global dialogue queue manager prevents overlapping NPC audio feeds.
-* **Dynamic Lipsync Injection**: Headless legacy integration generates structural mouth vector animation frames in real time.
-* **In-Game Configuration**: Fine-tune your generation metrics (creativity temperature, memory toggles) straight from your Pip-Boy via a custom holotape.
+* **One core package install**: Single FOMOD path that installs directly into `Data/` for MO2 and Vortex.
+* **No external add-on packs required**: Baseline voice pair and runtime defaults are expected in the core package.
+* **Fully local AI runtime**: Local model backend + local speech generation.
+* **Persistent NPC memory + bridge loop**: Runtime writes responses back to game through file bridge.
 
 ---
 
-## 🛠️ Step-by-Step Setup Guide
+## 🛠️ Installation (Automatic)
 
-### 1. Prerequisite Installations
-* Download and install the <a href="https://f4se.silverlock.org/">Fallout 4 Script Extender (F4SE)</a>.
-* Download and run the standalone server utility <a href="https://github.com/LostRuins/koboldcpp">KoboldCPP</a>.
-
-### 2. Model Acquisition (Free)
-* Download any text generation model in **GGUF format**. We highly recommend the **Llama-3-8B-Instruct-Q4_K_M.gguf** model file from HuggingFace.
-* Launch KoboldCPP, load your GGUF file, and verify the backend is idling on standard local port `5001`.
-
-### 3. Mod Installation
-* Download this archive file and drop it into your preferred mod manager (**Mod Organizer 2** or **Vortex**).
-* Follow the interactive FOMOD installation wizard to pick your local Piper neural voice configuration pack.
-* Navigate to your game's root directory at `Data/F4AI/` and double-click **Fallout4_AI_Engine.exe** to fire up the background file bridge before booting your game client.
+1. Install this archive in **Mod Organizer 2** or **Vortex**.
+2. In FOMOD, keep **Recommended - Core Runtime** selected.
+3. Launch your free local backend stack:
+   - <a href="https://f4se.silverlock.org/">F4SE</a>
+   - <a href="https://github.com/LostRuins/koboldcpp">KoboldCPP</a> with any free GGUF model
+4. Run `Data/F4AI/Launch_F4AI_Bridge.bat`.
+5. Start Fallout 4 with F4SE and begin dialogue.
 
 ---
 
-## 🤝 Open Source & Attributions
+## Troubleshooting (required free prerequisites only)
 
-This framework stands on the shoulders of the open-source community:
-* **LLM API Interface Framework**: Built using API design parameters established by <a href="https://github.com/LostRuins/koboldcpp">KoboldCPP</a>.
-* **TTS Pipeline Logic**: Developed using open components from <a href="https://github.com/rhasspy/piper">Piper TTS</a>.
-* **Bethesda Engine Mod Bridges**: Inspired by C++/Papyrus bridge architecture in <a href="https://github.com/art-from-the-machine/Mantella">Mantella</a>.
+* Verify KoboldCPP is running on `http://localhost:5001/api/v1/generate`.
+* Verify Fallout 4 is launched via F4SE.
+* Verify `Data/F4AI/Fallout4_AI_Engine.exe` and baseline voice files exist after install.
 ```
 
 ## Creation Kit alpha build walkthrough
@@ -247,26 +240,40 @@ Final distribution verification (high level):
 Recommended release archive layout:
 
 ```text
-F4AI_Advanced_System_v0.1.0-Alpha.zip
+F4AI_Advanced_System_v0.1.0_Core_FOMOD.zip
 ├── fomod/
-├── F4AI_Core_Files/
-│   ├── F4AI_Core.esp
-│   ├── Scripts/
-│   │   ├── F4AI_QueueManager.pex
-│   │   ├── F4AI_CrowdNPC.pex
-│   │   ├── F4AI_FeedbackMonitor.pex
-│   │   └── F4AI_VisionWidgetManager.pex
-│   └── F4AI/
-│       ├── Fallout4_AI_Engine.exe
-│       ├── train_lora.py
-│       ├── config.json
-│       ├── Training_Cache/
-│       └── Adapters/
-└── Optional_Voices/
+│   ├── info.xml
+│   └── ModuleConfig.xml
+└── 00 Core/
+    └── Data/
+        ├── F4AI_Core.esp
+        ├── Scripts/
+        │   ├── F4AI_QueueManager.pex
+        │   ├── F4AI_FeedbackMonitor.pex
+        │   ├── F4AI_PushToTalkTrigger.pex
+        │   ├── F4AI_VisionWidgetManager.pex
+        │   └── F4AI_InterNpcManager.pex
+        └── F4AI/
+            ├── Fallout4_AI_Engine.exe
+            ├── config.json
+            ├── en_US-lessac-medium.onnx
+            ├── en_US-lessac-medium.onnx.json
+            ├── Launch_F4AI_Bridge.bat
+            ├── FIRST_RUN.txt
+            └── NEXUS_TROUBLESHOOTING.txt
 ```
 
+Release automation:
+
+```bash
+python tools/build_nexus_release.py --version 0.1.0
+```
+
+The release builder validates required files before creating the zip.
+
 Final checks:
+- Keep the published package as one core archive (no external add-on packs).
 - Include only compiled `.pex` in release package (keep `.psc` in source repo).
-- Build executable with required collected runtime dependencies.
-- Ship default `config.json`.
-- Ensure testers run local Kobold backend before game launch.
+- Build executable with required runtime dependencies.
+- Ship default `config.json` and baseline voice pair in core package.
+- Ensure testers run local free Kobold backend before game launch.
