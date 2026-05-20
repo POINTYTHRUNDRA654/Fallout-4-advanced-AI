@@ -2,10 +2,10 @@ Fallout 4 Advanced AI - First Run
 
 1) Install this archive with Mod Organizer 2 or Vortex (FOMOD handles paths automatically).
 2) Start your local text backend (KoboldCPP) and load a GGUF model.
-3) Launch Data\\F4AI\\Launch_F4AI_Bridge.bat (or run Fallout4_AI_Engine.exe directly).
+3) Launch Data/F4AI/Launch_F4AI_Bridge.bat (or run Fallout4_AI_Engine.exe directly).
 4) Start Fallout 4 with F4SE.
 5) Talk to an NPC and verify subtitles/audio are generated.
 
 If audio is missing:
-- Confirm Data\\F4AI\\en_US-lessac-medium.onnx and .onnx.json are present.
+- Confirm Data/F4AI/en_US-lessac-medium.onnx and .onnx.json are present.
 - Confirm the core package includes all required runtime binaries for your release build.
