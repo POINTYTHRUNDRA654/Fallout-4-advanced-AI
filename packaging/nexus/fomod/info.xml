@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fomod>
+  <Name>Fallout 4 Advanced AI</Name>
+  <Author>POINTYTHRUNDRA654</Author>
+  <Version>0.1.0-Alpha</Version>
+  <Description>Offline Fallout 4 AI bridge with FOMOD-based automatic Data/ install path for MO2 and Vortex.</Description>
+  <Website>https://github.com/POINTYTHRUNDRA654/Fallout-4-advanced-AI</Website>
+</fomod>

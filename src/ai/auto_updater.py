@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -10,7 +11,40 @@ from typing import Any
 
 import requests
 
-CURRENT_VERSION = "0.1.0-Alpha"
+def get_runtime_directory() -> Path:
+    """Return runtime directory for packaged executable or source checkout."""
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
+def resolve_current_version() -> str:
+    """Resolve current runtime version from manifest, VERSION file, or fallback constant."""
+    runtime_dir = get_runtime_directory()
+    manifest_path = runtime_dir / "release_manifest.json"
+    if manifest_path.exists():
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            version = str(data.get("version", "")).strip()
+            channel = str(data.get("channel", "")).strip()
+            if version and channel:
+                return f"{version}-{channel.capitalize()}"
+        except (OSError, ValueError):
+            pass
+
+    version_file = runtime_dir / "VERSION"
+    if version_file.exists():
+        try:
+            value = version_file.read_text(encoding="utf-8").strip()
+            if value:
+                return value
+        except OSError:
+            pass
+
+    return "0.1.0-Alpha.1"
+
+
+CURRENT_VERSION = resolve_current_version()
 GITHUB_RELEASES_API = (
     "https://api.github.com/repos/POINTYTHRUNDRA654/Fallout-4-advanced-AI/releases/latest"
 )
