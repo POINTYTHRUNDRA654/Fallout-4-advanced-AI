@@ -18,8 +18,8 @@ are supplied by `packaging/nexus/core-template` and can be overridden by placing
 Build the Nexus archive:
 
 ```bash
-python tools/build_nexus_release.py --version 0.1.0
+python tools/build_nexus_release.py --version 0.1.0 --channel alpha
 ```
 
 Output:
-- `dist/nexus/F4AI_Advanced_System_v0.1.0_Core_FOMOD.zip`
+- `dist/nexus/F4AI_Advanced_System_v0.1.0-Alpha_Core_FOMOD.zip`

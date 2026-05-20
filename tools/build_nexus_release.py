@@ -24,6 +24,7 @@ REQUIRED_CORE_FILES = [
     "Data/F4AI/Launch_F4AI_Bridge.bat",
     "Data/F4AI/FIRST_RUN.txt",
     "Data/F4AI/NEXUS_TROUBLESHOOTING.txt",
+    "Data/F4AI/release_manifest.json",
 ]
 
 REQUIRED_CONFIG_KEYS = [
@@ -41,6 +42,12 @@ REQUIRED_CONFIG_KEYS = [
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build Nexus release archives.")
     parser.add_argument("--version", required=True, help="Version tag, e.g. 0.1.0")
+    parser.add_argument(
+        "--channel",
+        default="alpha",
+        choices=["alpha", "beta", "stable"],
+        help="Release channel label used for metadata and artifact naming.",
+    )
     parser.add_argument(
         "--release-name",
         default="F4AI_Advanced_System",
@@ -96,6 +103,24 @@ def make_zip(source_dir: Path, destination_zip: Path) -> None:
     shutil.make_archive(str(archive_base), "zip", root_dir=str(source_dir))
 
 
+def write_release_manifest(core_root: Path, version: str, channel: str) -> None:
+    """Write in-package release metadata used for in-place updates."""
+    manifest_path = core_root / "Data/F4AI/release_manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "version": version,
+        "channel": channel,
+        "update_strategy": "in_place_overwrite",
+        "mod_manager_update_supported": True,
+        "stable_paths": [
+            "Data/F4AI_Core.esp",
+            "Data/Scripts/",
+            "Data/F4AI/",
+        ],
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+
 def build_release(repo_root: Path, args: argparse.Namespace) -> Path:
     staging_dir = (repo_root / args.staging_dir).resolve()
     output_dir = (repo_root / args.output_dir).resolve()
@@ -123,10 +148,12 @@ def build_release(repo_root: Path, args: argparse.Namespace) -> Path:
             "Create it and place runtime/plugin/script assets there before building."
         )
     copy_tree(staged_core, core_dst)
+    write_release_manifest(core_dst, args.version, args.channel)
 
     ensure_required_files(core_dst)
 
-    core_archive = output_dir / f"{args.release_name}_v{args.version}_Core_FOMOD.zip"
+    channel_suffix = args.channel.capitalize()
+    core_archive = output_dir / f"{args.release_name}_v{args.version}-{channel_suffix}_Core_FOMOD.zip"
     make_zip(package_root, core_archive)
 
     return core_archive
@@ -138,7 +165,7 @@ def main() -> int:
 
     try:
         artifact = build_release(repo_root, args)
-    except (FileNotFoundError, ValueError, json.JSONDecodeError) as exc:
+    except (FileNotFoundError, ValueError) as exc:
         print(f"[release-builder] ERROR: {exc}")
         return 1
 

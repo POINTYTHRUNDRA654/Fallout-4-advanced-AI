@@ -5,6 +5,7 @@
 - [ ] **MO2 clean profile:** Install core archive, enable plugin, run game via F4SE.
 - [ ] **Vortex clean profile:** Install core archive, deploy mods, run game via F4SE.
 - [ ] **Manual fallback:** Extract core archive into Fallout 4 root and verify Data/ paths are correct.
+- [ ] **In-place alpha update:** Install a newer alpha build over existing install and verify no uninstall is required.
 
 ## Required runtime verification
 

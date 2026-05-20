@@ -144,7 +144,10 @@ def query_mossy_bridge(
         text = data.get("npc_response") or data.get("text")
         if isinstance(text, str) and text.strip():
             return text.strip()
-    except (requests.RequestException, ValueError):
+    except requests.RequestException:
+        return None
+    except json.JSONDecodeError:
+        print(f"[Mossy Bridge] Invalid JSON response from {endpoint} ({event}).")
         return None
     return None
 
@@ -160,7 +163,10 @@ def post_plugin_event(endpoint: str, event: str, payload: dict, timeout: float) 
         response.raise_for_status()
         data = response.json()
         return data if isinstance(data, dict) else None
-    except (requests.RequestException, ValueError):
+    except requests.RequestException:
+        return None
+    except json.JSONDecodeError:
+        print(f"[Plugin Hook] Invalid JSON response from {endpoint} ({event}).")
         return None
 
 

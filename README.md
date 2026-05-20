@@ -326,7 +326,7 @@ Final distribution verification (high level):
 Recommended release archive layout:
 
 ```text
-F4AI_Advanced_System_v0.1.0_Core_FOMOD.zip
+F4AI_Advanced_System_v0.1.0-Alpha_Core_FOMOD.zip
 ├── fomod/
 │   ├── info.xml
 │   └── ModuleConfig.xml
@@ -352,10 +352,15 @@ F4AI_Advanced_System_v0.1.0_Core_FOMOD.zip
 Release automation:
 
 ```bash
-python tools/build_nexus_release.py --version 0.1.0
+python tools/build_nexus_release.py --version 0.1.0 --channel alpha
 ```
 
 The release builder validates required files before creating the zip.
+
+Alpha update policy:
+- Publish alpha builds with the same internal Data/ paths and plugin/script filenames.
+- Users update in place by replacing/overwriting the existing mod in MO2/Vortex (no uninstall needed).
+- `Data/F4AI/release_manifest.json` is generated in every build to track version/channel/update strategy.
 
 Final checks:
 - Keep the published package as one core archive (no external add-on packs).
