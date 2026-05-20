@@ -67,7 +67,8 @@ A default config is provided at `src/config.json`:
   "mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge",
   "mossy_timeout": 3.0,
   "enable_plugin_hooks": 0,
-  "plugin_endpoints": []
+  "plugin_endpoints": [],
+  "plugin_timeout": 3.0
 }
 ```
 

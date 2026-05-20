@@ -37,6 +37,7 @@ REQUIRED_CONFIG_KEYS = [
     "mossy_timeout",
     "enable_plugin_hooks",
     "plugin_endpoints",
+    "plugin_timeout",
 ]
 
 
@@ -75,6 +76,11 @@ def read_default_version(repo_root: Path) -> str:
         if value:
             return value
     return "0.1.0"
+
+
+def format_release_version(version: str, channel: str) -> str:
+    """Format version + channel label consistently."""
+    return f"{version}-{channel.capitalize()}"
 
 
 def copy_tree(src: Path, dest: Path) -> None:
@@ -141,7 +147,7 @@ def write_fomod_version(package_root: Path, version: str, channel: str) -> None:
     root = tree.getroot()
     version_node = root.find("Version")
     if version_node is not None:
-        version_node.text = f"{version}-{channel.capitalize()}"
+        version_node.text = format_release_version(version, channel)
         tree.write(info_xml, encoding="utf-8", xml_declaration=True)
 
 
@@ -178,8 +184,7 @@ def build_release(repo_root: Path, args: argparse.Namespace) -> Path:
 
     ensure_required_files(core_dst)
 
-    channel_suffix = args.channel.capitalize()
-    core_archive = output_dir / f"{args.release_name}_v{version}-{channel_suffix}_Core_FOMOD.zip"
+    core_archive = output_dir / f"{args.release_name}_v{format_release_version(version, args.channel)}_Core_FOMOD.zip"
     make_zip(package_root, core_archive)
 
     return core_archive

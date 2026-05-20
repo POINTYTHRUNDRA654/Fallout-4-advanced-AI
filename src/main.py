@@ -48,6 +48,7 @@ def load_user_config() -> dict:
         "enable_mossy_bridge": 0,
         "mossy_endpoint": MOSSY_DEFAULT_ENDPOINT,
         "mossy_timeout": 3.0,
+        "plugin_timeout": 3.0,
         "enable_plugin_hooks": 0,
         "plugin_endpoints": [],
     }
@@ -179,6 +180,13 @@ def normalize_plugin_endpoints(value: object) -> list[str]:
     return []
 
 
+def process_ai_output(raw_output: str) -> tuple[str, int]:
+    """Normalize generated output and extract emotion id."""
+    emotion_id = extract_emotion_id(raw_output)
+    response = strip_emotion_tag(raw_output).replace("*", "").replace('"', "").strip()
+    return response, emotion_id
+
+
 def extract_emotion_id(raw_llm_output: str) -> int:
     """Map emotion tags to compact Papyrus-friendly integer ids."""
     if "[ANGRY]" in raw_llm_output:
@@ -215,9 +223,10 @@ def process_game_event() -> None:
     config = load_user_config()
     mossy_enabled = _is_enabled(config.get("enable_mossy_bridge", 0))
     mossy_endpoint = os.getenv("F4AI_MOSSY_ENDPOINT", config.get("mossy_endpoint", MOSSY_DEFAULT_ENDPOINT))
-    mossy_timeout = float(config.get("mossy_timeout", 3.0))
+    request_timeout = float(config.get("mossy_timeout", 3.0))
     plugin_enabled = _is_enabled(config.get("enable_plugin_hooks", 0))
     plugin_endpoints = normalize_plugin_endpoints(config.get("plugin_endpoints", []))
+    plugin_timeout = float(config.get("plugin_timeout", request_timeout))
 
     history_string = ""
     if config.get("enable_memory") == 1:
@@ -240,7 +249,7 @@ def process_game_event() -> None:
         }
         prompt_extensions: list[str] = []
         for endpoint in plugin_endpoints:
-            plugin_result = post_plugin_event(endpoint, "pre_dialogue", pre_payload, mossy_timeout)
+            plugin_result = post_plugin_event(endpoint, "pre_dialogue", pre_payload, plugin_timeout)
             if not plugin_result:
                 continue
             patched_npc = plugin_result.get("npc_name")
@@ -274,14 +283,13 @@ def process_game_event() -> None:
             "history": history_string,
             "system_prompt": system_prompt,
         }
-        mossy_output = query_mossy_bridge(mossy_endpoint, mossy_input_payload, mossy_timeout)
+        mossy_output = query_mossy_bridge(mossy_endpoint, mossy_input_payload, request_timeout)
         if mossy_output:
             raw_ai_output = mossy_output
 
     if not raw_ai_output:
         raw_ai_output = query_local_llm(full_prompt, float(config.get("ai_temperature", 0.7)))
-    emotion_id = extract_emotion_id(raw_ai_output)
-    ai_response = strip_emotion_tag(raw_ai_output).replace("*", "").replace('"', "").strip()
+    ai_response, emotion_id = process_ai_output(raw_ai_output)
 
     if plugin_enabled and plugin_endpoints:
         post_payload = {
@@ -292,14 +300,13 @@ def process_game_event() -> None:
             "emotion_id": emotion_id,
         }
         for endpoint in plugin_endpoints:
-            plugin_result = post_plugin_event(endpoint, "post_dialogue", post_payload, mossy_timeout)
+            plugin_result = post_plugin_event(endpoint, "post_dialogue", post_payload, plugin_timeout)
             if not plugin_result:
                 continue
             patched_response = plugin_result.get("npc_response")
             if isinstance(patched_response, str) and patched_response.strip():
                 raw_ai_output = patched_response.strip()
-                emotion_id = extract_emotion_id(raw_ai_output)
-                ai_response = strip_emotion_tag(raw_ai_output).replace("*", "").replace('"', "").strip()
+                ai_response, emotion_id = process_ai_output(raw_ai_output)
 
     print(f"[{npc}]: {ai_response}")
 
@@ -344,7 +351,7 @@ def process_game_event() -> None:
                 "npc_response": ai_response,
                 "emotion_id": emotion_id,
             },
-            mossy_timeout,
+            request_timeout,
             event="dialogue_result",
         )
         if mossy_result is None:

@@ -11,9 +11,16 @@ from typing import Any
 
 import requests
 
+def get_runtime_directory() -> Path:
+    """Return runtime directory for packaged executable or source checkout."""
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
 def resolve_current_version() -> str:
     """Resolve current runtime version from manifest, VERSION file, or fallback constant."""
-    runtime_dir = Path(sys.executable).resolve().parent if hasattr(sys, "_MEIPASS") else Path(__file__).resolve().parents[2]
+    runtime_dir = get_runtime_directory()
     manifest_path = runtime_dir / "release_manifest.json"
     if manifest_path.exists():
         try:
@@ -34,7 +41,7 @@ def resolve_current_version() -> str:
         except OSError:
             pass
 
-    return "0.1.0-Alpha"
+    return "0.1.0-Alpha.1"
 
 
 CURRENT_VERSION = resolve_current_version()
