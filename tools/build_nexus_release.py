@@ -7,6 +7,7 @@ import argparse
 import json
 import shutil
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -41,7 +42,7 @@ REQUIRED_CONFIG_KEYS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build Nexus release archives.")
-    parser.add_argument("--version", required=True, help="Version tag, e.g. 0.1.0")
+    parser.add_argument("--version", help="Version tag, e.g. 0.1.0 (defaults to VERSION file).")
     parser.add_argument(
         "--channel",
         default="alpha",
@@ -64,6 +65,16 @@ def parse_args() -> argparse.Namespace:
         help="Output directory for built zip archives.",
     )
     return parser.parse_args()
+
+
+def read_default_version(repo_root: Path) -> str:
+    """Read default release version from repository VERSION file."""
+    version_file = repo_root / "VERSION"
+    if version_file.exists():
+        value = version_file.read_text(encoding="utf-8").strip()
+        if value:
+            return value
+    return "0.1.0"
 
 
 def copy_tree(src: Path, dest: Path) -> None:
@@ -121,22 +132,37 @@ def write_release_manifest(core_root: Path, version: str, channel: str) -> None:
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
+def write_fomod_version(package_root: Path, version: str, channel: str) -> None:
+    """Update fomod info.xml version field for generated artifact metadata."""
+    info_xml = package_root / "fomod/info.xml"
+    if not info_xml.exists():
+        return
+    tree = ET.parse(info_xml)
+    root = tree.getroot()
+    version_node = root.find("Version")
+    if version_node is not None:
+        version_node.text = f"{version}-{channel.capitalize()}"
+        tree.write(info_xml, encoding="utf-8", xml_declaration=True)
+
+
 def build_release(repo_root: Path, args: argparse.Namespace) -> Path:
+    version = args.version or read_default_version(repo_root)
     staging_dir = (repo_root / args.staging_dir).resolve()
     output_dir = (repo_root / args.output_dir).resolve()
-    work_dir = output_dir / f"_work_{args.version}"
+    work_dir = output_dir / f"_work_{version}"
 
     if work_dir.exists():
         shutil.rmtree(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    package_root = work_dir / f"{args.release_name}_v{args.version}"
+    package_root = work_dir / f"{args.release_name}_v{version}"
     package_root.mkdir(parents=True, exist_ok=True)
 
     fomod_src = repo_root / "packaging/nexus/fomod"
     core_template_src = repo_root / "packaging/nexus/core-template"
 
     copy_tree(fomod_src, package_root / "fomod")
+    write_fomod_version(package_root, version, args.channel)
 
     core_dst = package_root / "00 Core"
     copy_tree(core_template_src, core_dst)
@@ -148,12 +174,12 @@ def build_release(repo_root: Path, args: argparse.Namespace) -> Path:
             "Create it and place runtime/plugin/script assets there before building."
         )
     copy_tree(staged_core, core_dst)
-    write_release_manifest(core_dst, args.version, args.channel)
+    write_release_manifest(core_dst, version, args.channel)
 
     ensure_required_files(core_dst)
 
     channel_suffix = args.channel.capitalize()
-    core_archive = output_dir / f"{args.release_name}_v{args.version}-{channel_suffix}_Core_FOMOD.zip"
+    core_archive = output_dir / f"{args.release_name}_v{version}-{channel_suffix}_Core_FOMOD.zip"
     make_zip(package_root, core_archive)
 
     return core_archive

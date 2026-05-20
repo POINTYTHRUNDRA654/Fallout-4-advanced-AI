@@ -33,6 +33,13 @@ Optional (not required):
 - Plugin endpoint hooks for third-party patches (`enable_plugin_hooks`)
 - Local STT extras (`faster-whisper`, `SpeechRecognition`, `pyaudio`)
 
+## Automatic alpha versioning on GitHub pushes
+
+- Repository version source-of-truth: `VERSION`
+- Workflow: `.github/workflows/auto-alpha-version.yml`
+- On each push (including from GitHub Desktop or VS Code), the workflow increments `VERSION` (for example `0.1.0-Alpha.1` → `0.1.0-Alpha.2`) and commits it back automatically.
+- This supports update-aware alpha releases without requiring manual version edits from GitHub Desktop or VS Code.
+
 ## Quick start (one-command Python setup)
 
 From the repository root:
@@ -352,7 +359,7 @@ F4AI_Advanced_System_v0.1.0-Alpha_Core_FOMOD.zip
 Release automation:
 
 ```bash
-python tools/build_nexus_release.py --version 0.1.0 --channel alpha
+python tools/build_nexus_release.py --channel alpha
 ```
 
 The release builder validates required files before creating the zip.

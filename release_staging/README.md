@@ -18,7 +18,7 @@ are supplied by `packaging/nexus/core-template` and can be overridden by placing
 Build the Nexus archive:
 
 ```bash
-python tools/build_nexus_release.py --version 0.1.0 --channel alpha
+python tools/build_nexus_release.py --channel alpha
 ```
 
 Output:
