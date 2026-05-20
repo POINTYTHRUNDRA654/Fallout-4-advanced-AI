@@ -36,7 +36,10 @@ A default config is provided at `src/config.json`:
 {
   "ai_temperature": 0.7,
   "enable_memory": 1,
-  "speech_speed": 1.0
+  "speech_speed": 1.0,
+  "enable_mossy_bridge": 0,
+  "mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge",
+  "mossy_timeout": 3.0
 }
 ```
 
@@ -50,6 +53,7 @@ When packaging for game runtime, place this as `Data/F4AI/config.json` beside th
 - [ ] At least one voice model `.onnx` file exists in the runtime folder (`Data/F4AI/` in packaged install, `src/` in local run).
 - [ ] `bridge_input.json` and `bridge_output.json` paths are writable in the runtime folder.
 - [ ] If using STT, microphone access is enabled and optional STT dependencies are installed.
+- [ ] If enabling Mossy integration, Mossy exposes a free local HTTP endpoint on your configured `mossy_endpoint`.
 
 ## Quick smoke test (bridge read/write loop)
 
@@ -70,6 +74,46 @@ python -c "import json, pathlib; print(json.loads(pathlib.Path('bridge_output.js
 
 Expected result: `bridge_output.json` contains `subtitle_text`, `audio_file`, `emotion_id`, and `display_duration`.
 
+## Optional Mossy plugin bridge (free/local)
+
+`src/main.py` supports optional Mossy communication through a local HTTP endpoint.
+
+- Enable via config: `"enable_mossy_bridge": 1`
+- Configure endpoint: `"mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge"`
+- Optional timeout: `"mossy_timeout": 3.0`
+
+Request body sent to Mossy:
+
+```json
+{
+  "event": "dialogue_request",
+  "payload": {
+    "npc_name": "Codsworth",
+    "location": "Sanctuary",
+    "player_speech": "Status report.",
+    "history": "...",
+    "system_prompt": "..."
+  }
+}
+```
+
+If Mossy returns JSON with `npc_response` (or `text`), that response is used; otherwise the runtime falls back to KoboldCPP.
+
+After generation, the bridge emits:
+
+```json
+{
+  "event": "dialogue_result",
+  "payload": {
+    "npc_name": "...",
+    "location": "...",
+    "player_speech": "...",
+    "npc_response": "...",
+    "emotion_id": 0
+  }
+}
+```
+
 ## Troubleshooting (common local failures)
 
 - **`piper` command not found**
@@ -79,6 +123,9 @@ Expected result: `bridge_output.json` contains `subtitle_text`, `audio_file`, `e
 - **Kobold backend not reachable on localhost:5001**
   - Start KoboldCPP, load a GGUF model, and verify the API endpoint is active.
   - If using a custom URL, set environment variable `F4AI_KOBOLD_API_URL`.
+- **Mossy endpoint not reachable**
+  - Disable Mossy bridge (`enable_mossy_bridge = 0`) or run Mossy at your configured `mossy_endpoint`.
+  - You can also override endpoint with environment variable `F4AI_MOSSY_ENDPOINT`.
 - **Firewall/connection errors**
   - Allow the executable/Python process through local firewall prompts so it can reach the local backend.
 

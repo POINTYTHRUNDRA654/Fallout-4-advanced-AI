@@ -30,6 +30,7 @@ MEMORY_DIR = DATA_DIR / "NPC_Memories"
 FALLOUT_ROOT = DATA_DIR.parent.parent.resolve()
 CK_32_EXE = FALLOUT_ROOT / "CreationKit32.exe"
 KOBOLD_API_URL = os.getenv("F4AI_KOBOLD_API_URL", "http://localhost:5001/api/v1/generate")
+MOSSY_DEFAULT_ENDPOINT = "http://127.0.0.1:8765/f4ai/bridge"
 
 
 def locate_installed_voice_model() -> str | None:
@@ -40,7 +41,14 @@ def locate_installed_voice_model() -> str | None:
 
 def load_user_config() -> dict:
     """Load local config file with safe defaults."""
-    defaults = {"ai_temperature": 0.7, "enable_memory": 1, "speech_speed": 1.0}
+    defaults = {
+        "ai_temperature": 0.7,
+        "enable_memory": 1,
+        "speech_speed": 1.0,
+        "enable_mossy_bridge": 0,
+        "mossy_endpoint": MOSSY_DEFAULT_ENDPOINT,
+        "mossy_timeout": 3.0,
+    }
     if CONFIG_FILE.exists():
         try:
             with CONFIG_FILE.open("r", encoding="utf-8") as handle:
@@ -106,6 +114,37 @@ def query_local_llm(prompt: str, temperature: float) -> str:
     return "My processors failed to yield a prompt response clear enough to speak."
 
 
+def _is_enabled(value: object) -> bool:
+    """Interpret common toggle formats from config json."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return int(value) == 1
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def query_mossy_bridge(
+    endpoint: str, payload: dict, timeout: float, event: str = "dialogue_request"
+) -> str | None:
+    """Send payload to optional Mossy plugin and return response text when available."""
+    try:
+        response = requests.post(
+            endpoint,
+            json={"event": event, "payload": payload},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data.get("npc_response") or data.get("text")
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    except (requests.RequestException, ValueError):
+        return None
+    return None
+
+
 def extract_emotion_id(raw_llm_output: str) -> int:
     """Map emotion tags to compact Papyrus-friendly integer ids."""
     if "[ANGRY]" in raw_llm_output:
@@ -140,6 +179,9 @@ def process_game_event() -> None:
     location = context.get("location", "The Commonwealth")
     player_input = context.get("player_speech", "[Greets you silently]")
     config = load_user_config()
+    mossy_enabled = _is_enabled(config.get("enable_mossy_bridge", 0))
+    mossy_endpoint = os.getenv("F4AI_MOSSY_ENDPOINT", str(config.get("mossy_endpoint", MOSSY_DEFAULT_ENDPOINT)))
+    mossy_timeout = float(config.get("mossy_timeout", 3.0))
 
     history_string = ""
     if config.get("enable_memory") == 1:
@@ -158,7 +200,21 @@ def process_game_event() -> None:
         "<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n"
         f"{player_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
     )
-    raw_ai_output = query_local_llm(full_prompt, float(config.get("ai_temperature", 0.7)))
+    raw_ai_output = ""
+    if mossy_enabled:
+        mossy_input_payload = {
+            "npc_name": npc,
+            "location": location,
+            "player_speech": player_input,
+            "history": history_string,
+            "system_prompt": system_prompt,
+        }
+        mossy_output = query_mossy_bridge(mossy_endpoint, mossy_input_payload, mossy_timeout)
+        if mossy_output:
+            raw_ai_output = mossy_output
+
+    if not raw_ai_output:
+        raw_ai_output = query_local_llm(full_prompt, float(config.get("ai_temperature", 0.7)))
     emotion_id = extract_emotion_id(raw_ai_output)
     ai_response = strip_emotion_tag(raw_ai_output).replace("*", "").replace('"', "").strip()
     print(f"[{npc}]: {ai_response}")
@@ -194,6 +250,19 @@ def process_game_event() -> None:
         "emotion_id": emotion_id,
         "display_duration": max(2.5, len(ai_response) / 13.0),
     }
+    if mossy_enabled:
+        _ = query_mossy_bridge(
+            mossy_endpoint,
+            {
+                "npc_name": npc,
+                "location": location,
+                "player_speech": player_input,
+                "npc_response": ai_response,
+                "emotion_id": emotion_id,
+            },
+            mossy_timeout,
+            event="dialogue_result",
+        )
     try:
         with OUTPUT_FILE.open("w", encoding="utf-8") as out_f:
             json.dump(output_payload, out_f)
