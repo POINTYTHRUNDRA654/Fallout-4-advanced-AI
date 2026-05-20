@@ -3,28 +3,98 @@ A subsidiary of Mossy Industries
 
 First Run Guide
 
-Required (free):
-- Fallout 4
-- F4SE (https://f4se.silverlock.org/)
-- KoboldCPP with a GGUF model loaded (https://github.com/LostRuins/koboldcpp/releases)
-- This core package (includes Piper TTS - no separate install needed!)
+═══════════════════════════════════════════════════════
 
-Installation:
-1) Install this archive with Mod Organizer 2 or Vortex (FOMOD handles paths automatically).
-2) Download KoboldCPP: https://github.com/LostRuins/koboldcpp/releases
-3) Download a GGUF model (3-8GB recommended):
-   - Llama 3 8B Instruct: https://huggingface.co/QuantFactory/Meta-Llama-3-8B-Instruct-GGUF
-   - Mistral 7B Instruct: https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-4) Start KoboldCPP and load the GGUF model.
-5) Launch Data/F4AI/Launch_F4AI_Bridge.bat (starts the AI bridge).
-6) Start Fallout 4 with F4SE.
-7) Talk to an NPC and verify subtitles/audio are generated.
+✨ TRUE ONE-CLICK INSTALLATION!
 
-For alpha updates:
-Install new versions over the existing mod (overwrite in MO2/Vortex; no uninstall required).
+This mod includes EVERYTHING needed:
+- ✅ AI model (TinyLlama-1.1B) - BUNDLED!
+- ✅ KoboldCPP runtime - BUNDLED!
+- ✅ Piper TTS - BUNDLED!
+- ✅ Voice models - BUNDLED!
 
-If audio is missing:
-- Confirm Data/F4AI/en_US-lessac-medium.onnx and .onnx.json are present.
-- Confirm Data/F4AI/piper.exe exists (should be included in mod package).
-- Confirm KoboldCPP is running on localhost:5001.
-- Check Data/F4AI/bridge_output.json for error messages.
+NO external downloads required!
+NO technical setup needed!
+
+═══════════════════════════════════════════════════════
+
+🚀 QUICK START:
+
+1) Install this mod with Mod Organizer 2 or Vortex
+   (FOMOD installer handles everything automatically)
+
+2) Run: Data/F4AI/AUTO_START.bat
+   (This starts the AI backend - takes 10-30 seconds first time)
+
+3) Launch Fallout 4 with F4SE
+
+4) Talk to any NPC and enjoy AI conversations!
+
+═══════════════════════════════════════════════════════
+
+ℹ️  WHAT HAPPENS BEHIND THE SCENES:
+
+AUTO_START.bat automatically:
+- Starts KoboldCPP with bundled TinyLlama model
+- Starts the F4AI bridge
+- Everything runs in the background
+
+You only need to run AUTO_START.bat once per gaming session.
+It will detect if already running and skip startup.
+
+═══════════════════════════════════════════════════════
+
+⚡ PERFORMANCE NOTES:
+
+The bundled TinyLlama model is:
+- Small (~668 MB)
+- Fast (works on most PCs)
+- Good quality for NPC dialogue
+
+It runs on CPU (no GPU required).
+First response may take 5-10 seconds as model loads into RAM.
+
+═══════════════════════════════════════════════════════
+
+🔧 OPTIONAL: Advanced Configuration
+
+Want better AI quality? You can use external models!
+
+Edit Data/F4AI/config.json:
+  "use_external_model": 1
+  "external_kobold_endpoint": "http://localhost:5001"
+
+Then run your own KoboldCPP with a larger model instead.
+The bundled model will be ignored.
+
+═══════════════════════════════════════════════════════
+
+🆘 TROUBLESHOOTING:
+
+Audio not working?
+→ Run AUTO_START.bat again
+→ Check Data/F4AI/bridge_output.json for errors
+
+AI not responding?
+→ Wait 30 seconds after running AUTO_START.bat
+→ Check Task Manager for koboldcpp.exe process
+
+Game crashes?
+→ Ensure F4SE is installed: https://f4se.silverlock.org/
+→ Check Papyrus logs in Documents/My Games/Fallout4/Logs/
+
+═══════════════════════════════════════════════════════
+
+📖 MORE HELP:
+
+See: NEXUS_TROUBLESHOOTING.txt
+See: ABOUT_MOSSY_INDUSTRIES.txt
+
+Nexus page: (your mod page link)
+GitHub: https://github.com/POINTYTHRUNDRA654/Fallout-4-advanced-AI
+
+═══════════════════════════════════════════════════════
+
+Mossy Industries - Advancing AI in Gaming
+
+Thank you for using Fallout 4 Advanced AI!

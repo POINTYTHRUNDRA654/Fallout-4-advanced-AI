@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 build/
+build_output/
+build_temp/
 dist/
 *.spec
 

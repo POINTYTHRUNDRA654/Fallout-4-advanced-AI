@@ -1,7 +1,10 @@
 {
+  "use_bundled_model": 1,
   "ai_temperature": 0.7,
   "enable_memory": 1,
   "speech_speed": 1.0,
+  "use_external_model": 0,
+  "external_kobold_endpoint": "http://localhost:5001",
   "enable_mossy_bridge": 0,
   "mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge",
   "mossy_timeout": 3.0,
