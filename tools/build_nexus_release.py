@@ -26,6 +26,8 @@ REQUIRED_CORE_FILES = [
     "Data/F4AI/NEXUS_TROUBLESHOOTING.txt",
 ]
 
+REQUIRED_CONFIG_KEYS = ["ai_temperature", "enable_memory", "speech_speed"]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build Nexus release archives.")
@@ -71,7 +73,7 @@ def ensure_required_files(root: Path) -> None:
     with config_path.open("r", encoding="utf-8") as handle:
         config = json.load(handle)
 
-    for key in ("ai_temperature", "enable_memory", "speech_speed"):
+    for key in REQUIRED_CONFIG_KEYS:
         if key not in config:
             raise ValueError(f"{config_path} is missing required key: {key}")
 
