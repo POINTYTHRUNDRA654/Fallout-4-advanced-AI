@@ -73,7 +73,7 @@ def ensure_required_files(root: Path) -> None:
 
     for key in ("ai_temperature", "enable_memory", "speech_speed"):
         if key not in config:
-            raise ValueError(f"config.json is missing required key: {key}")
+            raise ValueError(f"{config_path} is missing required key: {key}")
 
 
 def make_zip(source_dir: Path, destination_zip: Path) -> None:

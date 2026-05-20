@@ -8,4 +8,4 @@ Fallout 4 Advanced AI - First Run
 
 If audio is missing:
 - Confirm Data\\F4AI\\en_US-lessac-medium.onnx and .onnx.json are present.
-- Confirm Piper is installed or bundled for your release.
+- Confirm the core package includes all required runtime binaries for your release build.
