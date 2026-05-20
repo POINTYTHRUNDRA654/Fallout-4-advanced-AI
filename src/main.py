@@ -48,6 +48,8 @@ def load_user_config() -> dict:
         "enable_mossy_bridge": 0,
         "mossy_endpoint": MOSSY_DEFAULT_ENDPOINT,
         "mossy_timeout": 3.0,
+        "enable_plugin_hooks": 0,
+        "plugin_endpoints": [],
     }
     if CONFIG_FILE.exists():
         try:
@@ -137,12 +139,38 @@ def query_mossy_bridge(
         )
         response.raise_for_status()
         data = response.json()
+        if event != "dialogue_request":
+            return "ack"
         text = data.get("npc_response") or data.get("text")
         if isinstance(text, str) and text.strip():
             return text.strip()
     except (requests.RequestException, ValueError):
         return None
     return None
+
+
+def post_plugin_event(endpoint: str, event: str, payload: dict, timeout: float) -> dict | None:
+    """Send a plugin event and return parsed JSON dict when available."""
+    try:
+        response = requests.post(
+            endpoint,
+            json={"event": event, "payload": payload},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data if isinstance(data, dict) else None
+    except (requests.RequestException, ValueError):
+        return None
+
+
+def normalize_plugin_endpoints(value: object) -> list[str]:
+    """Normalize plugin endpoint config into a validated list of URLs."""
+    if isinstance(value, list):
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
 
 
 def extract_emotion_id(raw_llm_output: str) -> int:
@@ -180,8 +208,10 @@ def process_game_event() -> None:
     player_input = context.get("player_speech", "[Greets you silently]")
     config = load_user_config()
     mossy_enabled = _is_enabled(config.get("enable_mossy_bridge", 0))
-    mossy_endpoint = os.getenv("F4AI_MOSSY_ENDPOINT", str(config.get("mossy_endpoint", MOSSY_DEFAULT_ENDPOINT)))
+    mossy_endpoint = os.getenv("F4AI_MOSSY_ENDPOINT", config.get("mossy_endpoint", MOSSY_DEFAULT_ENDPOINT))
     mossy_timeout = float(config.get("mossy_timeout", 3.0))
+    plugin_enabled = _is_enabled(config.get("enable_plugin_hooks", 0))
+    plugin_endpoints = normalize_plugin_endpoints(config.get("plugin_endpoints", []))
 
     history_string = ""
     if config.get("enable_memory") == 1:
@@ -194,6 +224,35 @@ def process_game_event() -> None:
         f"You are currently located at {location}. "
         "Respond in character with one short sentence."
     )
+    if plugin_enabled and plugin_endpoints:
+        pre_payload = {
+            "npc_name": npc,
+            "location": location,
+            "player_speech": player_input,
+            "history": history_string,
+            "system_prompt": system_prompt,
+        }
+        prompt_extensions: list[str] = []
+        for endpoint in plugin_endpoints:
+            plugin_result = post_plugin_event(endpoint, "pre_dialogue", pre_payload, mossy_timeout)
+            if not plugin_result:
+                continue
+            patched_npc = plugin_result.get("npc_name")
+            patched_location = plugin_result.get("location")
+            patched_player = plugin_result.get("player_speech")
+            append_prompt = plugin_result.get("system_prompt_append")
+
+            if isinstance(patched_npc, str) and patched_npc.strip():
+                npc = patched_npc.strip()
+            if isinstance(patched_location, str) and patched_location.strip():
+                location = patched_location.strip()
+            if isinstance(patched_player, str) and patched_player.strip():
+                player_input = patched_player.strip()
+            if isinstance(append_prompt, str) and append_prompt.strip():
+                prompt_extensions.append(append_prompt.strip())
+        if prompt_extensions:
+            system_prompt = f"{system_prompt} {' '.join(prompt_extensions)}"
+
     full_prompt = (
         "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
         f"{system_prompt}\n\n{history_string}"
@@ -217,6 +276,25 @@ def process_game_event() -> None:
         raw_ai_output = query_local_llm(full_prompt, float(config.get("ai_temperature", 0.7)))
     emotion_id = extract_emotion_id(raw_ai_output)
     ai_response = strip_emotion_tag(raw_ai_output).replace("*", "").replace('"', "").strip()
+
+    if plugin_enabled and plugin_endpoints:
+        post_payload = {
+            "npc_name": npc,
+            "location": location,
+            "player_speech": player_input,
+            "npc_response": ai_response,
+            "emotion_id": emotion_id,
+        }
+        for endpoint in plugin_endpoints:
+            plugin_result = post_plugin_event(endpoint, "post_dialogue", post_payload, mossy_timeout)
+            if not plugin_result:
+                continue
+            patched_response = plugin_result.get("npc_response")
+            if isinstance(patched_response, str) and patched_response.strip():
+                raw_ai_output = patched_response.strip()
+                emotion_id = extract_emotion_id(raw_ai_output)
+                ai_response = strip_emotion_tag(raw_ai_output).replace("*", "").replace('"', "").strip()
+
     print(f"[{npc}]: {ai_response}")
 
     voice_model = locate_installed_voice_model()
@@ -251,7 +329,7 @@ def process_game_event() -> None:
         "display_duration": max(2.5, len(ai_response) / 13.0),
     }
     if mossy_enabled:
-        _ = query_mossy_bridge(
+        mossy_result = query_mossy_bridge(
             mossy_endpoint,
             {
                 "npc_name": npc,
@@ -263,6 +341,8 @@ def process_game_event() -> None:
             mossy_timeout,
             event="dialogue_result",
         )
+        if mossy_result is None:
+            print("[Mossy Bridge] dialogue_result dispatch was not acknowledged.")
     try:
         with OUTPUT_FILE.open("w", encoding="utf-8") as out_f:
             json.dump(output_payload, out_f)

@@ -14,6 +14,25 @@ This repository is designed to run fully local with free/open tools:
 
 No cloud API keys are required for the baseline flow.
 
+## Required mods/engines (free)
+
+These are the required dependencies to get working NPC conversations:
+
+1. **Fallout 4** (game install)
+2. **F4SE** (Fallout 4 Script Extender): https://f4se.silverlock.org/
+3. **KoboldCPP** (local text-generation backend): https://github.com/LostRuins/koboldcpp
+4. **Any free GGUF model** loaded into KoboldCPP
+5. **Core mod package built from this repo**, including:
+   - `Data/F4AI_Core.esp`
+   - required compiled `.pex` scripts
+   - `Data/F4AI/Fallout4_AI_Engine.exe`
+   - baseline voice pair (`.onnx` + `.onnx.json`)
+
+Optional (not required):
+- Mossy endpoint integration (`enable_mossy_bridge`)
+- Plugin endpoint hooks for third-party patches (`enable_plugin_hooks`)
+- Local STT extras (`faster-whisper`, `SpeechRecognition`, `pyaudio`)
+
 ## Quick start (one-command Python setup)
 
 From the repository root:
@@ -39,7 +58,9 @@ A default config is provided at `src/config.json`:
   "speech_speed": 1.0,
   "enable_mossy_bridge": 0,
   "mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge",
-  "mossy_timeout": 3.0
+  "mossy_timeout": 3.0,
+  "enable_plugin_hooks": 0,
+  "plugin_endpoints": []
 }
 ```
 
@@ -113,6 +134,24 @@ After generation, the bridge emits:
   }
 }
 ```
+
+## Plugin hooks for mod authors (patch/enhancement framework)
+
+For compatibility patches with other mods, enable plugin hooks:
+
+- `"enable_plugin_hooks": 1`
+- `"plugin_endpoints": ["http://127.0.0.1:8770/f4ai/plugin"]`
+
+Each endpoint can receive:
+
+- `pre_dialogue` with payload keys:
+  - `npc_name`, `location`, `player_speech`, `history`, `system_prompt`
+  - Optional response overrides: `npc_name`, `location`, `player_speech`, `system_prompt_append`
+- `post_dialogue` with payload keys:
+  - `npc_name`, `location`, `player_speech`, `npc_response`, `emotion_id`
+  - Optional response override: `npc_response`
+
+This allows third-party free local tools/mod patches to inject context rules, compatibility tags, or response rewriting without editing core scripts.
 
 ## Troubleshooting (common local failures)
 

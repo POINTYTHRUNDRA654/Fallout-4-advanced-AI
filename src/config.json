@@ -4,5 +4,7 @@
   "speech_speed": 1.0,
   "enable_mossy_bridge": 0,
   "mossy_endpoint": "http://127.0.0.1:8765/f4ai/bridge",
-  "mossy_timeout": 3.0
+  "mossy_timeout": 3.0,
+  "enable_plugin_hooks": 0,
+  "plugin_endpoints": []
 }

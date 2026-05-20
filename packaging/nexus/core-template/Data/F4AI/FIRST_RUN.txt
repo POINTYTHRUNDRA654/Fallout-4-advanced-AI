@@ -1,7 +1,13 @@
 Fallout 4 Advanced AI - First Run
 
+Required (free):
+- Fallout 4
+- F4SE
+- KoboldCPP with a GGUF model loaded
+- This core package files in Data/
+
 1) Install this archive with Mod Organizer 2 or Vortex (FOMOD handles paths automatically).
-2) Start your local text backend (KoboldCPP) and load a GGUF model.
+2) Start KoboldCPP and load a GGUF model.
 3) Launch Data/F4AI/Launch_F4AI_Bridge.bat (or run Fallout4_AI_Engine.exe directly).
 4) Start Fallout 4 with F4SE.
 5) Talk to an NPC and verify subtitles/audio are generated.

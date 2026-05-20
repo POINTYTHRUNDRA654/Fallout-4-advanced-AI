@@ -26,7 +26,16 @@ REQUIRED_CORE_FILES = [
     "Data/F4AI/NEXUS_TROUBLESHOOTING.txt",
 ]
 
-REQUIRED_CONFIG_KEYS = ["ai_temperature", "enable_memory", "speech_speed"]
+REQUIRED_CONFIG_KEYS = [
+    "ai_temperature",
+    "enable_memory",
+    "speech_speed",
+    "enable_mossy_bridge",
+    "mossy_endpoint",
+    "mossy_timeout",
+    "enable_plugin_hooks",
+    "plugin_endpoints",
+]
 
 
 def parse_args() -> argparse.Namespace:
