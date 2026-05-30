@@ -1,0 +1,13 @@
+# Accidental clone directory
+https-github.com-*/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
