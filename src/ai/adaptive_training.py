@@ -9,8 +9,8 @@ from pathlib import Path
 
 import requests
 
-TRAINING_DATA_DIR = Path("Data/F4AI/Training_Cache")
-ADAPTER_DIR = Path("Data/F4AI/Adapters")
+TRAINING_DATA_DIR = Path(r"H:\Mossy Memory\Training_Cache")
+ADAPTER_DIR = Path(r"H:\Mossy Memory\Adapters")
 KOBOLD_LORA_URL = "http://localhost:5001/api/v1/model/lora"
 
 

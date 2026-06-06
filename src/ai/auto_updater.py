@@ -50,6 +50,21 @@ GITHUB_RELEASES_API = (
 )
 
 
+def _is_auto_update_enabled() -> bool:
+    """Return False if disable_auto_update is set in the local config file."""
+    runtime_dir = get_runtime_directory()
+    for candidate in ("config.json", "Data/F4AI/config.json"):
+        cfg_path = runtime_dir / candidate
+        if cfg_path.exists():
+            try:
+                data = json.loads(cfg_path.read_text(encoding="utf-8"))
+                if int(data.get("disable_auto_update", 0)) == 1:
+                    return False
+            except (OSError, ValueError):
+                pass
+    return True
+
+
 def check_for_updates(
     current_version: str = CURRENT_VERSION,
     releases_api: str = GITHUB_RELEASES_API,
@@ -57,6 +72,9 @@ def check_for_updates(
     timeout: float = 3.0,
 ) -> bool:
     """Check GitHub latest release and trigger hot update if newer build exists."""
+    if not _is_auto_update_enabled():
+        print("[Updater] Auto-update disabled via config (disable_auto_update=1).")
+        return False
     print("[Updater] Checking for project updates...")
     try:
         response = requests.get(releases_api, timeout=timeout)

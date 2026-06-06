@@ -4,3 +4,5 @@ requests>=2.31.0
 numpy>=1.26.0
 # Audio I/O utilities used by src/tts.py for lipgen-ready WAV conversion
 scipy>=1.11.0
+# HTTP server for Mossy Industries local AI bridge (src/mossy_server.py)
+flask>=3.0.0

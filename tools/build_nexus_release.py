@@ -46,6 +46,7 @@ REQUIRED_CONFIG_KEYS = [
     "enable_plugin_hooks",
     "plugin_endpoints",
     "plugin_timeout",
+    "disable_auto_update",
 ]
 
 

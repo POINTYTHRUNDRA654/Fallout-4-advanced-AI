@@ -30,12 +30,13 @@ else:
 INPUT_FILE = DATA_DIR / "bridge_input.json"
 OUTPUT_FILE = DATA_DIR / "bridge_output.json"
 CONFIG_FILE = DATA_DIR / "config.json"
-MEMORY_DIR = DATA_DIR / "NPC_Memories"
+MEMORY_DIR = Path(r"H:\Mossy Memory\NPC_Memories")
+STATUS_FILE = Path(r"H:\Mossy Memory\bridge_status.json")
 FALLOUT_ROOT = DATA_DIR.parent.parent.resolve()
 CK_32_EXE = FALLOUT_ROOT / "CreationKit32.exe"
 PIPER_EXE = DATA_DIR / "piper.exe"
 KOBOLD_API_URL = os.getenv("F4AI_KOBOLD_API_URL", "http://localhost:5001/api/v1/generate")
-MOSSY_DEFAULT_ENDPOINT = "http://127.0.0.1:8765/f4ai/bridge"
+MOSSY_DEFAULT_ENDPOINT = "http://127.0.0.1:8787/v1/chat"
 
 
 def locate_installed_voice_model() -> str | None:
@@ -136,24 +137,46 @@ def _is_enabled(value: object) -> bool:
 def query_mossy_bridge(
     endpoint: str, payload: dict, timeout: float, event: str = "dialogue_request"
 ) -> str | None:
-    """Send payload to optional Mossy plugin and return response text when available."""
+    """Send dialogue context to Mossy /v1/chat and return NPC response text."""
+    if event != "dialogue_request":
+        return "ack"
+
+    npc = payload.get("npc_name", "Settler")
+    system_prompt = payload.get("system_prompt") or (
+        f"You are {npc} in Fallout 4. "
+        "Respond in character with one short sentence. Be concise and lore-appropriate."
+    )
+    history_string = payload.get("history", "")
+    player_input = payload.get("player_speech", "")
+
+    messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    for line in history_string.strip().splitlines():
+        if line.startswith("Player: "):
+            messages.append({"role": "user", "content": line[8:]})
+        elif line.startswith("You: "):
+            messages.append({"role": "assistant", "content": line[5:]})
+        elif line.startswith(f"{npc}: "):
+            messages.append({"role": "assistant", "content": line[len(npc) + 2:]})
+    messages.append({"role": "user", "content": player_input})
+
     try:
         response = requests.post(
             endpoint,
-            json={"event": event, "payload": payload},
+            json={"messages": messages, "temperature": 0.7},
             timeout=timeout,
         )
         response.raise_for_status()
         data = response.json()
-        if event != "dialogue_request":
-            return "ack"
-        text = data.get("npc_response") or data.get("text")
+        if data.get("ok") is False:
+            print(f"[Mossy] Error: {data.get('message', 'unknown error')}")
+            return None
+        text = data.get("text") or data.get("npc_response")
         if isinstance(text, str) and text.strip():
             return text.strip()
     except requests.RequestException:
         return None
     except json.JSONDecodeError:
-        print(f"[Mossy Bridge] Invalid JSON response from {endpoint} ({event}).")
+        print("[Mossy] Invalid JSON response.")
         return None
     return None
 
@@ -206,6 +229,25 @@ def extract_emotion_id(raw_llm_output: str) -> int:
 def strip_emotion_tag(raw_llm_output: str) -> str:
     """Remove leading [TAG] marker from generated line."""
     return re.sub(r"^\[(NORMAL|ANGRY|SAD|WHISPER)\]\s*", "", raw_llm_output).strip()
+
+
+def _write_bridge_status(npc: str, location: str, player_input: str, response: str, source: str) -> None:
+    """Write last-response status to H:\\Mossy Memory for external monitoring."""
+    try:
+        STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STATUS_FILE.write_text(
+            __import__("json").dumps({
+                "timestamp": __import__("time").strftime("%Y-%m-%dT%H:%M:%S"),
+                "source": source,
+                "npc": npc,
+                "location": location,
+                "player": player_input,
+                "response": response,
+            }, indent=2),
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
 
 
 def process_game_event() -> None:
@@ -280,6 +322,7 @@ def process_game_event() -> None:
         f"{player_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
     )
     raw_ai_output = ""
+    response_source = "LOCAL"
     if mossy_enabled:
         mossy_input_payload = {
             "npc_name": npc,
@@ -291,9 +334,11 @@ def process_game_event() -> None:
         mossy_output = query_mossy_bridge(mossy_endpoint, mossy_input_payload, request_timeout)
         if mossy_output:
             raw_ai_output = mossy_output
+            response_source = "MOSSY"
 
     if not raw_ai_output:
         raw_ai_output = query_local_llm(full_prompt, float(config.get("ai_temperature", 0.7)))
+        response_source = "LOCAL"
     ai_response, emotion_id = process_ai_output(raw_ai_output)
 
     if plugin_enabled and plugin_endpoints:
@@ -313,7 +358,8 @@ def process_game_event() -> None:
                 raw_ai_output = patched_response.strip()
                 ai_response, emotion_id = process_ai_output(raw_ai_output)
 
-    print(f"[{npc}]: {ai_response}")
+    print(f"[{response_source}] [{npc}]: {ai_response}")
+    _write_bridge_status(npc, location, player_input, ai_response, response_source)
 
     voice_model = locate_installed_voice_model()
     audio_wav_path = DATA_DIR / "f4ai_voice.wav"
@@ -346,21 +392,6 @@ def process_game_event() -> None:
         "emotion_id": emotion_id,
         "display_duration": max(2.5, len(ai_response) / 13.0),
     }
-    if mossy_enabled:
-        mossy_result = query_mossy_bridge(
-            mossy_endpoint,
-            {
-                "npc_name": npc,
-                "location": location,
-                "player_speech": player_input,
-                "npc_response": ai_response,
-                "emotion_id": emotion_id,
-            },
-            request_timeout,
-            event="dialogue_result",
-        )
-        if mossy_result is None:
-            print("[Mossy Bridge] dialogue_result dispatch was not acknowledged.")
     try:
         with OUTPUT_FILE.open("w", encoding="utf-8") as out_f:
             json.dump(output_payload, out_f)
