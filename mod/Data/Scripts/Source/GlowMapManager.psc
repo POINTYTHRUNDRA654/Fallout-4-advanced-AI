@@ -60,15 +60,15 @@
 Scriptname GlowMapManager extends Quest
 
 Quest Property AAIQuest       Auto
-Quest Property PerfManager    Auto  ; PerformanceManager
-Quest Property SporeSystem    Auto  ; SporeInfectionSystem
+Quest Property PerfManager    Auto; PerformanceManager; PerformanceManager; PerformanceManager; PerformanceManager
+Quest Property SporeSystem    Auto; SporeInfectionSystem; SporeInfectionSystem; SporeInfectionSystem; SporeInfectionSystem
 
 ; ── Mod Awareness ────────────────────────────────────────────────────────────
 GlobalVariable Property gAAI_GSJungle    Auto
 GlobalVariable Property gAAI_LivingOcean Auto
 
 ; ── Performance Bridge ────────────────────────────────────────────────────────
-GlobalVariable Property gPerf_ScriptMode Auto  ; 0=idle 1=normal 2=combat 3=stress
+GlobalVariable Property gPerf_ScriptMode Auto; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress
 
 ; ── Day/Night ─────────────────────────────────────────────────────────────────
 GlobalVariable Property gEnvIsNight      Auto
@@ -77,19 +77,19 @@ GlobalVariable Property gEnvTimeOfDay    Auto
 ; ── Pulse Zone Light Arrays (pre-placed in .esp, never PlaceAtMe) ────────────
 ; Each zone = array of associated light ObjectReferences
 ; We only call Enable/Disable on these — fully previs-safe
-ObjectReference[] Property PulseZone_Fungal_A    Auto  ; Fungal pillar cluster A
-ObjectReference[] Property PulseZone_Fungal_B    Auto  ; Fungal pillar cluster B
-ObjectReference[] Property PulseZone_SporeA      Auto  ; Spore pod cluster A
-ObjectReference[] Property PulseZone_SporeB      Auto  ; Spore pod cluster B
-ObjectReference[] Property PulseZone_Vine_A      Auto  ; Vine network section A
-ObjectReference[] Property PulseZone_Vine_B      Auto  ; Vine network section B
-ObjectReference[] Property PulseZone_Ocean_A     Auto  ; Ocean/coastal glow (Living Ocean)
+ObjectReference[] Property PulseZone_Fungal_A    Auto; Fungal pillar cluster A; Fungal pillar cluster A; Fungal pillar cluster A; Fungal pillar cluster A
+ObjectReference[] Property PulseZone_Fungal_B    Auto; Fungal pillar cluster B; Fungal pillar cluster B; Fungal pillar cluster B; Fungal pillar cluster B
+ObjectReference[] Property PulseZone_SporeA      Auto; Spore pod cluster A; Spore pod cluster A; Spore pod cluster A; Spore pod cluster A
+ObjectReference[] Property PulseZone_SporeB      Auto; Spore pod cluster B; Spore pod cluster B; Spore pod cluster B; Spore pod cluster B
+ObjectReference[] Property PulseZone_Vine_A      Auto; Vine network section A; Vine network section A; Vine network section A; Vine network section A
+ObjectReference[] Property PulseZone_Vine_B      Auto; Vine network section B; Vine network section B; Vine network section B; Vine network section B
+ObjectReference[] Property PulseZone_Ocean_A     Auto; Ocean/coastal glow (Living Ocean); Ocean/coastal glow (Living Ocean); Ocean/coastal glow (Living Ocean); Ocean/coastal glow (Living Ocean)
 ObjectReference[] Property PulseZone_Ocean_B     Auto
 
 ; ── Vine Network Trigger Markers ─────────────────────────────────────────────
 ; Plants in the same vine network share alert state
-ObjectReference[] Property VineNetwork_Alpha     Auto  ; First vine network
-ObjectReference[] Property VineNetwork_Beta      Auto  ; Second vine network
+ObjectReference[] Property VineNetwork_Alpha     Auto; First vine network; First vine network; First vine network; First vine network
+ObjectReference[] Property VineNetwork_Beta      Auto; Second vine network; Second vine network; Second vine network; Second vine network
 
 ; ── Spore Plant Activators ────────────────────────────────────────────────────
 ; Pre-placed activators that the SporeInfectionSystem can trigger
@@ -97,9 +97,9 @@ ObjectReference[] Property SporePlants_A         Auto
 ObjectReference[] Property SporePlants_B         Auto
 
 ; ── ImageSpace / Effects ──────────────────────────────────────────────────────
-ImageSpaceModifier Property imodGlowTransfer     Auto  ; Player glow after touching plant
-Spell Property spGlowTransfer                    Auto  ; Glow on player (visual effect)
-Spell Property spVineNetworkPulse               Auto  ; Alert signal through vine
+ImageSpaceModifier Property imodGlowTransfer     Auto; Player glow after touching plant; Player glow after touching plant; Player glow after touching plant; Player glow after touching plant
+Spell Property spGlowTransfer                    Auto; Glow on player (visual effect); Glow on player (visual effect); Glow on player (visual effect); Glow on player (visual effect)
+Spell Property spVineNetworkPulse               Auto; Alert signal through vine; Alert signal through vine; Alert signal through vine; Alert signal through vine
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property GlowEnabled              = True  Auto
@@ -107,11 +107,11 @@ bool  Property PulseEnabled             = True  Auto
 bool  Property DetectionHazardEnabled   = True  Auto
 bool  Property VineNetworkEnabled       = True  Auto
 bool  Property OceanGlowEnabled         = True  Auto
-float Property UpdateInterval           = 0.06  Auto  ; ~1.5 hrs game time
-float Property PulseZoneRadius          = 800.0 Auto  ; Only pulse zones within this range
-float Property GlowTransferRadius       = 150.0 Auto  ; How close player must be to glow
-float Property VineAlertRadius          = 2000.0 Auto ; Alert travels this far through vines
-float Property GlowFadeDuration         = 30.0  Auto  ; Real seconds until player glow fades
+float Property UpdateInterval           = 0.06  Auto; ~1.5 hrs game time; ~1.5 hrs game time; ~1.5 hrs game time; ~1.5 hrs game time
+float Property PulseZoneRadius          = 800.0 Auto; Only pulse zones within this range; Only pulse zones within this range; Only pulse zones within this range; Only pulse zones within this range
+float Property GlowTransferRadius       = 150.0 Auto; How close player must be to glow; How close player must be to glow; How close player must be to glow; How close player must be to glow
+float Property VineAlertRadius          = 2000.0 Auto; Alert travels this far through vines; Alert travels this far through vines; Alert travels this far through vines; Alert travels this far through vines
+float Property GlowFadeDuration         = 30.0  Auto; Real seconds until player glow fades; Real seconds until player glow fades; Real seconds until player glow fades; Real seconds until player glow fades
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 bool  _gsJungleActive   = False
@@ -123,9 +123,9 @@ float _lastRealTime     = 0.0
 
 ; Phase offsets for each zone (staggered to prevent GPU spike)
 ; Each zone starts its pulse at a different point in the cycle
-float[] _zonePhaseOffsets   ; Populated in OnQuestInit
-float[] _zoneTimers         ; Current timer position per zone
-bool[]  _zoneActive         ; Whether this zone is currently enabled
+float[] _zonePhaseOffsets; Populated in OnQuestInit; Populated in OnQuestInit; Populated in OnQuestInit; Populated in OnQuestInit
+float[] _zoneTimers; Current timer position per zone; Current timer position per zone; Current timer position per zone; Current timer position per zone
+bool[]  _zoneActive; Whether this zone is currently enabled; Whether this zone is currently enabled; Whether this zone is currently enabled; Whether this zone is currently enabled
 
 ; Player glow state
 bool  _playerIsGlowing = False
@@ -149,7 +149,7 @@ Event OnQuestInit()
     _zoneActive       = new bool[8]
     Int i = 0
     While i < 8
-        _zonePhaseOffsets[i] = i * 0.7  ; 0.0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9 seconds
+        _zonePhaseOffsets[i] = i * 0.7; 0.0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9 seconds; 0.0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9 seconds; 0.0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9 seconds; 0.0, 0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9 seconds
         _zoneTimers[i]       = _zonePhaseOffsets[i]
         _zoneActive[i]       = True
         i += 1
@@ -157,30 +157,34 @@ Event OnQuestInit()
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
-    RegisterForUpdateGameTime(UpdateInterval)
+    ScheduleTick(UpdateInterval)
 
     GlowLog("Glow Map Manager initialized | Zones: 8 | Stagger: 0.7s")
 EndEvent
 
-Event OnPlayerLoadGame(Actor akSender)
+Event Actor.OnPlayerLoadGame(Actor akSender)
     ReadGlobalState()
     SetInitialGlowState()
 EndEvent
 
-Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference akNewLoc)
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     If akNewLoc == None
         Return
     EndIf
     ; Only run full glow system in Glowing Sea
-    _gsJungleActive = gAAI_GSJungle != None ? (gAAI_GSJungle.GetValue() > 0.5) : False
+    If (gAAI_GSJungle != None)
+        _gsJungleActive = (gAAI_GSJungle.GetValue() > 0.5)
+    Else
+        _gsJungleActive = False
+    EndIf
 EndEvent
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; MAIN TICK
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !GlowEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
 
@@ -188,14 +192,14 @@ Event OnUpdateGameTime()
 
     ; Skip most glow processing if not in GS jungle and not Living Ocean
     If !_gsJungleActive && !_livingOceanActive
-        RegisterForUpdateGameTime(UpdateInterval * 3.0)  ; Check less often outside these areas
+        ScheduleTick(UpdateInterval * 3.0); Check less often outside these areas; Check less often outside these areas; Check less often outside these areas; Check less often outside these areas
         Return
     EndIf
 
     ; Performance mode affects glow intensity and pulse rate
-    If _currentPerfMode == 3  ; Stress — minimal glow
+    If _currentPerfMode == 3; Stress — minimal glow; Stress — minimal glow; Stress — minimal glow; Stress — minimal glow
         ReduceToMinimalGlow()
-        RegisterForUpdateGameTime(UpdateInterval * 4.0)
+        ScheduleTick(UpdateInterval * 4.0)
         Return
     EndIf
 
@@ -220,14 +224,10 @@ Event OnUpdateGameTime()
         UpdateOceanGlow()
     EndIf
 
-    Debug.Trace("[AAI] GLOW_STATE|gs_jungle=" + _gsJungleActive + \
-                "|night=" + _isNight + "|player_glowing=" + _playerIsGlowing + \
-                "|vine_alert=" + _vineNetworkAlerted + \
-                "|perf_mode=" + _currentPerfMode)
+    Debug.Trace("[AAI] GLOW_STATE|gs_jungle=" + _gsJungleActive + "|night=" + _isNight + "|player_glowing=" + _playerIsGlowing + "|vine_alert=" + _vineNetworkAlerted + "|perf_mode=" + _currentPerfMode)
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PULSE ZONE MANAGEMENT
 ; The heart of the glow system — staggered pulsing
@@ -235,14 +235,24 @@ EndEvent
 Function UpdatePulseZones()
     Actor player = Game.GetPlayer()
     Float realNow = Utility.GetCurrentRealTime()
-    Float deltaReal = Math.Max(realNow - _lastRealTime, 0.016)  ; ~60fps equivalent
+    Float deltaReal = Math.Max(realNow - _lastRealTime, 0.016); ~60fps equivalent; ~60fps equivalent; ~60fps equivalent; ~60fps equivalent
     _lastRealTime = realNow
 
     ; Night intensity multiplier
-    Float nightMult = _isNight ? 1.0 : 0.35  ; Daytime glow is subtle
+    Float nightMult; Daytime glow is subtle; Daytime glow is subtle; Daytime glow is subtle; Daytime glow is subtle
+    If (_isNight)
+        nightMult = 1.0
+    Else
+        nightMult = 0.35
+    EndIf
 
     ; Stress reduces pulse rate (less script overhead)
-    Float tickRate = _currentPerfMode >= 2 ? 0.5 : 1.0
+    Float tickRate
+    If (_currentPerfMode >= 2)
+        tickRate = 0.5
+    Else
+        tickRate = 1.0
+    EndIf
 
     ; Zone 0: Fungal Pillars A — slow deep pulse (3.5 second cycle)
     UpdateZone(0, PulseZone_Fungal_A, player, 3.5, "slow", nightMult, deltaReal * tickRate)
@@ -269,8 +279,7 @@ Function UpdatePulseZones()
     EndIf
 EndFunction
 
-Function UpdateZone(Int zoneIdx, ObjectReference[] lights, Actor player,
-                    Float cycleDuration, String pattern, Float intensityMult, Float delta)
+Function UpdateZone(Int zoneIdx, ObjectReference[] lights, Actor player, Float cycleDuration, String pattern, Float intensityMult, Float delta)
     If lights == None || lights.Length == 0 || !_zoneActive[zoneIdx]
         Return
     EndIf
@@ -279,7 +288,7 @@ Function UpdateZone(Int zoneIdx, ObjectReference[] lights, Actor player,
     If lights[0] != None
         Float dist = player.GetDistance(lights[0])
         If dist > PulseZoneRadius
-            Return  ; Player can't see this zone — skip (performance saving)
+            Return; Player can't see this zone — skip (performance saving); Player can't see this zone — skip (performance saving); Player can't see this zone — skip (performance saving); Player can't see this zone — skip (performance saving)
         EndIf
     EndIf
 
@@ -291,17 +300,21 @@ Function UpdateZone(Int zoneIdx, ObjectReference[] lights, Actor player,
         _zoneTimers[zoneIdx] -= cycleDuration
     EndWhile
 
-    Float phase = _zoneTimers[zoneIdx] / cycleDuration  ; 0.0 to 1.0
+    Float phase = _zoneTimers[zoneIdx] / cycleDuration; 0.0 to 1.0; 0.0 to 1.0; 0.0 to 1.0; 0.0 to 1.0
 
     ; Calculate intensity based on pattern
     Float intensity = 0.0
     If pattern == "slow"
         ; Sine wave — smooth breathing
-        intensity = (Math.sin(phase * 6.283) + 1.0) / 2.0  ; 0-1 sine wave
+        intensity = (Math.sin(phase * 6.283) + 1.0) / 2.0; 0-1 sine wave; 0-1 sine wave; 0-1 sine wave; 0-1 sine wave
 
     ElseIf pattern == "rapid"
         ; Sawtooth with flicker
-        intensity = phase < 0.7 ? phase / 0.7 : (1.0 - phase) / 0.3
+        If (phase < 0.7)
+            intensity = phase / 0.7
+        Else
+            intensity = (1.0 - phase) / 0.3
+        EndIf
         ; Add irregular flicker
         If Utility.RandomInt(1, 100) <= 10
             intensity *= Utility.RandomFloat(0.3, 1.0)
@@ -309,10 +322,10 @@ Function UpdateZone(Int zoneIdx, ObjectReference[] lights, Actor player,
 
     ElseIf pattern == "cascade"
         ; Sequential — different phase per light for cascade effect
-        intensity = phase  ; Base phase — individual lights shift their own phase
+        intensity = phase; Base phase — individual lights shift their own phase; Base phase — individual lights shift their own phase; Base phase — individual lights shift their own phase; Base phase — individual lights shift their own phase
     EndIf
 
-    intensity *= intensityMult  ; Apply night/day modifier
+    intensity *= intensityMult; Apply night/day modifier; Apply night/day modifier; Apply night/day modifier; Apply night/day modifier
 
     ; Apply to lights based on threshold
     ; We only do Enable/Disable (not actual intensity change — that needs F4SE)
@@ -382,7 +395,7 @@ EndFunction
 
 Function TransferGlowToPlayer(Actor player)
     If _playerIsGlowing
-        Return  ; Already glowing — refresh timer
+        Return; Already glowing — refresh timer; Already glowing — refresh timer; Already glowing — refresh timer; Already glowing — refresh timer
     EndIf
 
     _playerIsGlowing = True
@@ -390,7 +403,7 @@ Function TransferGlowToPlayer(Actor player)
 
     ; Apply glow visual effect
     If spGlowTransfer != None
-        player.CastSpell(spGlowTransfer, player)
+        spGlowTransfer.Cast(player, player)
     EndIf
     If imodGlowTransfer != None
         imodGlowTransfer.Apply()
@@ -405,13 +418,12 @@ Function TransferGlowToPlayer(Actor player)
     EndIf
 
     GlowLog("Glow transferred to player")
-    Debug.Trace("[AAI] GLOW_TRANSFER|player=true|night=" + _isNight + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] GLOW_TRANSFER|player=true|night=" + _isNight + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 Function ApplyGlowDetectionPenalty(Actor player)
     ; Glowing player is easier to detect — NPCs get a perception bonus
-    Actor[] nearby = player.GetActorsInRange(1500.0, 12)
+    Actor[] nearby = MiscUtil.ScanActors(player, 1500.0, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -419,7 +431,7 @@ Function ApplyGlowDetectionPenalty(Actor player)
             ActorValue avPerc = Game.GetFormFromFile(0x000002E3, "Fallout4.esm") as ActorValue
             If avPerc != None
                 Float curPerc = npc.GetValue(avPerc)
-                npc.SetValue(avPerc, Math.Min(curPerc * 1.5, 10.0))  ; +50% detection
+                npc.SetValue(avPerc, Math.Min(curPerc * 1.5, 10.0)); +50% detection; +50% detection; +50% detection; +50% detection
             EndIf
         EndIf
         i += 1
@@ -450,14 +462,14 @@ Function UpdatePlayerGlowState()
 EndFunction
 
 Function RestoreNPCDetection(Actor player)
-    Actor[] nearby = player.GetActorsInRange(1500.0, 12)
+    Actor[] nearby = MiscUtil.ScanActors(player, 1500.0, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead() && npc != player
             ActorValue avPerc = Game.GetFormFromFile(0x000002E3, "Fallout4.esm") as ActorValue
             If avPerc != None
-                npc.SetValue(avPerc, npc.GetBaseValue(avPerc))  ; Restore base
+                npc.SetValue(avPerc, npc.GetBaseValue(avPerc)); Restore base; Restore base; Restore base; Restore base
             EndIf
         EndIf
         i += 1
@@ -487,7 +499,7 @@ Function AlertVineNetwork(ObjectReference triggeredPlant, String reason)
 
     ; Nearby creatures become alert (the jungle "told" them)
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(VineAlertRadius, 12)
+    Actor[] nearby = MiscUtil.ScanActors(player, VineAlertRadius, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -499,8 +511,7 @@ Function AlertVineNetwork(ObjectReference triggeredPlant, String reason)
 
     GlowLog("Vine network ALERT: " + reason + " | " + nearby.Length + " creatures alerted")
     Debug.Notification("The jungle pulses with alarm — something in the plant network has been disturbed!")
-    Debug.Trace("[AAI] VINE_ALERT|reason=" + reason + "|radius=" + VineAlertRadius + \
-                "|creatures_alerted=" + nearby.Length)
+    Debug.Trace("[AAI] VINE_ALERT|reason=" + reason + "|radius=" + VineAlertRadius + "|creatures_alerted=" + nearby.Length)
 EndFunction
 
 Function UpdateVineNetwork()
@@ -509,7 +520,7 @@ Function UpdateVineNetwork()
     EndIf
 
     Float elapsed = Utility.GetCurrentRealTime() - _vineAlertTimer
-    If elapsed > 45.0  ; Alert lasts 45 real seconds
+    If elapsed > 45.0; Alert lasts 45 real seconds; Alert lasts 45 real seconds; Alert lasts 45 real seconds; Alert lasts 45 real seconds
         _vineNetworkAlerted = False
         GlowLog("Vine network alert subsiding")
     EndIf
@@ -550,20 +561,62 @@ EndFunction
 ; STATE READ
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ReadGlobalState()
-    _gsJungleActive   = gAAI_GSJungle   != None ? (gAAI_GSJungle.GetValue()   > 0.5) : False
-    _livingOceanActive = gAAI_LivingOcean != None ? (gAAI_LivingOcean.GetValue() > 0.5) : False
-    _isNight          = gEnvIsNight      != None ? (gEnvIsNight.GetValue()     > 0.5) : False
-    _currentHour      = gEnvTimeOfDay    != None ? gEnvTimeOfDay.GetValue()          : 12.0
-    _currentPerfMode  = gPerf_ScriptMode != None ? gPerf_ScriptMode.GetValue() as Int : 1
+    If (gAAI_GSJungle   != None)
+        _gsJungleActive = (gAAI_GSJungle.GetValue()   > 0.5)
+    Else
+        _gsJungleActive = False
+    EndIf
+    If (gAAI_LivingOcean != None)
+        _livingOceanActive = (gAAI_LivingOcean.GetValue() > 0.5)
+    Else
+        _livingOceanActive = False
+    EndIf
+    If (gEnvIsNight      != None)
+        _isNight = (gEnvIsNight.GetValue()     > 0.5)
+    Else
+        _isNight = False
+    EndIf
+    If (gEnvTimeOfDay    != None)
+        _currentHour = gEnvTimeOfDay.GetValue()
+    Else
+        _currentHour = 12.0
+    EndIf
+    If (gPerf_ScriptMode != None)
+        _currentPerfMode = gPerf_ScriptMode.GetValue() as Int
+    Else
+        _currentPerfMode = 1
+    EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API
 ; ═══════════════════════════════════════════════════════════════════════════
-Bool Function IsPlayerGlowing()    Return _playerIsGlowing    EndFunction
-Bool Function IsVineAlerted()      Return _vineNetworkAlerted  EndFunction
-Bool Function IsGSJungleActive()   Return _gsJungleActive     EndFunction
+Bool Function IsPlayerGlowing()
+    Return _playerIsGlowing
+EndFunction
+Bool Function IsVineAlerted()
+    Return _vineNetworkAlerted
+EndFunction
+Bool Function IsGSJungleActive()
+    Return _gsJungleActive
+EndFunction
 
 Function GlowLog(String msg)
     Debug.Trace("[AAI-Glow] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

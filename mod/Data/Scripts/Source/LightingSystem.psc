@@ -68,19 +68,19 @@
 Scriptname LightingSystem extends Quest
 
 Quest Property AAIQuest           Auto
-Quest Property PerfManager        Auto  ; PerformanceManager
+Quest Property PerfManager        Auto; PerformanceManager; PerformanceManager; PerformanceManager; PerformanceManager
 
 ; ── Power Grid Globals (bridge writes these, we read them) ───────────────────
-GlobalVariable Property gPower_DiamondCity   Auto  ; 1=powered 0=dark
+GlobalVariable Property gPower_DiamondCity   Auto; 1=powered 0=dark; 1=powered 0=dark; 1=powered 0=dark; 1=powered 0=dark
 GlobalVariable Property gPower_Goodneighbor  Auto
 GlobalVariable Property gPower_FarHarbor     Auto
 GlobalVariable Property gPower_SanctuaryHills Auto
 GlobalVariable Property gPower_Castle        Auto
-GlobalVariable Property gPower_PlayerBase    Auto  ; Player's main settlement
+GlobalVariable Property gPower_PlayerBase    Auto; Player's main settlement; Player's main settlement; Player's main settlement; Player's main settlement
 
 ; ── Shadow Budget Global (bridge writes based on INI + PC performance) ────────
-GlobalVariable Property gShadowBudget        Auto  ; How many shadow lights active (default 4)
-GlobalVariable Property gShadowRadius        Auto  ; Max distance for shadow casting (default 512)
+GlobalVariable Property gShadowBudget        Auto; How many shadow lights active (default 4); How many shadow lights active (default 4); How many shadow lights active (default 4); How many shadow lights active (default 4)
+GlobalVariable Property gShadowRadius        Auto; Max distance for shadow casting (default 512); Max distance for shadow casting (default 512); Max distance for shadow casting (default 512); Max distance for shadow casting (default 512)
 
 ; ── Mod Awareness ────────────────────────────────────────────────────────────
 GlobalVariable Property gAAI_LivingOcean    Auto
@@ -89,22 +89,22 @@ GlobalVariable Property gAAI_DarknessMult   Auto
 
 ; ── Light Reference Arrays (pre-placed in .esp, we only Enable/Disable) ─────
 ; Each array = lights for a zone, sorted by distance from zone center
-ObjectReference[] Property LightsZone_DiamondCity    Auto  ; All managed lights in DC
+ObjectReference[] Property LightsZone_DiamondCity    Auto; All managed lights in DC; All managed lights in DC; All managed lights in DC; All managed lights in DC
 ObjectReference[] Property LightsZone_Goodneighbor   Auto
 ObjectReference[] Property LightsZone_FarHarbor      Auto
 ObjectReference[] Property LightsZone_Castle         Auto
 ObjectReference[] Property LightsZone_PlayerBase     Auto
 
 ; ── Emergency Backup Light References ────────────────────────────────────────
-ObjectReference[] Property EmergencyLights           Auto  ; Red backup lights per zone
+ObjectReference[] Property EmergencyLights           Auto; Red backup lights per zone; Red backup lights per zone; Red backup lights per zone; Red backup lights per zone
 
 ; ── ImageSpace Modifiers ─────────────────────────────────────────────────────
-ImageSpaceModifier Property imodEyeAdjustDark    Auto  ; Dark adaptation (entering darkness)
-ImageSpaceModifier Property imodEyeAdjustBright  Auto  ; Bright adaptation (exiting darkness)
-ImageSpaceModifier Property imodNightVision      Auto  ; Night vision effect
+ImageSpaceModifier Property imodEyeAdjustDark    Auto; Dark adaptation (entering darkness); Dark adaptation (entering darkness); Dark adaptation (entering darkness); Dark adaptation (entering darkness)
+ImageSpaceModifier Property imodEyeAdjustBright  Auto; Bright adaptation (exiting darkness); Bright adaptation (exiting darkness); Bright adaptation (exiting darkness); Bright adaptation (exiting darkness)
+ImageSpaceModifier Property imodNightVision      Auto; Night vision effect; Night vision effect; Night vision effect; Night vision effect
 
 ; ── Flicker Effect Spells (applied to actors near flickering lights) ─────────
-Spell Property spFlickerDebuff  Auto  ; Stress from flickering lights (minor)
+Spell Property spFlickerDebuff  Auto; Stress from flickering lights (minor); Stress from flickering lights (minor); Stress from flickering lights (minor); Stress from flickering lights (minor)
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property LightingEnabled        = True  Auto
@@ -113,10 +113,10 @@ bool  Property ShadowLODEnabled       = True  Auto
 bool  Property FlickerEnabled         = True  Auto
 bool  Property EyeAdaptationEnabled   = True  Auto
 bool  Property BioluminescenceEnabled = True  Auto
-float Property UpdateInterval         = 0.25  Auto  ; Every ~6 hrs game time
+float Property UpdateInterval         = 0.25  Auto; Every ~6 hrs game time; Every ~6 hrs game time; Every ~6 hrs game time; Every ~6 hrs game time
 float Property ShadowHardRadius       = 512.0  Auto
 float Property ShadowSoftRadius       = 1024.0 Auto
-float Property LightEnableRadius      = 1200.0 Auto  ; Disable lights beyond this
+float Property LightEnableRadius      = 1200.0 Auto; Disable lights beyond this; Disable lights beyond this; Disable lights beyond this; Disable lights beyond this
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 bool  _wasIndoors       = False
@@ -132,7 +132,7 @@ bool _dcPowered    = True
 bool _gnPowered    = True
 bool _fhPowered    = True
 bool _sanPowered   = True
-bool _castlePowered = False  ; Castle starts without full power
+bool _castlePowered = False; Castle starts without full power; Castle starts without full power; Castle starts without full power; Castle starts without full power
 bool _playerPowered = False
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -143,7 +143,7 @@ Event OnQuestInit()
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
-    RegisterForUpdateGameTime(UpdateInterval)
+    ScheduleTick(UpdateInterval)
 
     ; Read initial shadow budget from bridge globals
     ReadBridgeSettings()
@@ -153,21 +153,20 @@ Event OnQuestInit()
         ApplyAllPowerStates()
     EndIf
 
-    LightLog("Lighting System initialized | Shadow budget: " + _shadowBudget + \
-             " | Shadow radius: " + _shadowRadius)
+    LightLog("Lighting System initialized | Shadow budget: " + _shadowBudget + " | Shadow radius: " + _shadowRadius)
 EndEvent
 
-Event OnPlayerLoadGame(Actor akSender)
+Event Actor.OnPlayerLoadGame(Actor akSender)
     ReadBridgeSettings()
     ApplyAllPowerStates()
 EndEvent
 
-Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference akNewLoc)
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     If akNewLoc == None
         Return
     EndIf
 
-    Bool isNowIndoors  = akNewLoc.IsInterior()
+    Bool isNowIndoors  = Game.GetPlayer().IsInInterior()
     Bool isNowDark     = IsLocationDark(akNewLoc)
     Float currentHour  = _currentHour
 
@@ -195,16 +194,15 @@ Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference
         UpdateShadowLOD()
     EndIf
 
-    Debug.Trace("[AAI] LIGHTING_LOC|interior=" + isNowIndoors + \
-                "|dark=" + isNowDark + "|name=" + akNewLoc.GetDisplayName())
+    Debug.Trace("[AAI] LIGHTING_LOC|interior=" + isNowIndoors + "|dark=" + isNowDark + "|name=" + akNewLoc.GetName())
 EndEvent
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PERIODIC UPDATE
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !LightingEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
 
@@ -214,22 +212,27 @@ Event OnUpdateGameTime()
 
     ReadBridgeSettings()
 
-    If PowerGridEnabled  UpdatePowerStates()
-    If ShadowLODEnabled  UpdateShadowLOD()
+    If PowerGridEnabled
+        UpdatePowerStates()
+    EndIf
+    If ShadowLODEnabled
+        UpdateShadowLOD()
+    EndIf
 
-    Debug.Trace("[AAI] LIGHTING_STATE|hour=" + _currentHour + \
-                "|night=" + _isNight + "|shadow_budget=" + _shadowBudget + \
-                "|active_shadows=" + _activeShadowCount)
+    Debug.Trace("[AAI] LIGHTING_STATE|hour=" + _currentHour + "|night=" + _isNight + "|shadow_budget=" + _shadowBudget + "|active_shadows=" + _activeShadowCount)
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; BRIDGE SETTINGS
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ReadBridgeSettings()
-    If gShadowBudget != None  _shadowBudget = gShadowBudget.GetValue() as Int
-    If gShadowRadius != None  _shadowRadius  = gShadowRadius.GetValue()
+    If gShadowBudget != None
+        _shadowBudget = gShadowBudget.GetValue() as Int
+    EndIf
+    If gShadowRadius != None
+        _shadowRadius  = gShadowRadius.GetValue()
+    EndIf
 
     ; Clamp to safe defaults
     _shadowBudget = Math.Clamp(_shadowBudget as Float, 2.0, 16.0) as Int
@@ -240,18 +243,58 @@ EndFunction
 ; POWER GRID
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdatePowerStates()
-    Bool newDC     = gPower_DiamondCity  != None ? (gPower_DiamondCity.GetValue()  > 0.5) : True
-    Bool newGN     = gPower_Goodneighbor != None ? (gPower_Goodneighbor.GetValue() > 0.5) : True
-    Bool newFH     = gPower_FarHarbor    != None ? (gPower_FarHarbor.GetValue()    > 0.5) : True
-    Bool newSan    = gPower_SanctuaryHills != None ? (gPower_SanctuaryHills.GetValue() > 0.5) : True
-    Bool newCastle = gPower_Castle       != None ? (gPower_Castle.GetValue()       > 0.5) : False
-    Bool newPlayer = gPower_PlayerBase   != None ? (gPower_PlayerBase.GetValue()   > 0.5) : False
+    Bool newDC
+    If (gPower_DiamondCity  != None)
+        newDC = (gPower_DiamondCity.GetValue()  > 0.5)
+    Else
+        newDC = True
+    EndIf
+    Bool newGN
+    If (gPower_Goodneighbor != None)
+        newGN = (gPower_Goodneighbor.GetValue() > 0.5)
+    Else
+        newGN = True
+    EndIf
+    Bool newFH
+    If (gPower_FarHarbor    != None)
+        newFH = (gPower_FarHarbor.GetValue()    > 0.5)
+    Else
+        newFH = True
+    EndIf
+    Bool newSan
+    If (gPower_SanctuaryHills != None)
+        newSan = (gPower_SanctuaryHills.GetValue() > 0.5)
+    Else
+        newSan = True
+    EndIf
+    Bool newCastle
+    If (gPower_Castle       != None)
+        newCastle = (gPower_Castle.GetValue()       > 0.5)
+    Else
+        newCastle = False
+    EndIf
+    Bool newPlayer
+    If (gPower_PlayerBase   != None)
+        newPlayer = (gPower_PlayerBase.GetValue()   > 0.5)
+    Else
+        newPlayer = False
+    EndIf
 
-    If newDC     != _dcPowered      SetZonePower(LightsZone_DiamondCity,  newDC,     "Diamond City")
-    If newGN     != _gnPowered      SetZonePower(LightsZone_Goodneighbor, newGN,     "Goodneighbor")
-    If newFH     != _fhPowered      SetZonePower(LightsZone_FarHarbor,    newFH,     "Far Harbor")
-    If newCastle != _castlePowered  SetZonePower(LightsZone_Castle,       newCastle, "The Castle")
-    If newPlayer != _playerPowered  SetZonePower(LightsZone_PlayerBase,   newPlayer, "Player Base")
+    If newDC     != _dcPowered
+        SetZonePower(LightsZone_DiamondCity,  newDC,     "Diamond City")
+    EndIf
+    If newGN     != _gnPowered
+        SetZonePower(LightsZone_Goodneighbor, newGN,     "Goodneighbor")
+    EndIf
+    If newFH     != _fhPowered
+        SetZonePower(LightsZone_FarHarbor,    newFH,     "Far Harbor")
+    EndIf
+    If newCastle != _castlePowered
+        SetZonePower(LightsZone_Castle,       newCastle, "The Castle")
+    EndIf
+    If newPlayer != _playerPowered
+        SetZonePower(LightsZone_PlayerBase,   newPlayer, "Player Base")
+    EndIf
 
     _dcPowered     = newDC
     _gnPowered     = newGN
@@ -274,15 +317,18 @@ Function SetZonePower(ObjectReference[] lights, Bool powered, String zoneName)
         Return
     EndIf
 
-    LightLog("Zone power: " + zoneName + " → " + (powered ? "ON" : "OFF"))
+    String _fxTmp9 = "ON"
+    If !(powered)
+        _fxTmp9 = "OFF"
+    EndIf
+    LightLog("Zone power: " + zoneName + " → " + _fxTmp9)
     Debug.Trace("[AAI] POWER_ZONE|zone=" + zoneName + "|powered=" + powered)
 
     If powered
         ; Power restored — lights come on with a brief flicker-on effect
         EnableZoneLights(lights)
         ; Notify world engine (settlements celebrate power restoration)
-        Debug.Trace("[AAI] WORLD_EVENT|type=power_restored|location=" + zoneName + \
-                    "|game_time=" + Utility.GetCurrentGameTime())
+        Debug.Trace("[AAI] WORLD_EVENT|type=power_restored|location=" + zoneName + "|game_time=" + Utility.GetCurrentGameTime())
     Else
         ; Power lost — start with flicker then emergency backup
         StartPowerFailure(lights, zoneName)
@@ -298,7 +344,7 @@ Function EnableZoneLights(ObjectReference[] lights)
             ; Only enable if within visual range
             Float dist = player.GetDistance(lights[i])
             If dist <= LightEnableRadius
-                lights[i].Enable(False)  ; False = no fade in (instant — cheaper)
+                lights[i].Enable(False); False = no fade in (instant — cheaper); False = no fade in (instant — cheaper); False = no fade in (instant — cheaper); False = no fade in (instant — cheaper)
             EndIf
         EndIf
         i += 1
@@ -322,7 +368,7 @@ Function StartPowerFailure(ObjectReference[] lights, String zoneName)
             Utility.Wait(0.08)
             lights[i].Enable(False)
             Utility.Wait(0.2)
-            lights[i].Disable(False)  ; Final: power out
+            lights[i].Disable(False); Final: power out; Final: power out; Final: power out; Final: power out
         EndIf
         i += 1
     EndWhile
@@ -344,10 +390,10 @@ Function ActivateEmergencyLights()
     EndWhile
     Debug.Notification("Emergency backup lighting active.")
     ; Auto-disable after 30 game seconds (battery depletes)
-    RegisterForSingleUpdateGameTime(0.00035)  ; ~30 real seconds
+    ScheduleSingleTick(0.00035); ~30 real seconds; ~30 real seconds; ~30 real seconds; ~30 real seconds
 EndFunction
 
-Event OnSingleUpdateGameTime()
+Function DoSingleGameTimeTick()
     ; Battery depleted — emergency lights die
     If EmergencyLights != None
         Int i = 0
@@ -360,8 +406,7 @@ Event OnSingleUpdateGameTime()
     EndIf
     Debug.Notification("Emergency power exhausted. Total darkness.")
     LightLog("Emergency battery depleted")
-EndEvent
-
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; SHADOW LOD (Previs-Safe)
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -386,13 +431,13 @@ Function ApplyShadowLODToZone(ObjectReference[] lights, Actor player)
     EndIf
     Int i = 0
     While i < lights.Length
-        ObjectReference light = lights[i]
-        If light != None
-            Float dist = player.GetDistance(light)
+        ObjectReference lightRef = lights[i]
+        If lightRef != None
+            Float dist = player.GetDistance(lightRef)
             If dist <= LightEnableRadius
-                light.Enable(False)   ; Light is visible — enable
+                lightRef.Enable(False); Light is visible — enable; Light is visible — enable; Light is visible — enable; Light is visible — enable
             Else
-                light.Disable(False)  ; Too far — disable entirely (cheapest option)
+                lightRef.Disable(False); Too far — disable entirely (cheapest option); Too far — disable entirely (cheapest option); Too far — disable entirely (cheapest option); Too far — disable entirely (cheapest option)
             EndIf
         EndIf
         i += 1
@@ -454,31 +499,36 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; HELPERS
 ; ═══════════════════════════════════════════════════════════════════════════
-Bool Function IsLocationDark(ObjectReference loc)
+Bool Function IsLocationDark(Location loc)
     If loc == None
         Return False
     EndIf
-    String name = loc.GetDisplayName()
-    Return name.Find("Vault") >= 0 || name.Find("Cave") >= 0 || \
-           name.Find("Bunker") >= 0 || name.Find("Basement") >= 0 || \
-           name.Find("Subway") >= 0 || name.Find("Tunnel") >= 0
+    String name = loc.GetName()
+    Return StringUtil.Find(name, "Vault") >= 0 || StringUtil.Find(name, "Cave") >= 0 || StringUtil.Find(name, "Bunker") >= 0 || StringUtil.Find(name, "Basement") >= 0 || StringUtil.Find(name, "Subway") >= 0 || StringUtil.Find(name, "Tunnel") >= 0
 EndFunction
 
 ; Power state query API (used by settlement scripts)
 Bool Function IsZonePowered(String zoneName)
-    If zoneName.Find("Diamond") >= 0  Return _dcPowered
-    If zoneName.Find("Goodneighbor") >= 0  Return _gnPowered
-    If zoneName.Find("Far Harbor") >= 0  Return _fhPowered
-    If zoneName.Find("Castle") >= 0  Return _castlePowered
+    If StringUtil.Find(zoneName, "Diamond") >= 0
+        Return _dcPowered
+    EndIf
+    If StringUtil.Find(zoneName, "Goodneighbor") >= 0
+        Return _gnPowered
+    EndIf
+    If StringUtil.Find(zoneName, "Far Harbor") >= 0
+        Return _fhPowered
+    EndIf
+    If StringUtil.Find(zoneName, "Castle") >= 0
+        Return _castlePowered
+    EndIf
     Return _playerPowered
 EndFunction
 
 ; Generator damaged — start failure sequence
 Function OnGeneratorDamaged(String zoneName)
-    Debug.Trace("[AAI] GENERATOR_DAMAGED|zone=" + zoneName + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] GENERATOR_DAMAGED|zone=" + zoneName + "|game_time=" + Utility.GetCurrentGameTime())
     ; Set global to 0 — UpdatePowerStates will pick this up next tick
-    If zoneName.Find("Diamond") >= 0 && gPower_DiamondCity != None
+    If StringUtil.Find(zoneName, "Diamond") >= 0 && gPower_DiamondCity != None
         gPower_DiamondCity.SetValue(0.0)
     EndIf
     ; (Same pattern for other zones)
@@ -487,3 +537,25 @@ EndFunction
 Function LightLog(String msg)
     Debug.Trace("[AAI-Light] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Function ScheduleSingleTick(Float afHours)
+    StartTimerGameTime(afHours, 901)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    ElseIf aiTimerID == 901
+        DoSingleGameTimeTick()
+    EndIf
+EndEvent

@@ -27,6 +27,22 @@ See [mod/REQUIREMENTS.md](mod/REQUIREMENTS.md) for the full dependency list.
 
 See [INSTALL.md](INSTALL.md) for step-by-step instructions.
 
+## Credits & Third-Party Software
+
+This mod bundles or depends on the following third-party projects. Please support their creators.
+
+**KoboldCpp** — local AI inference engine  
+By LostRuins and contributors  
+https://github.com/LostRuins/koboldcpp  
+License: AGPL-3.0
+
+**TinyLlama 1.1B Chat v1.0** — bundled language model  
+By the TinyLlama project (https://github.com/jzhang38/TinyLlama)  
+GGUF quantisation by TheBloke (https://huggingface.co/TheBloke)  
+License: Apache 2.0
+
+---
+
 ## License
 
 MIT

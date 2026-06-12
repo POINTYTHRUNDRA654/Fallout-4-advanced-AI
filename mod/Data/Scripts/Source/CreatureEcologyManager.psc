@@ -27,11 +27,11 @@ Keyword Property kwdBloatfly      Auto
 Keyword Property kwdGlowingOne    Auto
 Keyword Property kwdMolerat       Auto
 Keyword Property kwdStingwing     Auto
-Keyword Property kwdBrahmin       Auto   ; Prey animal — domesticated
-Keyword Property kwdRadstag       Auto   ; Prey animal — wild deer-like
+Keyword Property kwdBrahmin       Auto; Prey animal — domesticated; Prey animal — domesticated; Prey animal — domesticated; Prey animal — domesticated
+Keyword Property kwdRadstag       Auto; Prey animal — wild deer-like; Prey animal — wild deer-like; Prey animal — wild deer-like; Prey animal — wild deer-like
 
 ; ── Scavenger Spawn ───────────────────────────────────────────────────────────
-ActorBase Property scavBloatfly   Auto   ; Spawned after battles
+ActorBase Property scavBloatfly   Auto; Spawned after battles; Spawned after battles; Spawned after battles; Spawned after battles
 ActorBase Property scavRadroach   Auto
 ActorBase Property scavBloodbug   Auto
 
@@ -40,8 +40,8 @@ bool  Property EcologyEnabled        = True  Auto
 bool  Property PredatorPreyEnabled   = True  Auto
 bool  Property ScavengerSpawnEnabled = True  Auto
 bool  Property TerritoryEnabled      = True  Auto
-float Property EcologyUpdateInterval = 0.25  Auto  ; Every ~6 hrs game time
-float Property ScavengerSpawnDelay   = 20.0  Auto  ; Real seconds after battle
+float Property EcologyUpdateInterval = 0.25  Auto; Every ~6 hrs game time; Every ~6 hrs game time; Every ~6 hrs game time; Every ~6 hrs game time
+float Property ScavengerSpawnDelay   = 20.0  Auto; Real seconds after battle; Real seconds after battle; Real seconds after battle; Real seconds after battle
 
 ; ── Population Pressure ───────────────────────────────────────────────────────
 ; Tracked by bridge — these globals updated from bridge data
@@ -52,7 +52,7 @@ GlobalVariable Property gYaoGuaiKills      Auto
 
 ; ── State ─────────────────────────────────────────────────────────────────────
 float _lastEcologyUpdate = 0.0
-int   _battleCount       = 0      ; Battles near player this session
+int   _battleCount       = 0; Battles near player this session; Battles near player this session; Battles near player this session; Battles near player this session
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PREDATOR/PREY RELATIONSHIP TABLE
@@ -76,29 +76,28 @@ Event OnQuestInit()
     EndIf
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(EcologyUpdateInterval)
+    ScheduleTick(EcologyUpdateInterval)
     EcoLog("Ecology system initialized")
 EndEvent
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PERIODIC ECOLOGY UPDATE
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !EcologyEnabled
-        RegisterForUpdateGameTime(EcologyUpdateInterval)
+        ScheduleTick(EcologyUpdateInterval)
         Return
     EndIf
 
     Actor player = Game.GetPlayer()
-    Actor[] nearbyCreatures = player.GetActorsInRange(3000.0, 20)
+    Actor[] nearbyCreatures = MiscUtil.ScanActors(player, 3000.0, 20)
 
     UpdatePredatorPreyChains(nearbyCreatures)
     UpdateTerritoryDisputes(nearbyCreatures)
     UpdatePreyFleeResponse(nearbyCreatures, player)
 
-    RegisterForUpdateGameTime(EcologyUpdateInterval)
-EndEvent
-
+    ScheduleTick(EcologyUpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PREDATOR / PREY CHAINS
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -112,7 +111,7 @@ Function UpdatePredatorPreyChains(Actor[] creatures)
         Actor predator = creatures[i]
         If predator == None || predator.IsDead() || predator.IsInCombat()
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
 
         ; Find prey for this predator
@@ -140,7 +139,7 @@ Actor Function FindPreyFor(Actor predator, Actor[] candidates)
         Actor candidate = candidates[i]
         If candidate == None || candidate == predator || candidate.IsDead()
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
 
         Bool isPrey = False
@@ -151,25 +150,19 @@ Actor Function FindPreyFor(Actor predator, Actor[] candidates)
 
         ; Yao Guai — hunts Molerat, Radroach, Bloatfly; rivals Deathclaw
         ElseIf kwdYaoGuai != None && predator.HasKeyword(kwdYaoGuai)
-            isPrey = (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || \
-                     (kwdRadroach != None && candidate.HasKeyword(kwdRadroach)) || \
-                     (kwdBrahmin  != None && candidate.HasKeyword(kwdBrahmin))
+            isPrey = (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadroach != None && candidate.HasKeyword(kwdRadroach)) || (kwdBrahmin  != None && candidate.HasKeyword(kwdBrahmin))
 
         ; Radscorpion — hunts Brahmin, Molerat
         ElseIf kwdRadscorpion != None && predator.HasKeyword(kwdRadscorpion)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || \
-                     (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || \
-                     (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
 
         ; Bloodbug — hunts Brahmin, Radstag
         ElseIf kwdBloodbug != None && predator.HasKeyword(kwdBloodbug)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || \
-                     (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
 
         ; Mirelurk — hunts anything near water; rivals Radscorpion
         ElseIf kwdMirelurk != None && predator.HasKeyword(kwdMirelurk)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || \
-                     (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
         EndIf
 
         If isPrey
@@ -187,13 +180,7 @@ Actor Function FindPreyFor(Actor predator, Actor[] candidates)
 EndFunction
 
 Bool Function IsAnimal(Actor akTarget)
-    Return kwdDeathclaw != None && akTarget.HasKeyword(kwdDeathclaw) || \
-           kwdRadscorpion != None && akTarget.HasKeyword(kwdRadscorpion) || \
-           kwdMirelurk != None && akTarget.HasKeyword(kwdMirelurk) || \
-           kwdYaoGuai != None && akTarget.HasKeyword(kwdYaoGuai) || \
-           kwdBrahmin != None && akTarget.HasKeyword(kwdBrahmin) || \
-           kwdMolerat != None && akTarget.HasKeyword(kwdMolerat) || \
-           kwdRadstag != None && akTarget.HasKeyword(kwdRadstag)
+    Return kwdDeathclaw != None && akTarget.HasKeyword(kwdDeathclaw) || kwdRadscorpion != None && akTarget.HasKeyword(kwdRadscorpion) || kwdMirelurk != None && akTarget.HasKeyword(kwdMirelurk) || kwdYaoGuai != None && akTarget.HasKeyword(kwdYaoGuai) || kwdBrahmin != None && akTarget.HasKeyword(kwdBrahmin) || kwdMolerat != None && akTarget.HasKeyword(kwdMolerat) || kwdRadstag != None && akTarget.HasKeyword(kwdRadstag)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -210,7 +197,7 @@ Function UpdateTerritoryDisputes(Actor[] creatures)
         Actor creatureA = creatures[i]
         If creatureA == None || creatureA.IsDead() || creatureA.IsInCombat()
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
 
         Int j = i + 1
@@ -218,7 +205,7 @@ Function UpdateTerritoryDisputes(Actor[] creatures)
             Actor creatureB = creatures[j]
             If creatureB == None || creatureB.IsDead() || creatureB.IsInCombat()
                 j += 1
-                Continue
+                ; TODO: 'Continue' removed — refactor loop to skip remaining body
             EndIf
 
             If AreRivals(creatureA, creatureB)
@@ -227,8 +214,7 @@ Function UpdateTerritoryDisputes(Actor[] creatures)
                     ; Territorial dispute — fight
                     creatureA.StartCombat(creatureB)
                     creatureB.StartCombat(creatureA)
-                    EcoLog("Territory dispute: " + creatureA.GetDisplayName() + \
-                           " vs " + creatureB.GetDisplayName())
+                    EcoLog("Territory dispute: " + creatureA.GetDisplayName() + " vs " + creatureB.GetDisplayName())
                 EndIf
             EndIf
 
@@ -241,16 +227,14 @@ EndFunction
 Bool Function AreRivals(Actor a, Actor b)
     ; Deathclaw vs Yao Guai — apex territory rivals
     If kwdDeathclaw != None && kwdYaoGuai != None
-        If (a.HasKeyword(kwdDeathclaw) && b.HasKeyword(kwdYaoGuai)) || \
-           (a.HasKeyword(kwdYaoGuai)   && b.HasKeyword(kwdDeathclaw))
+        If (a.HasKeyword(kwdDeathclaw) && b.HasKeyword(kwdYaoGuai)) || (a.HasKeyword(kwdYaoGuai)   && b.HasKeyword(kwdDeathclaw))
             Return True
         EndIf
     EndIf
 
     ; Radscorpion vs Mirelurk — coastal territory
     If kwdRadscorpion != None && kwdMirelurk != None
-        If (a.HasKeyword(kwdRadscorpion) && b.HasKeyword(kwdMirelurk)) || \
-           (a.HasKeyword(kwdMirelurk)    && b.HasKeyword(kwdRadscorpion))
+        If (a.HasKeyword(kwdRadscorpion) && b.HasKeyword(kwdMirelurk)) || (a.HasKeyword(kwdMirelurk)    && b.HasKeyword(kwdRadscorpion))
             Return True
         EndIf
     EndIf
@@ -281,7 +265,7 @@ Function UpdatePreyFleeResponse(Actor[] creatures, Actor player)
         Actor c = creatures[i]
         If c == None || c.IsDead()
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
         If IsPredatorSpecies(c)
             predators[predators.Length] = c
@@ -303,7 +287,7 @@ Function UpdatePreyFleeResponse(Actor[] creatures, Actor player)
                 ; Prey detects predator — flee
                 ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
                 If avConf != None
-                    preyActor.SetValue(avConf, 0.0)  ; Coward — will flee
+                    preyActor.SetValue(avConf, 0.0); Coward — will flee; Coward — will flee; Coward — will flee; Coward — will flee
                 EndIf
                 preyActor.EvaluatePackage()
                 EcoLog(preyActor.GetDisplayName() + " flees from " + predActor.GetDisplayName())
@@ -315,23 +299,17 @@ Function UpdatePreyFleeResponse(Actor[] creatures, Actor player)
 EndFunction
 
 Bool Function IsPredatorSpecies(Actor c)
-    Return (kwdDeathclaw   != None && c.HasKeyword(kwdDeathclaw))   || \
-           (kwdYaoGuai     != None && c.HasKeyword(kwdYaoGuai))     || \
-           (kwdRadscorpion != None && c.HasKeyword(kwdRadscorpion)) || \
-           (kwdBloodbug    != None && c.HasKeyword(kwdBloodbug))    || \
-           (kwdGlowingOne  != None && c.HasKeyword(kwdGlowingOne))
+    Return (kwdDeathclaw   != None && c.HasKeyword(kwdDeathclaw))   || (kwdYaoGuai     != None && c.HasKeyword(kwdYaoGuai))     || (kwdRadscorpion != None && c.HasKeyword(kwdRadscorpion)) || (kwdBloodbug    != None && c.HasKeyword(kwdBloodbug))    || (kwdGlowingOne  != None && c.HasKeyword(kwdGlowingOne))
 EndFunction
 
 Bool Function IsPreySpecies(Actor c)
-    Return (kwdBrahmin  != None && c.HasKeyword(kwdBrahmin)) || \
-           (kwdRadstag  != None && c.HasKeyword(kwdRadstag)) || \
-           (kwdMolerat  != None && c.HasKeyword(kwdMolerat))
+    Return (kwdBrahmin  != None && c.HasKeyword(kwdBrahmin)) || (kwdRadstag  != None && c.HasKeyword(kwdRadstag)) || (kwdMolerat  != None && c.HasKeyword(kwdMolerat))
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; SCAVENGER SPAWNING — After a big fight, scavengers arrive
 ; ═══════════════════════════════════════════════════════════════════════════
-Function OnLargeBattleEnded(ObjectReference battleLocation, int corpsesFound)
+Function OnLargeBattleEnded(ObjectReference battleLocation, Int corpsesFound)
     If !ScavengerSpawnEnabled || battleLocation == None
         Return
     EndIf
@@ -339,9 +317,7 @@ Function OnLargeBattleEnded(ObjectReference battleLocation, int corpsesFound)
     _battleCount += 1
 
     ; Log for bridge population tracking
-    Debug.Trace("[AAI] ECOLOGY_BATTLE|location=" + battleLocation.GetDisplayName() + \
-                "|corpses=" + corpsesFound + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] ECOLOGY_BATTLE|location=" + battleLocation.GetDisplayName() + "|corpses=" + corpsesFound + "|game_time=" + Utility.GetCurrentGameTime())
 
     ; More corpses = more scavengers
     If corpsesFound >= 3
@@ -350,7 +326,7 @@ Function OnLargeBattleEnded(ObjectReference battleLocation, int corpsesFound)
     EndIf
 EndFunction
 
-Function SpawnScavengers(ObjectReference location, Int corpseCount)
+Function SpawnScavengers(ObjectReference akSpawnLoc, Int corpseCount)
     Int scavCount = Math.Min(corpseCount / 2, 4) as Int
 
     Int i = 0
@@ -368,14 +344,14 @@ Function SpawnScavengers(ObjectReference location, Int corpseCount)
         EndIf
 
         If scavBase != None
-            Actor spawned = location.PlaceActorAtMe(scavBase, 1) as Actor
+            Actor spawned = akSpawnLoc.PlaceActorAtMe(scavBase, 1) as Actor
             If spawned != None
                 ; Scavengers start feeding, not aggressive unless provoked
                 ActorValue avAggr = Game.GetFormFromFile(0x000002E7, "Fallout4.esm") as ActorValue
                 If avAggr != None
                     spawned.SetValue(avAggr, 20.0)
                 EndIf
-                EcoLog("Scavenger spawned: " + spawned.GetDisplayName() + " at " + location.GetDisplayName())
+                EcoLog("Scavenger spawned: " + spawned.GetDisplayName() + " at " + akSpawnLoc.GetDisplayName())
             EndIf
         EndIf
         i += 1
@@ -403,3 +379,19 @@ EndFunction
 Function EcoLog(String msg)
     Debug.Trace("[AAI-Ecology] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

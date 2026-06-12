@@ -17,59 +17,59 @@ Keyword  Property kwdSynthGen2    Auto
 Keyword  Property kwdSynthCourser Auto
 
 ; Abilities
-Spell    Property spLaserCharge     Auto  ; Assaultron head laser
-Spell    Property spEMPBlast        Auto  ; EMP burst (Protectron)
-Spell    Property spRocketBarrage   Auto  ; Sentry Bot missiles
-Explosion Property expSelfDestruct  Auto  ; Self-destruct explosion
+Spell    Property spLaserCharge     Auto; Assaultron head laser; Assaultron head laser; Assaultron head laser; Assaultron head laser
+Spell    Property spEMPBlast        Auto; EMP burst (Protectron); EMP burst (Protectron); EMP burst (Protectron); EMP burst (Protectron)
+Spell    Property spRocketBarrage   Auto; Sentry Bot missiles; Sentry Bot missiles; Sentry Bot missiles; Sentry Bot missiles
+Explosion Property expSelfDestruct  Auto; Self-destruct explosion; Self-destruct explosion; Self-destruct explosion; Self-destruct explosion
 
 CombatStyle Property csRobotPrecision  Auto
 CombatStyle Property csCourserTactics  Auto
 
 ; ── Self-Repair ───────────────────────────────────────────────────────────
 bool  Property CanSelfRepair      = True  Auto
-float Property SelfRepairAmount   = 25.0  Auto  ; HP restored per repair trigger
-float Property SelfRepairCooldown = 30.0  Auto  ; Real seconds between repairs
-float Property SelfRepairThreshold = 0.40 Auto  ; Trigger at 40% HP
+float Property SelfRepairAmount   = 25.0  Auto; HP restored per repair trigger; HP restored per repair trigger; HP restored per repair trigger; HP restored per repair trigger
+float Property SelfRepairCooldown = 30.0  Auto; Real seconds between repairs; Real seconds between repairs; Real seconds between repairs; Real seconds between repairs
+float Property SelfRepairThreshold = 0.40 Auto; Trigger at 40% HP; Trigger at 40% HP; Trigger at 40% HP; Trigger at 40% HP
 
 ; ── Targeting ─────────────────────────────────────────────────────────────
-bool  Property PrioritizeArmor    = False Auto  ; Aim for armor pieces
-bool  Property PrioritizeStealth  = False Auto  ; Hunt stealthed targets
+bool  Property PrioritizeArmor    = False Auto; Aim for armor pieces; Aim for armor pieces; Aim for armor pieces; Aim for armor pieces
+bool  Property PrioritizeStealth  = False Auto; Hunt stealthed targets; Hunt stealthed targets; Hunt stealthed targets; Hunt stealthed targets
 
 ; ── State ─────────────────────────────────────────────────────────────────
 bool  _repairOnCooldown = False
 bool  _laserCharging    = False
 float _lastRepairTime   = 0.0
-Actor _self             = None
+Actor _actor             = None
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
-    _self = GetActorReference()
-    If _self == None
+    _actor = GetActorReference() as Actor
+    If _actor == None
         Return
     EndIf
 
     ; Robots never flee — max confidence
     ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
     If avConf != None
-        _self.SetValue(avConf, 100.0)
+        _actor.SetValue(avConf, 100.0)
     EndIf
 
     ; Apply robot-specific combat style
-    If kwdSynthCourser != None && _self.HasKeyword(kwdSynthCourser) && csCourserTactics != None
-        _self.SetCombatStyle(csCourserTactics)
+    If kwdSynthCourser != None && _actor.HasKeyword(kwdSynthCourser) && csCourserTactics != None
+        _actor.SetCombatStyle(csCourserTactics)
     ElseIf csRobotPrecision != None
-        _self.SetCombatStyle(csRobotPrecision)
+        _actor.SetCombatStyle(csRobotPrecision)
     EndIf
 
-    RegisterForRemoteEvent(_self, "OnCombatStateChanged")
-    RegisterForRemoteEvent(_self, "OnHit")
-    RegisterForRemoteEvent(_self, "OnDeath")
+    RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
+    RegisterForHitEvent(_actor)
+    RegisterForRemoteEvent(_actor, "OnDeath")
 EndEvent
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; COMBAT
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
     If aeCombatState == 1
         ActivateRobotProtocols()
     EndIf
@@ -77,61 +77,61 @@ EndEvent
 
 Function ActivateRobotProtocols()
     ; Assaultron: begin laser charge cycle
-    If kwdAssaultron != None && _self.HasKeyword(kwdAssaultron)
+    If kwdAssaultron != None && _actor.HasKeyword(kwdAssaultron)
         _laserCharging = True
-        RegisterForUpdateGameTime(0.01)  ; ~15s game time
+        ScheduleTick(0.01); ~15s game time; ~15s game time; ~15s game time; ~15s game time
     EndIf
 
     ; Eyebot: activate alarm — call nearby hostiles
-    If kwdEyebot != None && _self.HasKeyword(kwdEyebot)
+    If kwdEyebot != None && _actor.HasKeyword(kwdEyebot)
         AlertNearbyRobots()
     EndIf
 
     ; Courser: teleport to optimal position
-    If kwdSynthCourser != None && _self.HasKeyword(kwdSynthCourser)
-        RegisterForUpdateGameTime(0.03)  ; Teleport reposition
+    If kwdSynthCourser != None && _actor.HasKeyword(kwdSynthCourser)
+        ScheduleTick(0.03); Teleport reposition; Teleport reposition; Teleport reposition; Teleport reposition
     EndIf
 
-    _self.EvaluatePackage()
+    _actor.EvaluatePackage()
 EndFunction
 
-Event OnUpdateGameTime()
-    If _self == None || _self.IsDead()
+Function DoGameTimeTick()
+    If _actor == None || _actor.IsDead()
         Return
     EndIf
 
     ; Assaultron laser charge
-    If _laserCharging && spLaserCharge != None && _self.IsInCombat()
-        Actor target = _self.GetCombatTarget() as Actor
+    If _laserCharging && spLaserCharge != None && _actor.IsInCombat()
+        Actor target = _actor.GetCombatTarget() as Actor
         If target != None
-            _self.CastSpell(spLaserCharge, target)
-            Debug.Trace("[AAI-Robot] Assaultron laser fired: " + _self.GetDisplayName())
+            spLaserCharge.Cast(_actor, target)
+            Debug.Trace("[AAI-Robot] Assaultron laser fired: " + _actor.GetDisplayName())
         EndIf
-        RegisterForUpdateGameTime(0.05)  ; Fire again after cooldown
+        ScheduleTick(0.05); Fire again after cooldown; Fire again after cooldown; Fire again after cooldown; Fire again after cooldown
     EndIf
 
     ; Courser reposition (teleport-like movement)
-    If kwdSynthCourser != None && _self.HasKeyword(kwdSynthCourser) && _self.IsInCombat()
-        Actor target = _self.GetCombatTarget() as Actor
+    If kwdSynthCourser != None && _actor.HasKeyword(kwdSynthCourser) && _actor.IsInCombat()
+        Actor target = _actor.GetCombatTarget() as Actor
         If target != None
             ; Move to a position flanking the target
-            _self.EvaluatePackage()
+            _actor.EvaluatePackage()
         EndIf
-        RegisterForUpdateGameTime(0.08)
+        ScheduleTick(0.08)
     EndIf
-EndEvent
-
-Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked, string apMaterial)
+EndFunction
+Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, Bool abPowerAttack, Bool abSneakAttack, Bool abBashAttack, Bool abHitBlocked, String apMaterial)
+    RegisterForHitEvent(_actor); hit events are single-shot in FO4 — re-arm immediately
     ; Self-repair check
     If CanSelfRepair && !_repairOnCooldown
         CheckSelfRepair()
     EndIf
 
     ; Sentry Bot: if critically hit, activate missile barrage
-    If kwdSentryBot != None && _self.HasKeyword(kwdSentryBot) && spRocketBarrage != None
+    If kwdSentryBot != None && _actor.HasKeyword(kwdSentryBot) && spRocketBarrage != None
         Actor aggressor = akAggressor as Actor
         If aggressor != None
-            _self.CastSpell(spRocketBarrage, aggressor)
+            spRocketBarrage.Cast(_actor, aggressor)
         EndIf
     EndIf
 EndEvent
@@ -144,18 +144,18 @@ Function CheckSelfRepair()
     If avHP == None
         Return
     EndIf
-    Float maxHP = _self.GetBaseValue(avHP)
-    Float curHP = _self.GetValue(avHP)
+    Float maxHP = _actor.GetBaseValue(avHP)
+    Float curHP = _actor.GetValue(avHP)
     If maxHP <= 0
         Return
     EndIf
 
     If (curHP / maxHP) <= SelfRepairThreshold
-        _self.RestoreValue(avHP, SelfRepairAmount)
+        _actor.RestoreValue(avHP, SelfRepairAmount)
         _repairOnCooldown = True
         Utility.Wait(SelfRepairCooldown)
         _repairOnCooldown = False
-        Debug.Trace("[AAI-Robot] Self-repaired: " + _self.GetDisplayName() + " +" + SelfRepairAmount + "HP")
+        Debug.Trace("[AAI-Robot] Self-repaired: " + _actor.GetDisplayName() + " +" + SelfRepairAmount + "HP")
     EndIf
 EndFunction
 
@@ -164,14 +164,12 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 Function AlertNearbyRobots()
     Actor player = Game.GetPlayer()
-    Actor[] nearby = _self.GetActorsInRange(3000.0, 10)
+    Actor[] nearby = MiscUtil.ScanActors(_actor, 3000.0, 10)
     Int i = 0
     While i < nearby.Length
         Actor bot = nearby[i]
-        If bot != None && bot != _self && !bot.IsDead()
-            If (kwdAssaultron != None && bot.HasKeyword(kwdAssaultron)) || \
-               (kwdSentryBot  != None && bot.HasKeyword(kwdSentryBot))  || \
-               (kwdSynthGen2  != None && bot.HasKeyword(kwdSynthGen2))
+        If bot != None && bot != _actor && !bot.IsDead()
+            If (kwdAssaultron != None && bot.HasKeyword(kwdAssaultron)) || (kwdSentryBot  != None && bot.HasKeyword(kwdSentryBot))  || (kwdSynthGen2  != None && bot.HasKeyword(kwdSynthGen2))
                 If !bot.IsInCombat()
                     bot.StartCombat(player)
                 EndIf
@@ -185,17 +183,33 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; DEATH — Self-Destruct
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnDeath(Actor akKiller)
+Event Actor.OnDeath(Actor akSender, Actor akKiller)
     _laserCharging = False
 
     ; Sentry Bot: explode on death
-    If kwdSentryBot != None && _self.HasKeyword(kwdSentryBot) && expSelfDestruct != None
-        _self.PlaceAtMe(expSelfDestruct)
+    If kwdSentryBot != None && _actor.HasKeyword(kwdSentryBot) && expSelfDestruct != None
+        _actor.PlaceAtMe(expSelfDestruct)
         Debug.Notification("SENTRY BOT SELF-DESTRUCT!")
     EndIf
 
     ; Assaultron: head laser deactivates
-    If kwdAssaultron != None && _self.HasKeyword(kwdAssaultron) && expSelfDestruct != None
-        _self.PlaceAtMe(expSelfDestruct)
+    If kwdAssaultron != None && _actor.HasKeyword(kwdAssaultron) && expSelfDestruct != None
+        _actor.PlaceAtMe(expSelfDestruct)
+    EndIf
+EndEvent
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
     EndIf
 EndEvent

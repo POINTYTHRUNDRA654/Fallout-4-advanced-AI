@@ -47,34 +47,34 @@
 Scriptname ModAwareEcology extends Quest
 
 Quest Property AAIQuest             Auto
-Quest Property EnvManager           Auto  ; EnvironmentalAIManager
-Quest Property CreatureEcoManager   Auto  ; CreatureEcologyManager
-Quest Property WaterSim             Auto  ; WaterSimulation
+Quest Property EnvManager           Auto; EnvironmentalAIManager; EnvironmentalAIManager; EnvironmentalAIManager; EnvironmentalAIManager
+Quest Property CreatureEcoManager   Auto; CreatureEcologyManager; CreatureEcologyManager; CreatureEcologyManager; CreatureEcologyManager
+Quest Property WaterSim             Auto; WaterSimulation; WaterSimulation; WaterSimulation; WaterSimulation
 
 ; ── Mod Awareness GlobalVariables (set by bridge, read here) ─────────────────
 ; Vegetation
-GlobalVariable Property gAAI_VegRainMult    Auto  ; 1.0 = vanilla, 2.0 = double rain
-GlobalVariable Property gAAI_VegStealthAdd  Auto  ; 0.0–0.4 stealth bonus from foliage
-GlobalVariable Property gAAI_VegDetReduce   Auto  ; 0.0–0.35 reduction in NPC detection
-GlobalVariable Property gAAI_VegCount       Auto  ; How many vegetation mods
+GlobalVariable Property gAAI_VegRainMult    Auto; 1.0 = vanilla, 2.0 = double rain; 1.0 = vanilla, 2.0 = double rain; 1.0 = vanilla, 2.0 = double rain; 1.0 = vanilla, 2.0 = double rain
+GlobalVariable Property gAAI_VegStealthAdd  Auto; 0.0–0.4 stealth bonus from foliage; 0.0–0.4 stealth bonus from foliage; 0.0–0.4 stealth bonus from foliage; 0.0–0.4 stealth bonus from foliage
+GlobalVariable Property gAAI_VegDetReduce   Auto; 0.0–0.35 reduction in NPC detection; 0.0–0.35 reduction in NPC detection; 0.0–0.35 reduction in NPC detection; 0.0–0.35 reduction in NPC detection
+GlobalVariable Property gAAI_VegCount       Auto; How many vegetation mods; How many vegetation mods; How many vegetation mods; How many vegetation mods
 
 ; Fish / Aquatic
-GlobalVariable Property gAAI_FishPresent    Auto  ; 1 = fish mods active
-GlobalVariable Property gAAI_AquaticWeb     Auto  ; 1 = full food web active
+GlobalVariable Property gAAI_FishPresent    Auto; 1 = fish mods active; 1 = fish mods active; 1 = fish mods active; 1 = fish mods active
+GlobalVariable Property gAAI_AquaticWeb     Auto; 1 = full food web active; 1 = full food web active; 1 = full food web active; 1 = full food web active
 
 ; Special Biomes
-GlobalVariable Property gAAI_GSJungle       Auto  ; 1 = Glowing Sea is jungle
-GlobalVariable Property gAAI_LivingOcean    Auto  ; 1 = Living Ocean active
-GlobalVariable Property gAAI_TidalActive    Auto  ; 1 = tidal patterns active
+GlobalVariable Property gAAI_GSJungle       Auto; 1 = Glowing Sea is jungle; 1 = Glowing Sea is jungle; 1 = Glowing Sea is jungle; 1 = Glowing Sea is jungle
+GlobalVariable Property gAAI_LivingOcean    Auto; 1 = Living Ocean active; 1 = Living Ocean active; 1 = Living Ocean active; 1 = Living Ocean active
+GlobalVariable Property gAAI_TidalActive    Auto; 1 = tidal patterns active; 1 = tidal patterns active; 1 = tidal patterns active; 1 = tidal patterns active
 
 ; Weather / Lighting
-GlobalVariable Property gAAI_StormMult      Auto  ; 1.0 = vanilla storms
-GlobalVariable Property gAAI_DarknessMult   Auto  ; 1.0 = vanilla darkness
+GlobalVariable Property gAAI_StormMult      Auto; 1.0 = vanilla storms; 1.0 = vanilla storms; 1.0 = vanilla storms; 1.0 = vanilla storms
+GlobalVariable Property gAAI_DarknessMult   Auto; 1.0 = vanilla darkness; 1.0 = vanilla darkness; 1.0 = vanilla darkness; 1.0 = vanilla darkness
 
 ; Compatibility
-GlobalVariable Property gAAI_ArbitrationMode Auto  ; 1 = skip detection overrides
-GlobalVariable Property gAAI_SimSettlements  Auto  ; 1 = SS2 present
-GlobalVariable Property gAAI_SurvivalMode    Auto  ; 1 = survival mode
+GlobalVariable Property gAAI_ArbitrationMode Auto; 1 = skip detection overrides; 1 = skip detection overrides; 1 = skip detection overrides; 1 = skip detection overrides
+GlobalVariable Property gAAI_SimSettlements  Auto; 1 = SS2 present; 1 = SS2 present; 1 = SS2 present; 1 = SS2 present
+GlobalVariable Property gAAI_SurvivalMode    Auto; 1 = survival mode; 1 = survival mode; 1 = survival mode; 1 = survival mode
 
 ; ── Location References (for biome checks) ────────────────────────────────────
 Location Property locGlowingSea     Auto
@@ -83,14 +83,14 @@ Location Property locNukaWorld      Auto
 
 ; ── Glowing Sea Creature Keywords ────────────────────────────────────────────
 ; When GS Jungle active, these creature types become dominant in the GS
-Keyword Property kwdJungleVariant   Auto  ; Custom keyword: AAI_JungleVariant
+Keyword Property kwdJungleVariant   Auto; Custom keyword: AAI_JungleVariant; Custom keyword: AAI_JungleVariant; Custom keyword: AAI_JungleVariant; Custom keyword: AAI_JungleVariant
 Keyword Property kwdDeathclaw       Auto
 Keyword Property kwdFogCrawler      Auto
 Keyword Property kwdMirelurk        Auto
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property ModAwarenessEnabled  = True  Auto
-float Property UpdateInterval       = 0.5   Auto  ; Every ~12 hrs game time
+float Property UpdateInterval       = 0.5   Auto; Every ~12 hrs game time; Every ~12 hrs game time; Every ~12 hrs game time; Every ~12 hrs game time
 String Property EcosystemFilePath   = "AdvancedAI_EcosystemState.json" Auto Const
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
@@ -117,16 +117,16 @@ Event OnQuestInit()
     EndIf
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(UpdateInterval)
+    ScheduleTick(UpdateInterval)
 
     ; Read initial state
     ReadEcosystemState()
 
-    ModLog("Mod-Aware Ecology initialized — " + _vegCount + " vegetation mods, fish=" + _fishPresent + ", GS jungle=" + _gsJungleActive)
+    ModLog("%-Aware Ecology initialized — " + _vegCount + " vegetation mods, fish=" + _fishPresent + ", GS jungle=" + _gsJungleActive)
     _initialized = True
 EndEvent
 
-Event OnPlayerLoadGame(Actor akSender)
+Event Actor.OnPlayerLoadGame(Actor akSender)
     ; Re-read on every load (player may have added mods)
     ReadEcosystemState()
     ApplyAllAdaptations()
@@ -139,51 +139,120 @@ Function ReadEcosystemState()
     ; Read from GlobalVariables (bridge writes these via MCM Helper globals)
     ; Fallback to defaults if not set
 
-    _vegCount      = gAAI_VegCount      != None ? gAAI_VegCount.GetValue()      : 0.0
-    _vegRainMult   = gAAI_VegRainMult   != None ? gAAI_VegRainMult.GetValue()   : 1.0
-    _vegStealthAdd = gAAI_VegStealthAdd != None ? gAAI_VegStealthAdd.GetValue() : 0.0
-    _vegDetReduce  = gAAI_VegDetReduce  != None ? gAAI_VegDetReduce.GetValue()  : 0.0
-    _fishPresent   = gAAI_FishPresent   != None ? (gAAI_FishPresent.GetValue() > 0.5) : False
-    _aquaticWebActive = gAAI_AquaticWeb != None ? (gAAI_AquaticWeb.GetValue() > 0.5) : False
-    _gsJungleActive   = gAAI_GSJungle   != None ? (gAAI_GSJungle.GetValue() > 0.5)   : False
-    _livingOceanActive = gAAI_LivingOcean != None ? (gAAI_LivingOcean.GetValue() > 0.5) : False
-    _tidalActive      = gAAI_TidalActive != None ? (gAAI_TidalActive.GetValue() > 0.5) : False
-    _stormMult       = gAAI_StormMult   != None ? gAAI_StormMult.GetValue()   : 1.0
-    _darknessMult    = gAAI_DarknessMult != None ? gAAI_DarknessMult.GetValue() : 1.0
-    _arbitrationMode = gAAI_ArbitrationMode != None ? (gAAI_ArbitrationMode.GetValue() > 0.5) : False
-    _survivalMode    = gAAI_SurvivalMode != None ? (gAAI_SurvivalMode.GetValue() > 0.5) : False
+    If (gAAI_VegCount      != None)
+        _vegCount = gAAI_VegCount.GetValue()
+    Else
+        _vegCount = 0.0
+    EndIf
+    If (gAAI_VegRainMult   != None)
+        _vegRainMult = gAAI_VegRainMult.GetValue()
+    Else
+        _vegRainMult = 1.0
+    EndIf
+    If (gAAI_VegStealthAdd != None)
+        _vegStealthAdd = gAAI_VegStealthAdd.GetValue()
+    Else
+        _vegStealthAdd = 0.0
+    EndIf
+    If (gAAI_VegDetReduce  != None)
+        _vegDetReduce = gAAI_VegDetReduce.GetValue()
+    Else
+        _vegDetReduce = 0.0
+    EndIf
+    If (gAAI_FishPresent   != None)
+        _fishPresent = (gAAI_FishPresent.GetValue() > 0.5)
+    Else
+        _fishPresent = False
+    EndIf
+    If (gAAI_AquaticWeb != None)
+        _aquaticWebActive = (gAAI_AquaticWeb.GetValue() > 0.5)
+    Else
+        _aquaticWebActive = False
+    EndIf
+    If (gAAI_GSJungle   != None)
+        _gsJungleActive = (gAAI_GSJungle.GetValue() > 0.5)
+    Else
+        _gsJungleActive = False
+    EndIf
+    If (gAAI_LivingOcean != None)
+        _livingOceanActive = (gAAI_LivingOcean.GetValue() > 0.5)
+    Else
+        _livingOceanActive = False
+    EndIf
+    If (gAAI_TidalActive != None)
+        _tidalActive = (gAAI_TidalActive.GetValue() > 0.5)
+    Else
+        _tidalActive = False
+    EndIf
+    If (gAAI_StormMult   != None)
+        _stormMult = gAAI_StormMult.GetValue()
+    Else
+        _stormMult = 1.0
+    EndIf
+    If (gAAI_DarknessMult != None)
+        _darknessMult = gAAI_DarknessMult.GetValue()
+    Else
+        _darknessMult = 1.0
+    EndIf
+    If (gAAI_ArbitrationMode != None)
+        _arbitrationMode = (gAAI_ArbitrationMode.GetValue() > 0.5)
+    Else
+        _arbitrationMode = False
+    EndIf
+    If (gAAI_SurvivalMode != None)
+        _survivalMode = (gAAI_SurvivalMode.GetValue() > 0.5)
+    Else
+        _survivalMode = False
+    EndIf
 
     ; Also try to read from the JSON file for detailed data
     If JsonUtil.JsonExists(EcosystemFilePath)
-        ModLog("Ecosystem state JSON found — reading detailed adaptation data")
+        ModLog("Ecosystem stateVal JSON found — reading detailed adaptation data")
     EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PERIODIC TICK — Apply adaptations
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !ModAwarenessEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
 
     ApplyAllAdaptations()
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 Function ApplyAllAdaptations()
     ; Apply each system's adaptations based on current mod state
-    If _vegCount > 0         ApplyVegetationAdaptations()
-    If _fishPresent          ApplyFishEcosystem()
-    If _gsJungleActive       ApplyGlowingSeaJungle()
-    If _livingOceanActive    ApplyLivingOcean()
-    If _tidalActive          ApplyTidalPatterns()
-    If _stormMult > 1.0      ApplyWeatherIntensity()
-    If _darknessMult > 1.0   ApplyDarknessIntensity()
-    If _arbitrationMode      ApplyArbitrationCompatibility()
-    If _survivalMode         ApplySurvivalAdaptations()
+    If _vegCount > 0
+        ApplyVegetationAdaptations()
+    EndIf
+    If _fishPresent
+        ApplyFishEcosystem()
+    EndIf
+    If _gsJungleActive
+        ApplyGlowingSeaJungle()
+    EndIf
+    If _livingOceanActive
+        ApplyLivingOcean()
+    EndIf
+    If _tidalActive
+        ApplyTidalPatterns()
+    EndIf
+    If _stormMult > 1.0
+        ApplyWeatherIntensity()
+    EndIf
+    If _darknessMult > 1.0
+        ApplyDarknessIntensity()
+    EndIf
+    If _arbitrationMode
+        ApplyArbitrationCompatibility()
+    EndIf
+    If _survivalMode
+        ApplySurvivalAdaptations()
+    EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -191,7 +260,7 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ApplyVegetationAdaptations()
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2500.0, 20)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2500.0, 20)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -202,15 +271,12 @@ Function ApplyVegetationAdaptations()
     EndWhile
 
     ; Log for bridge
-    Debug.Trace("[AAI] MOD_VEG|count=" + _vegCount + \
-                "|rain=" + _vegRainMult + \
-                "|stealth=" + _vegStealthAdd + \
-                "|detection=" + _vegDetReduce)
+    Debug.Trace("[AAI] MOD_VEG|count=" + _vegCount + "|rain=" + _vegRainMult + "|stealth=" + _vegStealthAdd + "|detection=" + _vegDetReduce)
 EndFunction
 
 Function ApplyVegetationToActor(Actor npc)
     If _arbitrationMode
-        Return  ; Skip detection overrides if Arbitration is handling it
+        Return; Skip detection overrides if Arbitration is handling it; Skip detection overrides if Arbitration is handling it; Skip detection overrides if Arbitration is handling it; Skip detection overrides if Arbitration is handling it
     EndIf
 
     ActorValue avPerc = Game.GetFormFromFile(0x000002E3, "Fallout4.esm") as ActorValue
@@ -234,7 +300,7 @@ Function ApplyFishEcosystem()
         Return
     EndIf
 
-    Actor[] nearby = player.GetActorsInRange(2000.0, 12)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2000.0, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -255,7 +321,7 @@ EndFunction
 Location Function GetNearbyWaterLocation()
     ; Returns the nearest water-associated location
     ; In a full implementation: check water body proximity
-    Return None  ; Placeholder — expand in CK with actual water location refs
+    Return None; Placeholder — expand in CK with actual water location refs; Placeholder — expand in CK with actual water location refs; Placeholder — expand in CK with actual water location refs; Placeholder — expand in CK with actual water location refs
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -270,7 +336,7 @@ Function ApplyGlowingSeaJungle()
     EndIf
 
     ; Jungle GS: Deathclaws become ambush hunters instead of open stalkers
-    Actor[] nearby = player.GetActorsInRange(2500.0, 15)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2500.0, 15)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -279,9 +345,9 @@ Function ApplyGlowingSeaJungle()
                 ; Jungle Deathclaw: wait in cover, ambush when close
                 ; Apply restrained/ambush package state
                 If npc.GetDistance(player) > 500.0
-                    npc.SetRestrained(True)   ; Stay hidden in jungle
+                    npc.SetRestrained(True); Stay hidden in jungle; Stay hidden in jungle; Stay hidden in jungle; Stay hidden in jungle
                 Else
-                    npc.SetRestrained(False)  ; Player too close — attack
+                    npc.SetRestrained(False); Player too close — attack; Player too close — attack; Player too close — attack; Player too close — attack
                     npc.StartCombat(player)
                 EndIf
 
@@ -323,11 +389,11 @@ Function ApplyTidalPatterns()
 
     ; High tide: 06:00 and 18:00 (dawn and dusk)
     If (hourOfDay >= 5.0 && hourOfDay <= 7.0) || (hourOfDay >= 17.0 && hourOfDay <= 19.0)
-        tidalPhase = 1.0  ; High tide
+        tidalPhase = 1.0; High tide; High tide; High tide; High tide
     ElseIf (hourOfDay >= 11.0 && hourOfDay <= 13.0) || (hourOfDay >= 23.0 || hourOfDay <= 1.0)
-        tidalPhase = 0.0  ; Low tide
+        tidalPhase = 0.0; Low tide; Low tide; Low tide; Low tide
     Else
-        tidalPhase = 0.5  ; Mid tide
+        tidalPhase = 0.5; Mid tide; Mid tide; Mid tide; Mid tide
     EndIf
 
     If tidalPhase != _lastTidalPhase
@@ -362,7 +428,7 @@ Function ApplyDarknessIntensity()
     If isNight
         ; Apply extra stealth bonus from darkness mod
         Actor player = Game.GetPlayer()
-        Actor[] nearby = player.GetActorsInRange(2000.0, 15)
+        Actor[] nearby = MiscUtil.ScanActors(player, 2000.0, 15)
         Int i = 0
         While i < nearby.Length
             Actor npc = nearby[i]
@@ -402,19 +468,59 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API — other scripts query the mod state
 ; ═══════════════════════════════════════════════════════════════════════════
-Bool  Function IsFishPresent()       Return _fishPresent        EndFunction
-Bool  Function IsAquaticWebActive()  Return _aquaticWebActive   EndFunction
-Bool  Function IsGSJungleActive()    Return _gsJungleActive     EndFunction
-Bool  Function IsLivingOceanActive() Return _livingOceanActive  EndFunction
-Bool  Function IsTidalActive()       Return _tidalActive        EndFunction
-Bool  Function IsArbitrationMode()   Return _arbitrationMode    EndFunction
-Bool  Function IsSurvivalMode()      Return _survivalMode       EndFunction
-Float Function GetVegCount()         Return _vegCount           EndFunction
-Float Function GetVegStealthBonus()  Return _vegStealthAdd      EndFunction
-Float Function GetVegDetectReduce()  Return _vegDetReduce       EndFunction
-Float Function GetStormMult()        Return _stormMult          EndFunction
-Float Function GetDarknessMult()     Return _darknessMult       EndFunction
+Bool  Function IsFishPresent()
+    Return _fishPresent
+EndFunction
+Bool  Function IsAquaticWebActive()
+    Return _aquaticWebActive
+EndFunction
+Bool  Function IsGSJungleActive()
+    Return _gsJungleActive
+EndFunction
+Bool  Function IsLivingOceanActive()
+    Return _livingOceanActive
+EndFunction
+Bool  Function IsTidalActive()
+    Return _tidalActive
+EndFunction
+Bool  Function IsArbitrationMode()
+    Return _arbitrationMode
+EndFunction
+Bool  Function IsSurvivalMode()
+    Return _survivalMode
+EndFunction
+Float Function GetVegCount()
+    Return _vegCount
+EndFunction
+Float Function GetVegStealthBonus()
+    Return _vegStealthAdd
+EndFunction
+Float Function GetVegDetectReduce()
+    Return _vegDetReduce
+EndFunction
+Float Function GetStormMult()
+    Return _stormMult
+EndFunction
+Float Function GetDarknessMult()
+    Return _darknessMult
+EndFunction
 
 Function ModLog(String msg)
     Debug.Trace("[AAI-ModEco] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

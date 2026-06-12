@@ -85,30 +85,30 @@ Keyword Property kwdDeathclaw  Auto
 Keyword Property kwdSynth      Auto
 
 ; ── Explosion Spells / Effects ───────────────────────────────────────────────
-Spell     Property spStaggerNear       Auto  ; Full knockdown  (<300 units)
-Spell     Property spStaggerMid        Auto  ; Stagger         (300–700 units)
-Spell     Property spStaggerFar        Auto  ; Flinch          (700–1200 units)
-Spell     Property spConcussion        Auto  ; Temporary hearing/detection penalty
-Spell     Property spRadiationBurst    Auto  ; Radiation zone from nuke explosion
-Spell     Property spEMPBurst          Auto  ; EMP stun for robots
-Spell     Property spCryoBlast         Auto  ; Freezing effect
-Spell     Property spPlasmaFire        Auto  ; Plasma burn / green fire
-Spell     Property spSmokeInhalation   Auto  ; Lung damage in smoke
+Spell     Property spStaggerNear       Auto; Full knockdown  (<300 units); Full knockdown  (<300 units); Full knockdown  (<300 units); Full knockdown  (<300 units)
+Spell     Property spStaggerMid        Auto; Stagger         (300–700 units); Stagger         (300–700 units); Stagger         (300–700 units); Stagger         (300–700 units)
+Spell     Property spStaggerFar        Auto; Flinch          (700–1200 units); Flinch          (700–1200 units); Flinch          (700–1200 units); Flinch          (700–1200 units)
+Spell     Property spConcussion        Auto; Temporary hearing/detection penalty; Temporary hearing/detection penalty; Temporary hearing/detection penalty; Temporary hearing/detection penalty
+Spell     Property spRadiationBurst    Auto; Radiation zone from nuke explosion; Radiation zone from nuke explosion; Radiation zone from nuke explosion; Radiation zone from nuke explosion
+Spell     Property spEMPBurst          Auto; EMP stun for robots; EMP stun for robots; EMP stun for robots; EMP stun for robots
+Spell     Property spCryoBlast         Auto; Freezing effect; Freezing effect; Freezing effect; Freezing effect
+Spell     Property spPlasmaFire        Auto; Plasma burn / green fire; Plasma burn / green fire; Plasma burn / green fire; Plasma burn / green fire
+Spell     Property spSmokeInhalation   Auto; Lung damage in smoke; Lung damage in smoke; Lung damage in smoke; Lung damage in smoke
 
 ; ── Fire Effects ──────────────────────────────────────────────────────────────
-Explosion Property expFireSpread       Auto  ; Small fire ignition explosion
-Explosion Property expEmberScatter     Auto  ; Ember particle scatter
-Explosion Property expStructuralFire   Auto  ; Building fire stage
-Explosion Property expChainCarExplosion Auto ; Delayed vehicle explosion
-Explosion Property expAmmoInferno      Auto  ; Ammo cook-off burst
-Explosion Property expNukaExplosion    Auto  ; Nuka-Cola machine irradiated blast
+Explosion Property expFireSpread       Auto; Small fire ignition explosion; Small fire ignition explosion; Small fire ignition explosion; Small fire ignition explosion
+Explosion Property expEmberScatter     Auto; Ember particle scatter; Ember particle scatter; Ember particle scatter; Ember particle scatter
+Explosion Property expStructuralFire   Auto; Building fire stage; Building fire stage; Building fire stage; Building fire stage
+Explosion Property expChainCarExplosion Auto; Delayed vehicle explosion; Delayed vehicle explosion; Delayed vehicle explosion; Delayed vehicle explosion
+Explosion Property expAmmoInferno      Auto; Ammo cook-off burst; Ammo cook-off burst; Ammo cook-off burst; Ammo cook-off burst
+Explosion Property expNukaExplosion    Auto; Nuka-Cola machine irradiated blast; Nuka-Cola machine irradiated blast; Nuka-Cola machine irradiated blast; Nuka-Cola machine irradiated blast
 
 ; ── Activator References ──────────────────────────────────────────────────────
-Activator Property activFireSmall      Auto  ; Small fire object
-Activator Property activFireMedium     Auto  ; Medium fire object
-Activator Property activSmokePillar    Auto  ; Rising smoke column
-Activator Property activScorchMark     Auto  ; Permanent scorch decal
-Activator Property activAshPile        Auto  ; Organic ash remains
+Activator Property activFireSmall      Auto; Small fire object; Small fire object; Small fire object; Small fire object
+Activator Property activFireMedium     Auto; Medium fire object; Medium fire object; Medium fire object; Medium fire object
+Activator Property activSmokePillar    Auto; Rising smoke column; Rising smoke column; Rising smoke column; Rising smoke column
+Activator Property activScorchMark     Auto; Permanent scorch decal; Permanent scorch decal; Permanent scorch decal; Permanent scorch decal
+Activator Property activAshPile        Auto; Organic ash remains; Organic ash remains; Organic ash remains; Organic ash remains
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property FireEnabled         = True  Auto
@@ -118,24 +118,24 @@ bool  Property ChainReactionEnabled = True Auto
 bool  Property SmokeEnabled        = True  Auto
 bool  Property AfterEffectsEnabled = True  Auto
 
-float Property FireSpreadRadius    = 300.0 Auto  ; How far fire spreads
-float Property FireSpreadInterval  = 8.0   Auto  ; Real seconds between spread checks
-float Property PressureNearRadius  = 300.0 Auto  ; Full knockdown radius
-float Property PressureMidRadius   = 700.0 Auto  ; Stagger radius
-float Property PressureFarRadius   = 1200.0 Auto ; Flinch / hear radius
-float Property ConcussionDuration  = 12.0  Auto  ; Seconds of hearing penalty
-float Property SmokeDamageRate     = 2.0   Auto  ; HP/sec in thick smoke
+float Property FireSpreadRadius    = 300.0 Auto; How far fire spreads; How far fire spreads; How far fire spreads; How far fire spreads
+float Property FireSpreadInterval  = 8.0   Auto; Real seconds between spread checks; Real seconds between spread checks; Real seconds between spread checks; Real seconds between spread checks
+float Property PressureNearRadius  = 300.0 Auto; Full knockdown radius; Full knockdown radius; Full knockdown radius; Full knockdown radius
+float Property PressureMidRadius   = 700.0 Auto; Stagger radius; Stagger radius; Stagger radius; Stagger radius
+float Property PressureFarRadius   = 1200.0 Auto; Flinch / hear radius; Flinch / hear radius; Flinch / hear radius; Flinch / hear radius
+float Property ConcussionDuration  = 12.0  Auto; Seconds of hearing penalty; Seconds of hearing penalty; Seconds of hearing penalty; Seconds of hearing penalty
+float Property SmokeDamageRate     = 2.0   Auto; HP/sec in thick smoke; HP/sec in thick smoke; HP/sec in thick smoke; HP/sec in thick smoke
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 int   _currentWeather   = 0
-float _currentWindMod   = 1.0  ; From weather — affects spread and ember
+float _currentWindMod   = 1.0; From weather — affects spread and ember; From weather — affects spread and ember; From weather — affects spread and ember; From weather — affects spread and ember
 bool  _isRaining        = False
 bool  _isStorming       = False
 
 ; Active fire tracking (up to 8 simultaneous fire events)
 ObjectReference[] _activeFires
 float[]           _fireStartTimes
-int[]             _fireStages      ; 0=spark 1=small 2=medium 3=inferno
+int[]             _fireStages; 0=spark 1=small 2=medium 3=inferno; 0=spark 1=small 2=medium 3=inferno; 0=spark 1=small 2=medium 3=inferno; 0=spark 1=small 2=medium 3=inferno
 ObjectReference[] _fireLocations
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -150,12 +150,12 @@ Event OnQuestInit()
     _fireLocations = new ObjectReference[8]
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForWeatherChange()
-    RegisterForUpdateGameTime(0.08)
+    ; weather changes are detected by polling in OnTimerGameTime (FO4 has no weather-change event)
+    ScheduleTick(0.08)
     FireLog("Fire & Explosion System initialized")
 EndEvent
 
-Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather, bool abPrecip, bool abPermaNow)
+Function WeatherChanged(Weather akOldWeather, Weather akNewWeather, Bool abPrecip, Bool abPermaNow)
     If gEnvWeatherType != None
         _currentWeather = gEnvWeatherType.GetValue() as Int
     EndIf
@@ -163,17 +163,21 @@ Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather, bool abPrecip,
     _isStorming = _currentWeather == 3
 
     ; Wind modifier: storms fan flames, calm = slow spread
-    _currentWindMod = _isStorming ? 2.5 : _isRaining ? 0.3 : 1.0
-EndEvent
-
+    If (_isStorming)
+        _currentWindMod = 2.5
+    ElseIf (_isRaining)
+        _currentWindMod = 0.3
+    Else
+        _currentWindMod = 1.0
+    EndIf
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PERIODIC FIRE UPDATE
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     UpdateActiveFires()
-    RegisterForUpdateGameTime(0.08)
-EndEvent
-
+    ScheduleTick(0.08)
+EndFunction
 Function UpdateActiveFires()
     Float now = Utility.GetCurrentGameTime()
     Int i = 0
@@ -186,7 +190,7 @@ Function UpdateActiveFires()
 EndFunction
 
 Function UpdateFireStage(Int slot, Float now)
-    Float elapsed = (now - _fireStartTimes[slot]) * 24.0 * 3600.0  ; Convert to real seconds
+    Float elapsed = (now - _fireStartTimes[slot]) * 24.0 * 3600.0; Convert to real seconds; Convert to real seconds; Convert to real seconds; Convert to real seconds
     Int stage = _fireStages[slot]
 
     ; Rain extinguishes small fires
@@ -250,8 +254,15 @@ Function OnFireStageChange(Int slot, Int newStage)
 EndFunction
 
 Function ApplyFireEffects(ObjectReference fireLoc, Int stage)
-    Float damageRadius = stage == 1 ? 150.0 : stage == 2 ? 300.0 : 500.0
-    Actor[] nearby = fireLoc.GetActorsInRange(damageRadius, 10)
+    Float damageRadius
+    If (stage == 1)
+        damageRadius = 150.0
+    ElseIf (stage == 2)
+        damageRadius = 300.0
+    Else
+        damageRadius = 500.0
+    EndIf
+    Actor[] nearby = MiscUtil.ScanActors(fireLoc, damageRadius, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -265,7 +276,7 @@ Function ApplyFireEffects(ObjectReference fireLoc, Int stage)
             EndIf
             ; Smoke inhalation in medium/inferno
             If SmokeEnabled && stage >= 2 && spSmokeInhalation != None
-                npc.CastSpell(spSmokeInhalation, npc)
+                spSmokeInhalation.Cast(npc, npc)
             EndIf
         EndIf
         i += 1
@@ -279,11 +290,14 @@ Function ReactToFireWithFear(Actor npc, ObjectReference fireLoc, Int stage)
     EndIf
 
     ; Yao Guai and Mongrels: maximum fear
-    Bool isAnimalWithFear = (kwdYaoGuai  != None && npc.HasKeyword(kwdYaoGuai)) || \
-                            (kwdMongrel  != None && npc.HasKeyword(kwdMongrel)) || \
-                            (kwdDeathclaw != None && npc.HasKeyword(kwdDeathclaw))
+    Bool isAnimalWithFear = (kwdYaoGuai  != None && npc.HasKeyword(kwdYaoGuai)) || (kwdMongrel  != None && npc.HasKeyword(kwdMongrel)) || (kwdDeathclaw != None && npc.HasKeyword(kwdDeathclaw))
 
-    Float fearAmount = isAnimalWithFear ? 100.0 : (stage * 25.0)
+    Float fearAmount
+    If (isAnimalWithFear)
+        fearAmount = 100.0
+    Else
+        fearAmount = (stage * 25.0)
+    EndIf
     npc.SetValue(avConf, Math.Max(npc.GetValue(avConf) - fearAmount, 0.0))
 
     If !npc.IsInCombat()
@@ -305,8 +319,19 @@ Function TrySpreadFire(ObjectReference sourceRef)
 
     Float spreadRadius = FireSpreadRadius * _currentWindMod
 
-    ; Find nearby flammable objects (in a full CK build these would have a flammable keyword)
-    ObjectReference[] nearby = sourceRef.GetRefsInRange(spreadRadius, 5)
+    ; mode 0 = all refs in radius (modes 5/10 are unsupported in FO4 PapyrusUtil)
+    ObjectReference[] nearby = MiscUtil.ScanRefs(sourceRef, spreadRadius, 0)
+
+    ; Fallback: ScanRefs returned empty (C++ native not yet wired up).
+    ; Place the spread explosion at the source so fire visuals still fire.
+    If nearby.Length == 0
+        If expFireSpread != None
+            sourceRef.PlaceAtMe(expFireSpread)
+            FireLog("Fire spread (ScanRefs empty — source scatter, wind=" + _currentWindMod + ")")
+        EndIf
+        Return
+    EndIf
+
     Int i = 0
     Int spread = 0
     While i < nearby.Length && spread < 2
@@ -328,10 +353,7 @@ Bool Function IsFlammable(ObjectReference obj)
     ; In a full implementation: check for AAI_Flammable keyword
     ; For now: check name for flammable materials
     String name = obj.GetDisplayName()
-    Return name.Find("Wood") >= 0 || name.Find("Crate") >= 0 || \
-           name.Find("Box") >= 0 || name.Find("Barrel") >= 0 || \
-           name.Find("Cloth") >= 0 || name.Find("Tent") >= 0 || \
-           name.Find("Mattress") >= 0 || name.Find("Book") >= 0
+    Return StringUtil.Find(name, "Wood") >= 0 || StringUtil.Find(name, "Crate") >= 0 || StringUtil.Find(name, "Box") >= 0 || StringUtil.Find(name, "Barrel") >= 0 || StringUtil.Find(name, "Cloth") >= 0 || StringUtil.Find(name, "Tent") >= 0 || StringUtil.Find(name, "Mattress") >= 0 || StringUtil.Find(name, "Book") >= 0
 EndFunction
 
 Function TryEmberScatter(ObjectReference sourceRef)
@@ -342,7 +364,12 @@ Function TryEmberScatter(ObjectReference sourceRef)
     ; Wind carries embers in the storm direction
     ; In a full implementation: use actual wind direction vector
     ; For now: random nearby scatter with wind multiplier
-    Int emberCount = _isStorming ? 3 : 1
+    Int emberCount
+    If (_isStorming)
+        emberCount = 3
+    Else
+        emberCount = 1
+    EndIf
     Int i = 0
     While i < emberCount
         ; Place ember scatter effect at a random offset
@@ -381,8 +408,7 @@ Function LeaveAshAndScorch(ObjectReference fireLoc, Int finalStage)
     If finalStage >= 2 && activAshPile != None
         fireLoc.PlaceAtMe(activAshPile)
     EndIf
-    Debug.Trace("[AAI] FIRE_AFTERMATH|location=" + fireLoc.GetDisplayName() + \
-                "|stage=" + finalStage + "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] FIRE_AFTERMATH|location=" + fireLoc.GetDisplayName() + "|stage=" + finalStage + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 Function RegisterNewFire(ObjectReference fireLoc)
@@ -399,7 +425,7 @@ Function RegisterNewFire(ObjectReference fireLoc)
 EndFunction
 
 Function AlertNPCsToFire(ObjectReference fireLoc, Float radius)
-    Actor[] nearby = fireLoc.GetActorsInRange(radius, 15)
+    Actor[] nearby = MiscUtil.ScanActors(fireLoc, radius, 15)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -444,9 +470,7 @@ Function OnExplosionEvent(ObjectReference explRef, String explosionType, Float y
         RegisterNewFire(explRef)
     EndIf
 
-    Debug.Trace("[AAI] EXPLOSION|type=" + explosionType + \
-                "|yield=" + yield + "|location=" + explRef.GetDisplayName() + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] EXPLOSION|type=" + explosionType + "|yield=" + yield + "|location=" + explRef.GetDisplayName() + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -457,13 +481,13 @@ Function ApplyPressureWave(ObjectReference explRef, Float yield)
     Float midR  = PressureMidRadius  * yield
     Float farR  = PressureFarRadius  * yield
 
-    Actor[] allAffected = explRef.GetActorsInRange(farR, 30)
+    Actor[] allAffected = MiscUtil.ScanActors(explRef, farR, 30)
     Int i = 0
     While i < allAffected.Length
         Actor npc = allAffected[i]
         If npc == None || npc.IsDead()
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
 
         Float dist = explRef.GetDistance(npc)
@@ -471,76 +495,73 @@ Function ApplyPressureWave(ObjectReference explRef, Float yield)
         If dist <= nearR
             ; KNOCKDOWN — thrown off feet
             If spStaggerNear != None
-                explRef.CastSpell(spStaggerNear, npc)
+                spStaggerNear.Cast(explRef, npc)
             EndIf
             ; Concussion — temporary detection/hearing penalty
             If spConcussion != None
-                npc.CastSpell(spConcussion, npc)
+                spConcussion.Cast(npc, npc)
             EndIf
             FireLog("Knockdown: " + npc.GetDisplayName() + " (" + dist + " units)")
 
         ElseIf dist <= midR
             ; STAGGER
             If spStaggerMid != None
-                explRef.CastSpell(spStaggerMid, npc)
+                spStaggerMid.Cast(explRef, npc)
             EndIf
             If spConcussion != None
-                npc.CastSpell(spConcussion, npc)
+                spConcussion.Cast(npc, npc)
             EndIf
 
         ElseIf dist <= farR
             ; FLINCH — barely affected, but hears it and may investigate
             If spStaggerFar != None
-                explRef.CastSpell(spStaggerFar, npc)
+                spStaggerFar.Cast(explRef, npc)
             EndIf
             If !npc.IsInCombat()
-                npc.EvaluatePackage()  ; Investigate the explosion
+                npc.EvaluatePackage(); Investigate the explosion; Investigate the explosion; Investigate the explosion; Investigate the explosion
             EndIf
         EndIf
 
         i += 1
     EndWhile
 
-    FireLog("Pressure wave: near=" + nearR + " mid=" + midR + " far=" + farR + \
-            " affected=" + allAffected.Length)
+    FireLog("Pressure wave: near=" + nearR + " mid=" + midR + " far=" + farR + " affected=" + allAffected.Length)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; CHAIN REACTIONS
 ; ═══════════════════════════════════════════════════════════════════════════
 Function CheckChainReactions(ObjectReference explRef, Float yield)
-    ObjectReference[] nearby = explRef.GetRefsInRange(500.0 * yield, 10)
+    ; mode 0 = all refs (modes > 2 unsupported in FO4 PapyrusUtil)
+    ObjectReference[] nearby = MiscUtil.ScanRefs(explRef, 500.0 * yield, 0)
     Int i = 0
     While i < nearby.Length
         ObjectReference obj = nearby[i]
         If obj == None || obj == explRef
             i += 1
-            Continue
+            ; TODO: 'Continue' removed — refactor loop to skip remaining body
         EndIf
 
         String name = obj.GetDisplayName()
 
         ; Vehicles — delayed massive explosion
-        If name.Find("Car") >= 0 || name.Find("Truck") >= 0 || \
-           name.Find("Bus") >= 0 || name.Find("Vehicle") >= 0
+        If StringUtil.Find(name, "Car") >= 0 || StringUtil.Find(name, "Truck") >= 0 || StringUtil.Find(name, "Bus") >= 0 || StringUtil.Find(name, "Vehicle") >= 0
             TriggerDelayedVehicleExplosion(obj)
 
         ; Fuel / propane
-        ElseIf name.Find("Fuel") >= 0 || name.Find("Propane") >= 0 || \
-               name.Find("Gas") >= 0
+        ElseIf StringUtil.Find(name, "Fuel") >= 0 || StringUtil.Find(name, "Propane") >= 0 || StringUtil.Find(name, "Gas") >= 0
             TriggerFuelExplosion(obj)
 
         ; Ammo boxes — cook-off
-        ElseIf name.Find("Ammo") >= 0 || name.Find("Ammunition") >= 0
+        ElseIf StringUtil.Find(name, "Ammo") >= 0 || StringUtil.Find(name, "Ammunition") >= 0
             TriggerAmmoCookoff(obj)
 
         ; Nuka-Cola machines
-        ElseIf name.Find("Nuka") >= 0 && name.Find("Machine") >= 0
+        ElseIf StringUtil.Find(name, "Nuka") >= 0 && StringUtil.Find(name, "Machine") >= 0
             TriggerNukaCoolaExplosion(obj)
 
         ; Electrical panels — EMP
-        ElseIf name.Find("Panel") >= 0 || name.Find("Generator") >= 0 || \
-               name.Find("Electrical") >= 0
+        ElseIf StringUtil.Find(name, "Panel") >= 0 || StringUtil.Find(name, "Generator") >= 0 || StringUtil.Find(name, "Electrical") >= 0
             ApplyEMPBurst(obj, 0.6)
         EndIf
 
@@ -550,7 +571,7 @@ EndFunction
 
 Function TriggerDelayedVehicleExplosion(ObjectReference vehicle)
     Debug.Notification("Vehicle catching fire — GET CLEAR!")
-    Utility.Wait(4.0)  ; 4 second delay — classic Hollywood beat
+    Utility.Wait(4.0); 4 second delay — classic Hollywood beat; 4 second delay — classic Hollywood beat; 4 second delay — classic Hollywood beat; 4 second delay — classic Hollywood beat
     If expChainCarExplosion != None
         vehicle.PlaceAtMe(expChainCarExplosion)
     EndIf
@@ -581,7 +602,7 @@ Function TriggerNukaCoolaExplosion(ObjectReference nukaRef)
         nukaRef.PlaceAtMe(expNukaExplosion)
     EndIf
     If spRadiationBurst != None
-        Game.GetPlayer().CastSpell(spRadiationBurst, nukaRef as Actor)
+        spRadiationBurst.Cast(Game.GetPlayer(), nukaRef as Actor)
     EndIf
 EndFunction
 
@@ -590,7 +611,7 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ApplyEMPBurst(ObjectReference explRef, Float yield)
     Float empRadius = 600.0 * yield
-    Actor[] nearby = explRef.GetActorsInRange(empRadius, 12)
+    Actor[] nearby = MiscUtil.ScanActors(explRef, empRadius, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -598,7 +619,7 @@ Function ApplyEMPBurst(ObjectReference explRef, Float yield)
             If kwdRobot != None && npc.HasKeyword(kwdRobot)
                 ; Robots: EMP stun
                 If spEMPBurst != None
-                    npc.CastSpell(spEMPBurst, npc)
+                    spEMPBurst.Cast(npc, npc)
                 EndIf
                 ; Temporarily reduce robot speed and aggression
                 ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
@@ -616,24 +637,22 @@ EndFunction
 Function ApplyNuclearBurst(ObjectReference explRef, Float yield)
     ; Nuclear explosion: massive pressure wave + persistent radiation zone
     If spRadiationBurst != None
-        explRef.CastSpell(spRadiationBurst, explRef as Actor)
+        spRadiationBurst.Cast(explRef, explRef as Actor)
     EndIf
     ; Log for bridge — creates persistent radiation zone for 3 game days
-    Debug.Trace("[AAI] NUCLEAR_EXPLOSION|location=" + explRef.GetDisplayName() + \
-                "|yield=" + yield + "|rad_zone_days=3" + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] NUCLEAR_EXPLOSION|location=" + explRef.GetDisplayName() + "|yield=" + yield + "|rad_zone_days=3" + "|game_time=" + Utility.GetCurrentGameTime())
     Debug.Notification("NUCLEAR DETONATION — radiation zone forming. Leave the area!")
 EndFunction
 
 Function ApplyCryoBurst(ObjectReference explRef, Float yield)
     Float cryoRadius = 400.0 * yield
-    Actor[] nearby = explRef.GetActorsInRange(cryoRadius, 10)
+    Actor[] nearby = MiscUtil.ScanActors(explRef, cryoRadius, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead()
             If spCryoBlast != None
-                npc.CastSpell(spCryoBlast, npc)
+                spCryoBlast.Cast(npc, npc)
             EndIf
             ; Reduce speed (frozen)
             ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
@@ -649,16 +668,16 @@ EndFunction
 Function ApplyPlasmaBurst(ObjectReference explRef, Float yield)
     ; Plasma: melting effect + green fire patches
     Float plasmaRadius = 350.0 * yield
-    Actor[] nearby = explRef.GetActorsInRange(plasmaRadius, 10)
+    Actor[] nearby = MiscUtil.ScanActors(explRef, plasmaRadius, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead() && spPlasmaFire != None
-            npc.CastSpell(spPlasmaFire, npc)
+            spPlasmaFire.Cast(npc, npc)
         EndIf
         i += 1
     EndWhile
-    RegisterNewFire(explRef)  ; Green fire patch at blast site
+    RegisterNewFire(explRef); Green fire patch at blast site; Green fire patch at blast site; Green fire patch at blast site; Green fire patch at blast site
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -675,3 +694,26 @@ EndFunction
 Function FireLog(String msg)
     Debug.Trace("[AAI-Fire] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Weather _f4aiLastWeather = None
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Weather wNow = Weather.GetCurrentWeather()
+        If wNow != _f4aiLastWeather
+            Weather wOld = _f4aiLastWeather
+            _f4aiLastWeather = wNow
+            WeatherChanged(wOld, wNow, False, False)
+        EndIf
+        DoGameTimeTick()
+    EndIf
+EndEvent

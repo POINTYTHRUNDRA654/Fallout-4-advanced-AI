@@ -11,16 +11,16 @@
 Scriptname AdvancedAIManager extends Quest
 
 ; ── MCM / Configuration Properties ─────────────────────────────────────────
-bool   Property AAI_Enabled              = True  Auto  ; Master toggle
-bool   Property AAI_CreatureAI           = True  Auto  ; Enhanced creature behavior
-bool   Property AAI_NPCAI               = True  Auto  ; Enhanced humanoid AI
-bool   Property AAI_CompanionAI         = True  Auto  ; Enhanced companion system
-bool   Property AAI_RobotAI             = True  Auto  ; Enhanced robot behavior
-bool   Property AAI_GroupTactics        = True  Auto  ; Pack / squad coordination
-bool   Property AAI_DynamicDifficulty   = True  Auto  ; Scale AI to player level
-bool   Property AAI_DetectionOverhaul   = True  Auto  ; Enhanced detection radii
-bool   Property AAI_CombatStyleOverride = True  Auto  ; Override vanilla combat styles
-bool   Property AAI_Debug               = False Auto  ; Papyrus log output
+bool   Property AAI_Enabled              = True  Auto; Master toggle; Master toggle; Master toggle; Master toggle
+bool   Property AAI_CreatureAI           = True  Auto; Enhanced creature behavior; Enhanced creature behavior; Enhanced creature behavior; Enhanced creature behavior
+bool   Property AAI_NPCAI               = True  Auto; Enhanced humanoid AI; Enhanced humanoid AI; Enhanced humanoid AI; Enhanced humanoid AI
+bool   Property AAI_CompanionAI         = True  Auto; Enhanced companion system; Enhanced companion system; Enhanced companion system; Enhanced companion system
+bool   Property AAI_RobotAI             = True  Auto; Enhanced robot behavior; Enhanced robot behavior; Enhanced robot behavior; Enhanced robot behavior
+bool   Property AAI_GroupTactics        = True  Auto; Pack / squad coordination; Pack / squad coordination; Pack / squad coordination; Pack / squad coordination
+bool   Property AAI_DynamicDifficulty   = True  Auto; Scale AI to player level; Scale AI to player level; Scale AI to player level; Scale AI to player level
+bool   Property AAI_DetectionOverhaul   = True  Auto; Enhanced detection radii; Enhanced detection radii; Enhanced detection radii; Enhanced detection radii
+bool   Property AAI_CombatStyleOverride = True  Auto; Override vanilla combat styles; Override vanilla combat styles; Override vanilla combat styles; Override vanilla combat styles
+bool   Property AAI_Debug               = False Auto; Papyrus log output; Papyrus log output; Papyrus log output; Papyrus log output
 
 ; Difficulty scalars (set via MCM)
 float Property AAI_AggressionMult  = 1.0 Auto
@@ -41,12 +41,12 @@ ActorValue Property avAssistance   Auto
 ActorValue Property avHealth       Auto
 
 ; ── Keyword References ───────────────────────────────────────────────────────
-Keyword Property kwdCreature       Auto  ; ActorTypeCreature
-Keyword Property kwdRobot          Auto  ; ActorTypeRobot
-Keyword Property kwdSynth          Auto  ; ActorTypeSynth
-Keyword Property kwdGhoul          Auto  ; ActorTypeGhoul
-Keyword Property kwdSuperMutant    Auto  ; ActorTypeSuperMutant
-Keyword Property kwdCompanionAff   Auto  ; CompanionAffinity keyword
+Keyword Property kwdCreature       Auto; ActorTypeCreature; ActorTypeCreature; ActorTypeCreature; ActorTypeCreature
+Keyword Property kwdRobot          Auto; ActorTypeRobot; ActorTypeRobot; ActorTypeRobot; ActorTypeRobot
+Keyword Property kwdSynth          Auto; ActorTypeSynth; ActorTypeSynth; ActorTypeSynth; ActorTypeSynth
+Keyword Property kwdGhoul          Auto; ActorTypeGhoul; ActorTypeGhoul; ActorTypeGhoul; ActorTypeGhoul
+Keyword Property kwdSuperMutant    Auto; ActorTypeSuperMutant; ActorTypeSuperMutant; ActorTypeSuperMutant; ActorTypeSuperMutant
+Keyword Property kwdCompanionAff   Auto; CompanionAffinity keyword; CompanionAffinity keyword; CompanionAffinity keyword; CompanionAffinity keyword
 
 ; ── Internal State ───────────────────────────────────────────────────────────
 float _lastUpdateTime  = 0.0
@@ -59,12 +59,12 @@ bool  _initialized     = False
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(AAI_UpdateInterval)
-    Utility.Wait(2.0)  ; Let game finish loading
+    ScheduleTick(AAI_UpdateInterval)
+    Utility.Wait(2.0); Let game finish loading; Let game finish loading; Let game finish loading; Let game finish loading
     InitializeSystem()
 EndEvent
 
-Event OnPlayerLoadGame(Actor akSender)
+Event Actor.OnPlayerLoadGame(Actor akSender)
     If !_initialized
         InitializeSystem()
     Else
@@ -93,20 +93,19 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; PERIODIC UPDATE
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !AAI_Enabled || !_initialized
-        RegisterForUpdateGameTime(AAI_UpdateInterval)
+        ScheduleTick(AAI_UpdateInterval)
         Return
     EndIf
 
     RefreshActiveActors()
-    RegisterForUpdateGameTime(AAI_UpdateInterval)
-EndEvent
-
+    ScheduleTick(AAI_UpdateInterval)
+EndFunction
 Function RefreshActiveActors()
     Actor akPlayer = Game.GetPlayer()
     ; Get all actors in a large radius around the player
-    Actor[] nearbyActors = akPlayer.GetActorsInRange(10000.0, 50)
+    Actor[] nearbyActors = MiscUtil.ScanActors(akPlayer, 10000.0, 50)
 
     Int i = 0
     While i < nearbyActors.Length
@@ -205,10 +204,10 @@ EndFunction
 Function ApplyGhoulEnhancements(Actor akTarget)
     ; Feral ghouls: frenzied, zero confidence (never flee), maximize energy
     If avConfidence != None
-        akTarget.SetValue(avConfidence, 100.0)  ; Never flee
+        akTarget.SetValue(avConfidence, 100.0); Never flee; Never flee; Never flee; Never flee
     EndIf
     If avAggression != None
-        akTarget.SetValue(avAggression, 100.0)  ; Always attack
+        akTarget.SetValue(avAggression, 100.0); Always attack; Always attack; Always attack; Always attack
     EndIf
     If avEnergy != None
         akTarget.SetValue(avEnergy, Math.Min(akTarget.GetBaseValue(avEnergy) * 1.3, 100.0))
@@ -267,7 +266,7 @@ Function ScaleActorToPlayer(Actor akTarget)
         If avHPAV != None
             Float currentMax = akTarget.GetBaseValue(avHPAV)
             Float scaledMax  = currentMax * AAI_HealthMult * (playerLevel as Float / Math.Max(actorLevel as Float, 1.0))
-            akTarget.SetValue(avHPAV, Math.Min(scaledMax, currentMax * 3.0)) ; cap at 3x
+            akTarget.SetValue(avHPAV, Math.Min(scaledMax, currentMax * 3.0)); cap at 3x; cap at 3x; cap at 3x; cap at 3x
         EndIf
     EndIf
 EndFunction
@@ -276,13 +275,11 @@ EndFunction
 ; CLASSIFICATION HELPERS
 ; ════════════════════════════════════════════════════════════════════════════
 Bool Function IsCreature(Actor akTarget)
-    Return kwdCreature != None && akTarget.HasKeyword(kwdCreature) && \
-           !akTarget.HasKeyword(kwdRobot) && !akTarget.HasKeyword(kwdSynth)
+    Return kwdCreature != None && akTarget.HasKeyword(kwdCreature) && !akTarget.HasKeyword(kwdRobot) && !akTarget.HasKeyword(kwdSynth)
 EndFunction
 
 Bool Function IsRobot(Actor akTarget)
-    Return (kwdRobot != None && akTarget.HasKeyword(kwdRobot)) || \
-           (kwdSynth != None && akTarget.HasKeyword(kwdSynth))
+    Return (kwdRobot != None && akTarget.HasKeyword(kwdRobot)) || (kwdSynth != None && akTarget.HasKeyword(kwdSynth))
 EndFunction
 
 Bool Function IsCompanion(Actor akTarget)
@@ -296,7 +293,7 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; MCM CALLBACKS (called by AIConfigMCM.psc)
 ; ════════════════════════════════════════════════════════════════════════════
-Function MCM_SetEnabled(bool value)
+Function MCM_SetEnabled(Bool value)
     AAI_Enabled = value
     If value
         InitializeSystem()
@@ -306,7 +303,7 @@ Function MCM_SetEnabled(bool value)
     EndIf
 EndFunction
 
-Function MCM_SetDifficulty(float aggrMult, float confMult, float detMult, float hpMult)
+Function MCM_SetDifficulty(Float aggrMult, Float confMult, Float detMult, Float hpMult)
     AAI_AggressionMult = aggrMult
     AAI_ConfidenceMult = confMult
     AAI_DetectionMult  = detMult
@@ -324,7 +321,7 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; LOGGING (Mossy Bridge reads these via Papyrus.0.log)
 ; ════════════════════════════════════════════════════════════════════════════
-Function AAI_Log(string msg)
+Function AAI_Log(String msg)
     If AAI_Debug
         Debug.Trace("[AAI] " + msg)
     EndIf
@@ -332,12 +329,21 @@ EndFunction
 
 ; Public status query — called by Mossy Bridge API
 String Function GetStatusReport()
-    Return "AAI_STATUS|enabled=" + AAI_Enabled + \
-           "|overridden=" + _totalOverridden + \
-           "|errors=" + _sessionErrors + \
-           "|creatures=" + AAI_CreatureAI + \
-           "|npcs=" + AAI_NPCAI + \
-           "|robots=" + AAI_RobotAI + \
-           "|companions=" + AAI_CompanionAI + \
-           "|groupTactics=" + AAI_GroupTactics
+    Return "AAI_STATUS|enabled=" + AAI_Enabled + "|overridden=" + _totalOverridden + "|errors=" + _sessionErrors + "|creatures=" + AAI_CreatureAI + "|npcs=" + AAI_NPCAI + "|robots=" + AAI_RobotAI + "|companions=" + AAI_CompanionAI + "|groupTactics=" + AAI_GroupTactics
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

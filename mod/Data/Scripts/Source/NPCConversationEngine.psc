@@ -17,12 +17,12 @@
 Scriptname NPCConversationEngine extends Quest
 
 ; ── Configuration ─────────────────────────────────────────────────────────────
-float Property ConversationRadius      = 1200.0 Auto  ; How close NPCs must be
-float Property ConversationCooldown    = 180.0  Auto  ; Real seconds between conv cycles
-int   Property MaxConversations        = 3      Auto  ; Max simultaneous conversations
-int   Property MaxNPCsToScan           = 12     Auto  ; NPC scan limit (performance)
+float Property ConversationRadius      = 1200.0 Auto; How close NPCs must be; How close NPCs must be; How close NPCs must be; How close NPCs must be
+float Property ConversationCooldown    = 180.0  Auto; Real seconds between conv cycles; Real seconds between conv cycles; Real seconds between conv cycles; Real seconds between conv cycles
+int   Property MaxConversations        = 3      Auto; Max simultaneous conversations; Max simultaneous conversations; Max simultaneous conversations; Max simultaneous conversations
+int   Property MaxNPCsToScan           = 12     Auto; NPC scan limit (performance); NPC scan limit (performance); NPC scan limit (performance); NPC scan limit (performance)
 bool  Property Enabled                 = True   Auto
-bool  Property Debug                   = False  Auto
+bool Property _debugMode                   = False  Auto
 
 ; ── File Paths (written by Mossy Bridge) ──────────────────────────────────────
 ; PapyrusUtil reads from Fallout4\Data\ or absolute path via JsonUtil
@@ -32,10 +32,10 @@ string Property RequestFilePath      = "AdvancedAI_ConvRequest.json"   Auto Cons
 ; ── Topics (generic topic containers that hold our dynamic lines) ─────────────
 ; These are vanilla-compatible topic containers set up in the CK
 ; We use the SetActorValue / Say combo with generic idle marker topics
-Topic Property topicIdleGenericA Auto  ; idle_generic_topic_A (no conditions, always available)
-Topic Property topicIdleGenericB Auto  ; idle_generic_topic_B
-Topic Property topicIdleGenericC Auto  ; idle_generic_topic_C
-Topic Property topicIdleGenericD Auto  ; idle_generic_topic_D
+Topic Property topicIdleGenericA Auto; idle_generic_topic_A (no conditions, always available); idle_generic_topic_A (no conditions, always available); idle_generic_topic_A (no conditions, always available); idle_generic_topic_A (no conditions, always available)
+Topic Property topicIdleGenericB Auto; idle_generic_topic_B; idle_generic_topic_B; idle_generic_topic_B; idle_generic_topic_B
+Topic Property topicIdleGenericC Auto; idle_generic_topic_C; idle_generic_topic_C; idle_generic_topic_C; idle_generic_topic_C
+Topic Property topicIdleGenericD Auto; idle_generic_topic_D; idle_generic_topic_D; idle_generic_topic_D; idle_generic_topic_D
 
 ; ── State ─────────────────────────────────────────────────────────────────────
 float _lastConversationTime = 0.0
@@ -43,8 +43,8 @@ bool  _conversationActive   = False
 int   _totalConversations   = 0
 
 ; Active conversation tracking
-Actor[] _speakerPairA  ; Speaker A for each active conversation
-Actor[] _speakerPairB  ; Speaker B for each active conversation
+Actor[] _speakerPairA; Speaker A for each active conversation; Speaker A for each active conversation; Speaker A for each active conversation; Speaker A for each active conversation
+Actor[] _speakerPairB; Speaker B for each active conversation; Speaker B for each active conversation; Speaker B for each active conversation; Speaker B for each active conversation
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
@@ -56,8 +56,8 @@ Event OnQuestInit()
     _speakerPairB = new Actor[3]
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerFastTravelEnd")
-    RegisterForUpdateGameTime(0.5)  ; Poll for new conversations every ~12 min game time
+    RegisterForPlayerTeleport(); fires on fast travel, load doors, moveto
+    ScheduleTick(0.5); Poll for new conversations every ~12 min game time; Poll for new conversations every ~12 min game time; Poll for new conversations every ~12 min game time; Poll for new conversations every ~12 min game time
 
     ConvLog("NPC Conversation Engine initialized")
 EndEvent
@@ -65,14 +65,14 @@ EndEvent
 ; ════════════════════════════════════════════════════════════════════════════
 ; LOCATION CHANGE — Trigger new conversation generation
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference akNewLoc)
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     If !Enabled || akNewLoc == None
         Return
     EndIf
 
-    Utility.Wait(3.0)  ; Let the cell load fully
+    Utility.Wait(3.0); Let the cell load fully; Let the cell load fully; Let the cell load fully; Let the cell load fully
 
-    String locationName = akNewLoc.GetDisplayName()
+    String locationName = akNewLoc.GetName()
     If locationName == ""
         locationName = "Unknown Location"
     EndIf
@@ -86,28 +86,28 @@ Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference
     RequestConversations(locationName, locType)
 EndEvent
 
-Event OnPlayerFastTravelEnd(Actor akSender, ObjectReference akTarget)
+Event OnPlayerTeleport()
     Utility.Wait(4.0)
     Actor player = Game.GetPlayer()
-    ObjectReference curLoc = player.GetCurrentLocation() as ObjectReference
+    Location curLoc = player.GetCurrentLocation()
     If curLoc != None
-        RequestConversations(curLoc.GetDisplayName(), ClassifyLocation(curLoc))
+        RequestConversations(curLoc.GetName(), ClassifyLocation(curLoc))
     EndIf
 EndEvent
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; PERIODIC POLL — Read bridge output file for conversations
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !Enabled
-        RegisterForUpdateGameTime(0.5)
+        ScheduleTick(0.5)
         Return
     EndIf
 
     ; Check cooldown
     Float now = Utility.GetCurrentRealTime()
     If (now - _lastConversationTime) < ConversationCooldown
-        RegisterForUpdateGameTime(0.5)
+        ScheduleTick(0.5)
         Return
     EndIf
 
@@ -120,16 +120,15 @@ Event OnUpdateGameTime()
         EndIf
     EndIf
 
-    RegisterForUpdateGameTime(0.5)
-EndEvent
-
+    ScheduleTick(0.5)
+EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; REQUEST — Write request file for the bridge to process
 ; ════════════════════════════════════════════════════════════════════════════
 Function RequestConversations(String locationName, String locType)
     ; Scan nearby NPCs
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(ConversationRadius, MaxNPCsToScan)
+    Actor[] nearby = MiscUtil.ScanActors(player, ConversationRadius, MaxNPCsToScan)
 
     ; Build NPC list string for the request (pipe-delimited)
     String npcList = ""
@@ -137,12 +136,9 @@ Function RequestConversations(String locationName, String locType)
     Int i = 0
     While i < nearby.Length && validCount < MaxNPCsToScan
         Actor npc = nearby[i]
-        If npc != None && npc != player && !npc.IsDead() && \
-           !npc.IsInCombat() && npc.IsPlayerTeammate() == False
+        If npc != None && npc != player && !npc.IsDead() && !npc.IsInCombat() && npc.IsPlayerTeammate() == False
             ; Format: npc_id|npc_name|faction
-            String npcEntry = npc.GetActorBase().GetFormID() + "|" + \
-                              npc.GetDisplayName() + "|" + \
-                              GetActorFaction(npc)
+            String npcEntry = npc.GetActorBase().GetFormID() as String + "|" + npc.GetDisplayName() + "|" + GetActorFaction(npc)
             If npcList == ""
                 npcList = npcEntry
             Else
@@ -160,10 +156,7 @@ Function RequestConversations(String locationName, String locType)
 
     ; Write request to file (bridge reads this via its log watcher)
     ; We log a special tagged line the bridge parses
-    Debug.Trace("[AAI-CONV] REQUEST|location=" + locationName + \
-                "|type=" + locType + \
-                "|npc_count=" + validCount + \
-                "|npcs=" + npcList)
+    Debug.Trace("[AAI-CONV] REQUEST|location=" + locationName + "|type=" + locType + "|npc_count=" + validCount + "|npcs=" + npcList)
 
     ConvLog("Requested " + validCount + " NPCs for conversation at " + locationName)
 EndFunction
@@ -248,15 +241,14 @@ Function ExecuteConversation(Actor npcA, Actor npcB, String filePath, Int convIn
             ShowConversationLine(activeSpeaker.GetDisplayName(), line)
 
             ; Wait based on line length (roughly 1 word = 0.4 seconds)
-            Float waitTime = Math.Max(line.GetLength() as Float * 0.07, 2.5)
+            Float waitTime = Math.Max(StringUtil.GetLength(line) as Float * 0.07, 2.5)
             Utility.Wait(waitTime)
         EndIf
         j += 1
     EndWhile
 
     ; Mark as delivered in the file
-    Debug.Trace("[AAI-CONV] DELIVERED|conv_id=" + \
-                JsonUtil.GetStringField(filePath, "conversations[" + convIndex + "].conversation_id"))
+    Debug.Trace("[AAI-CONV] DELIVERED|conv_id=" + JsonUtil.GetStringField(filePath, "conversations[" + convIndex + "].conversation_id"))
 
     ; Release look-at
     npcA.ClearLookAt()
@@ -279,7 +271,7 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 Actor Function FindNPCByName(String displayName)
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(ConversationRadius, MaxNPCsToScan)
+    Actor[] nearby = MiscUtil.ScanActors(player, ConversationRadius, MaxNPCsToScan)
     Int i = 0
     While i < nearby.Length
         If nearby[i] != None && nearby[i].GetDisplayName() == displayName
@@ -296,25 +288,25 @@ String Function GetActorFaction(Actor akTarget)
     Return "Unknown"
 EndFunction
 
-String Function ClassifyLocation(ObjectReference loc)
+String Function ClassifyLocation(Form loc)
     If loc == None
         Return "wasteland"
     EndIf
-    String name = loc.GetDisplayName()
-    If name.Find("Diamond City") >= 0 || name.Find("Goodneighbor") >= 0 || name.Find("Vault") >= 0
+    String name = loc.GetName(); F4SE Form.GetName — works for Location and ObjectReference
+    If StringUtil.Find(name, "Diamond City") >= 0 || StringUtil.Find(name, "Goodneighbor") >= 0 || StringUtil.Find(name, "Vault") >= 0
         Return "city"
-    ElseIf name.Find("Bar") >= 0 || name.Find("Dugout") >= 0 || name.Find("Third Rail") >= 0
+    ElseIf StringUtil.Find(name, "Bar") >= 0 || StringUtil.Find(name, "Dugout") >= 0 || StringUtil.Find(name, "Third Rail") >= 0
         Return "bar_tavern"
-    ElseIf name.Find("Castle") >= 0 || name.Find("Prydwen") >= 0 || name.Find("Outpost") >= 0
+    ElseIf StringUtil.Find(name, "Castle") >= 0 || StringUtil.Find(name, "Prydwen") >= 0 || StringUtil.Find(name, "Outpost") >= 0
         Return "military"
-    ElseIf name.Find("Settlement") >= 0 || name.Find("Sanctuary") >= 0 || name.Find("Tenpines") >= 0
+    ElseIf StringUtil.Find(name, "Settlement") >= 0 || StringUtil.Find(name, "Sanctuary") >= 0 || StringUtil.Find(name, "Tenpines") >= 0
         Return "settlement"
     EndIf
     Return "wasteland"
 EndFunction
 
 Function ConvLog(String msg)
-    If Debug
+    If _debugMode
         Debug.Trace("[AAI-CONV] " + msg)
     EndIf
 EndFunction
@@ -326,10 +318,24 @@ Int Function GetTotalConversations()
     Return _totalConversations
 EndFunction
 
-Function ForceConversationAt(Actor npcA, Actor npcB, String topic)
-    ; Other mods can force a specific conversation pair
-    ; topic is sent to the bridge which generates it on demand
-    Debug.Trace("[AAI-CONV] FORCE|npc_a=" + npcA.GetDisplayName() + \
-                "|npc_b=" + npcB.GetDisplayName() + \
-                "|topic=" + topic)
+Function ForceConversationAt(Actor npcA, Actor npcB, String topicText)
+    ; Other mods can force a specific conversation pair ("topic" shadows the Topic script type)
+    ; topicText is sent to the bridge which generates it on demand
+    Debug.Trace("[AAI-CONV] FORCE|npc_a=" + npcA.GetDisplayName() + "|npc_b=" + npcB.GetDisplayName() + "|topic=" + topicText)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

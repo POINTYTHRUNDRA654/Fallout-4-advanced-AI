@@ -105,16 +105,16 @@ GlobalVariable Property gCurrentLocType  Auto
 ; 0=wasteland 1=city 2=indoor_wood 3=indoor_metal 4=cave 5=vault 6=forest 7=underwater 8=settlement
 
 ; ── Acoustic Modifier Globals (read by other scripts) ─────────────────────────
-GlobalVariable Property gAcoustic_EchoMult      Auto  ; How much echo is present
-GlobalVariable Property gAcoustic_GunRadiusMult  Auto  ; Gunshot detection radius mult
-GlobalVariable Property gAcoustic_FootstepMask   Auto  ; 0=fully audible 1=fully masked
-GlobalVariable Property gAcoustic_StealthMult    Auto  ; Stealth bonus from acoustic env
-GlobalVariable Property gAcoustic_OcclusionMult  Auto  ; Through-wall sound reduction
+GlobalVariable Property gAcoustic_EchoMult      Auto; How much echo is present; How much echo is present; How much echo is present; How much echo is present
+GlobalVariable Property gAcoustic_GunRadiusMult  Auto; Gunshot detection radius mult; Gunshot detection radius mult; Gunshot detection radius mult; Gunshot detection radius mult
+GlobalVariable Property gAcoustic_FootstepMask   Auto; 0=fully audible 1=fully masked; 0=fully audible 1=fully masked; 0=fully audible 1=fully masked; 0=fully audible 1=fully masked
+GlobalVariable Property gAcoustic_StealthMult    Auto; Stealth bonus from acoustic env; Stealth bonus from acoustic env; Stealth bonus from acoustic env; Stealth bonus from acoustic env
+GlobalVariable Property gAcoustic_OcclusionMult  Auto; Through-wall sound reduction; Through-wall sound reduction; Through-wall sound reduction; Through-wall sound reduction
 
 ; ── Spells / Effects ─────────────────────────────────────────────────────────
-Spell Property spConcussion       Auto  ; Shared with FireExplosionSystem
-Spell Property spThunderStartle   Auto  ; Brief startle from thunder
-Spell Property spEarRing          Auto  ; Tinnitus from nearby explosion/gunfire
+Spell Property spConcussion       Auto; Shared with FireExplosionSystem; Shared with FireExplosionSystem; Shared with FireExplosionSystem; Shared with FireExplosionSystem
+Spell Property spThunderStartle   Auto; Brief startle from thunder; Brief startle from thunder; Brief startle from thunder; Brief startle from thunder
+Spell Property spEarRing          Auto; Tinnitus from nearby explosion/gunfire; Tinnitus from nearby explosion/gunfire; Tinnitus from nearby explosion/gunfire; Tinnitus from nearby explosion/gunfire
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property AcousticEnabled          = True  Auto
@@ -145,17 +145,16 @@ Event OnQuestInit()
     EndIf
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
-    RegisterForWeatherChange()
-    RegisterForUpdateGameTime(UpdateInterval)
+    ; weather changes are detected by polling in OnTimerGameTime (FO4 has no weather-change event)
+    ScheduleTick(UpdateInterval)
     AcousticLog("Acoustic System initialized")
 EndEvent
 
-Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather, bool abPrecip, bool abPermaNow)
+Function WeatherChanged(Weather akOldWeather, Weather akNewWeather, Bool abPrecip, Bool abPermaNow)
     ReadGlobals()
     UpdateAcousticProfile()
-EndEvent
-
-Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference akNewLoc)
+EndFunction
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     If akNewLoc != None
         _currentLocType = ClassifyLocationAcoustic(akNewLoc)
         If gCurrentLocType != None
@@ -165,20 +164,23 @@ Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference
     EndIf
 EndEvent
 
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !AcousticEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
     ReadGlobals()
     UpdateAcousticProfile()
     WriteAcousticGlobals()
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 Function ReadGlobals()
-    If gEnvWeatherType != None  _currentWeather = gEnvWeatherType.GetValue() as Int
-    If gEnvIsNight     != None  _isNight        = gEnvIsNight.GetValue() > 0.5
+    If gEnvWeatherType != None
+        _currentWeather = gEnvWeatherType.GetValue() as Int
+    EndIf
+    If gEnvIsNight     != None
+        _isNight        = gEnvIsNight.GetValue() > 0.5
+    EndIf
     _isRaining  = _currentWeather == 1 || _currentWeather == 4
     _isStorming = _currentWeather == 3
 EndFunction
@@ -194,59 +196,59 @@ Function UpdateAcousticProfile()
     Float baseOccl     = 0.7
     Float baseFootMask = 0.0
 
-    If _currentLocType == 5  ; Vault — metal echo
-        baseEcho    = 3.5   ; Heavy echo
-        baseGunMult = 2.5   ; Sound everywhere in vault
-        baseStealth = 0.7   ; Hard to be quiet
-        baseOccl    = 0.4   ; Sound bleeds through metal walls easily
-        baseFootMask = 0.0  ; Footsteps ring out
+    If _currentLocType == 5; Vault — metal echo; Vault — metal echo; Vault — metal echo; Vault — metal echo
+        baseEcho    = 3.5; Heavy echo; Heavy echo; Heavy echo; Heavy echo
+        baseGunMult = 2.5; Sound everywhere in vault; Sound everywhere in vault; Sound everywhere in vault; Sound everywhere in vault
+        baseStealth = 0.7; Hard to be quiet; Hard to be quiet; Hard to be quiet; Hard to be quiet
+        baseOccl    = 0.4; Sound bleeds through metal walls easily; Sound bleeds through metal walls easily; Sound bleeds through metal walls easily; Sound bleeds through metal walls easily
+        baseFootMask = 0.0; Footsteps ring out; Footsteps ring out; Footsteps ring out; Footsteps ring out
         AcousticLog("Acoustic: VAULT — every sound echoes")
 
-    ElseIf _currentLocType == 4  ; Cave
+    ElseIf _currentLocType == 4; Cave; Cave; Cave; Cave
         baseEcho    = 2.8
         baseGunMult = 2.0
         baseStealth = 0.8
         baseOccl    = 0.5
         AcousticLog("Acoustic: CAVE — deep reverb")
 
-    ElseIf _currentLocType == 3  ; Indoor wood/building
+    ElseIf _currentLocType == 3; Indoor wood/building; Indoor wood/building; Indoor wood/building; Indoor wood/building
         baseEcho    = 1.4
         baseGunMult = 1.2
         baseStealth = 1.1
         baseOccl    = 0.6
         AcousticLog("Acoustic: INDOOR — muffled")
 
-    ElseIf _currentLocType == 1  ; City ruins
-        baseEcho    = 2.0   ; Sound bounces off buildings
-        baseGunMult = 1.8   ; Multiple reflections
+    ElseIf _currentLocType == 1; City ruins; City ruins; City ruins; City ruins
+        baseEcho    = 2.0; Sound bounces off buildings; Sound bounces off buildings; Sound bounces off buildings; Sound bounces off buildings
+        baseGunMult = 1.8; Multiple reflections; Multiple reflections; Multiple reflections; Multiple reflections
         baseStealth = 1.1
         baseOccl    = 0.65
         AcousticLog("Acoustic: CITY — bounce and echo")
 
-    ElseIf _currentLocType == 6  ; Forest
-        baseEcho    = 0.6   ; Plants absorb sound
-        baseGunMult = 0.8   ; Sound doesn't carry as far
-        baseStealth = 1.4   ; Good cover acoustically
-        baseOccl    = 0.85  ; Plants block sound well
+    ElseIf _currentLocType == 6; Forest; Forest; Forest; Forest
+        baseEcho    = 0.6; Plants absorb sound; Plants absorb sound; Plants absorb sound; Plants absorb sound
+        baseGunMult = 0.8; Sound doesn't carry as far; Sound doesn't carry as far; Sound doesn't carry as far; Sound doesn't carry as far
+        baseStealth = 1.4; Good cover acoustically; Good cover acoustically; Good cover acoustically; Good cover acoustically
+        baseOccl    = 0.85; Plants block sound well; Plants block sound well; Plants block sound well; Plants block sound well
         AcousticLog("Acoustic: FOREST — absorbed")
 
-    ElseIf _currentLocType == 7  ; Underwater
+    ElseIf _currentLocType == 7; Underwater; Underwater; Underwater; Underwater
         baseEcho    = 1.5
-        baseGunMult = 0.3   ; Sounds terrible underwater
-        baseStealth = 0.5   ; Movement very audible
+        baseGunMult = 0.3; Sounds terrible underwater; Sounds terrible underwater; Sounds terrible underwater; Sounds terrible underwater
+        baseStealth = 0.5; Movement very audible; Movement very audible; Movement very audible; Movement very audible
         baseOccl    = 0.9
         AcousticLog("Acoustic: UNDERWATER")
 
-    ElseIf _currentLocType == 8  ; Settlement
+    ElseIf _currentLocType == 8; Settlement; Settlement; Settlement; Settlement
         baseEcho    = 1.2
         baseGunMult = 1.4
-        baseStealth = 1.15  ; Generator/forge noise helps
+        baseStealth = 1.15; Generator/forge noise helps; Generator/forge noise helps; Generator/forge noise helps; Generator/forge noise helps
         baseOccl    = 0.6
         AcousticLog("Acoustic: SETTLEMENT — ambient noise masking")
 
-    Else  ; Wasteland (0)
+    Else; Wasteland (0); Wasteland (0); Wasteland (0); Wasteland (0)
         baseEcho    = 1.0
-        baseGunMult = 1.3   ; Flat carry
+        baseGunMult = 1.3; Flat carry; Flat carry; Flat carry; Flat carry
         baseStealth = 1.0
         baseOccl    = 0.9
         AcousticLog("Acoustic: WASTELAND — flat carry")
@@ -258,20 +260,25 @@ Function UpdateAcousticProfile()
     Float weatherFootMod = 0.0
 
     If _isRaining
-        weatherGunMod  = 0.70  ; Rain absorbs -30% gun radius
-        weatherStlMod  = 1.25  ; Rain helps stealth +25%
-        weatherFootMod = 0.5   ; Footsteps half-masked by rain
+        weatherGunMod  = 0.70; Rain absorbs -30% gun radius; Rain absorbs -30% gun radius; Rain absorbs -30% gun radius; Rain absorbs -30% gun radius
+        weatherStlMod  = 1.25; Rain helps stealth +25%; Rain helps stealth +25%; Rain helps stealth +25%; Rain helps stealth +25%
+        weatherFootMod = 0.5; Footsteps half-masked by rain; Footsteps half-masked by rain; Footsteps half-masked by rain; Footsteps half-masked by rain
         AcousticLog("Weather: RAIN — footsteps masked, gun range -30%")
 
     ElseIf _isStorming
-        weatherGunMod  = 0.55  ; Storm absorbs -45%
-        weatherStlMod  = 1.6   ; Major stealth window in storm
-        weatherFootMod = 0.75  ; Footsteps nearly masked
+        weatherGunMod  = 0.55; Storm absorbs -45%; Storm absorbs -45%; Storm absorbs -45%; Storm absorbs -45%
+        weatherStlMod  = 1.6; Major stealth window in storm; Major stealth window in storm; Major stealth window in storm; Major stealth window in storm
+        weatherFootMod = 0.75; Footsteps nearly masked; Footsteps nearly masked; Footsteps nearly masked; Footsteps nearly masked
         AcousticLog("Weather: STORM — major stealth window")
     EndIf
 
     ; Night modifier (quieter world = sounds carry farther)
-    Float nightMod = _isNight ? 1.25 : 1.0
+    Float nightMod
+    If (_isNight)
+        nightMod = 1.25
+    Else
+        nightMod = 1.0
+    EndIf
 
     ; Thunder masking check
     If _thunderMaskActive
@@ -279,7 +286,7 @@ Function UpdateAcousticProfile()
         If now > _thunderMaskEndTime
             _thunderMaskActive = False
         Else
-            weatherGunMod  *= 0.3   ; Thunder masks gunfire for 2–3 seconds
+            weatherGunMod  *= 0.3; Thunder masks gunfire for 2–3 seconds; Thunder masks gunfire for 2–3 seconds; Thunder masks gunfire for 2–3 seconds; Thunder masks gunfire for 2–3 seconds
             weatherStlMod  += 0.3
             weatherFootMod += 0.4
         EndIf
@@ -294,45 +301,50 @@ Function UpdateAcousticProfile()
 EndFunction
 
 Function WriteAcousticGlobals()
-    If gAcoustic_EchoMult     != None  gAcoustic_EchoMult.SetValue(_currentEchoMult)
-    If gAcoustic_GunRadiusMult != None  gAcoustic_GunRadiusMult.SetValue(_currentGunMult)
-    If gAcoustic_StealthMult   != None  gAcoustic_StealthMult.SetValue(_currentStealthMult)
-    If gAcoustic_OcclusionMult != None  gAcoustic_OcclusionMult.SetValue(_currentOcclusion)
-    If gAcoustic_FootstepMask  != None  gAcoustic_FootstepMask.SetValue(_currentFootstepMask)
+    If gAcoustic_EchoMult     != None
+        gAcoustic_EchoMult.SetValue(_currentEchoMult)
+    EndIf
+    If gAcoustic_GunRadiusMult != None
+        gAcoustic_GunRadiusMult.SetValue(_currentGunMult)
+    EndIf
+    If gAcoustic_StealthMult   != None
+        gAcoustic_StealthMult.SetValue(_currentStealthMult)
+    EndIf
+    If gAcoustic_OcclusionMult != None
+        gAcoustic_OcclusionMult.SetValue(_currentOcclusion)
+    EndIf
+    If gAcoustic_FootstepMask  != None
+        gAcoustic_FootstepMask.SetValue(_currentFootstepMask)
+    EndIf
 
-    Debug.Trace("[AAI] ACOUSTIC_STATE|loc=" + _currentLocType + \
-                "|echo=" + _currentEchoMult + \
-                "|gun_mult=" + _currentGunMult + \
-                "|stealth=" + _currentStealthMult + \
-                "|footstep_mask=" + _currentFootstepMask + \
-                "|thunder=" + _thunderMaskActive)
+    Debug.Trace("[AAI] ACOUSTIC_STATE|loc=" + _currentLocType + "|echo=" + _currentEchoMult + "|gun_mult=" + _currentGunMult + "|stealth=" + _currentStealthMult + "|footstep_mask=" + _currentFootstepMask + "|thunder=" + _thunderMaskActive)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; LOCATION CLASSIFICATION
 ; ═══════════════════════════════════════════════════════════════════════════
-int Function ClassifyLocationAcoustic(ObjectReference loc)
+int Function ClassifyLocationAcoustic(Location loc)
     If loc == None
         Return 0
     EndIf
-    String name = loc.GetDisplayName()
+    String name = loc.GetName()
 
-    If name.Find("Vault") >= 0                   Return 5  ; Vault
-    ElseIf name.Find("Cave") >= 0 || name.Find("Subway") >= 0 ||
-           name.Find("Tunnel") >= 0              Return 4  ; Cave
-    ElseIf name.Find("Diamond City") >= 0 ||
-           name.Find("Goodneighbor") >= 0 ||
-           name.Find("City") >= 0 ||
-           name.Find("Ruin") >= 0                Return 1  ; City
-    ElseIf name.Find("Forest") >= 0 ||
-           name.Find("Woodland") >= 0            Return 6  ; Forest
-    ElseIf name.Find("Settlement") >= 0 ||
-           name.Find("Sanctuary") >= 0 ||
-           name.Find("Town") >= 0                Return 8  ; Settlement
-    ElseIf loc.IsUnderwater()                    Return 7  ; Underwater
-    ElseIf loc.IsInterior()                      Return 3  ; Indoor
+    If StringUtil.Find(name, "Vault") >= 0
+        Return 5
+    ElseIf StringUtil.Find(name, "Cave") >= 0 || StringUtil.Find(name, "Subway") >= 0 || StringUtil.Find(name, "Tunnel") >= 0
+        Return 4
+    ElseIf StringUtil.Find(name, "Diamond City") >= 0 || StringUtil.Find(name, "Goodneighbor") >= 0 || StringUtil.Find(name, "City") >= 0 || StringUtil.Find(name, "Ruin") >= 0
+        Return 1
+    ElseIf StringUtil.Find(name, "Forest") >= 0 || StringUtil.Find(name, "Woodland") >= 0
+        Return 6
+    ElseIf StringUtil.Find(name, "Settlement") >= 0 || StringUtil.Find(name, "Sanctuary") >= 0 || StringUtil.Find(name, "Town") >= 0
+        Return 8
+    ElseIf Game.GetPlayer().IsSwimming(); no underwater check on Location — use player swim state
+        Return 7
+    ElseIf Game.GetPlayer().IsInInterior()
+        Return 3
     EndIf
-    Return 0  ; Default: wasteland
+    Return 0; Default: wasteland; Default: wasteland; Default: wasteland; Default: wasteland
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -344,17 +356,17 @@ Function OnThunderStrike()
     EndIf
 
     _thunderMaskActive  = True
-    _thunderMaskEndTime = Utility.GetCurrentGameTime() + (0.00003)  ; ~2.5 seconds game time
+    _thunderMaskEndTime = Utility.GetCurrentGameTime() + (0.00003); ~2.5 seconds game time; ~2.5 seconds game time; ~2.5 seconds game time; ~2.5 seconds game time
 
     ; Nearby NPCs briefly startle
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(800.0, 10)
+    Actor[] nearby = MiscUtil.ScanActors(player, 800.0, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead() && spThunderStartle != None
             ; Brief startle — doesn't trigger combat
-            npc.CastSpell(spThunderStartle, npc)
+            spThunderStartle.Cast(npc, npc)
         EndIf
         i += 1
     EndWhile
@@ -373,7 +385,7 @@ Function OnSuppressedShot(ObjectReference shotOrigin)
     EndIf
 
     ; Suppressor effectiveness by location
-    Float suppressedRadius = 300.0  ; Base suppressed alert radius
+    Float suppressedRadius = 300.0; Base suppressed alert radius; Base suppressed alert radius; Base suppressed alert radius; Base suppressed alert radius
 
     ; Forest: best — plants absorb residual
     If _currentLocType == 6
@@ -387,12 +399,12 @@ Function OnSuppressedShot(ObjectReference shotOrigin)
 
     ; City: reflections confuse direction
     ElseIf _currentLocType == 1
-        suppressedRadius = 350.0  ; Heard but direction is wrong
+        suppressedRadius = 350.0; Heard but direction is wrong; Heard but direction is wrong; Heard but direction is wrong; Heard but direction is wrong
         AcousticLog("Suppressor: City — heard but direction confused")
 
     ; Vault / cave: barely helps — echo everywhere
     ElseIf _currentLocType == 4 || _currentLocType == 5
-        suppressedRadius = 700.0  ; Suppressor nearly useless in echo chambers
+        suppressedRadius = 700.0; Suppressor nearly useless in echo chambers; Suppressor nearly useless in echo chambers; Suppressor nearly useless in echo chambers; Suppressor nearly useless in echo chambers
         AcousticLog("Suppressor: Vault/Cave — nearly useless!")
         Debug.Notification("Suppressor barely helps in here — the echo gives you away.")
     EndIf
@@ -406,7 +418,7 @@ Function OnSuppressedShot(ObjectReference shotOrigin)
     EndIf
 
     ; Alert NPCs in the suppressed radius
-    Actor[] inRange = shotOrigin.GetActorsInRange(suppressedRadius, 15)
+    Actor[] inRange = MiscUtil.ScanActors(shotOrigin, suppressedRadius, 15)
     Int i = 0
     While i < inRange.Length
         Actor npc = inRange[i]
@@ -416,10 +428,7 @@ Function OnSuppressedShot(ObjectReference shotOrigin)
         i += 1
     EndWhile
 
-    Debug.Trace("[AAI] SUPPRESSED_SHOT|radius=" + suppressedRadius + \
-                "|loc_type=" + _currentLocType + \
-                "|night=" + _isNight + \
-                "|weather=" + _currentWeather)
+    Debug.Trace("[AAI] SUPPRESSED_SHOT|radius=" + suppressedRadius + "|loc_type=" + _currentLocType + "|night=" + _isNight + "|weather=" + _currentWeather)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -435,9 +444,9 @@ Function OnFootstep(String materialType)
     String notification = ""
 
     If materialType == "Metal"
-        detectionMod = 2.0    ; Very loud
-        If _currentLocType == 5 || _currentLocType == 4  ; Vault or cave
-            detectionMod = 3.0  ; Rings out
+        detectionMod = 2.0; Very loud; Very loud; Very loud; Very loud
+        If _currentLocType == 5 || _currentLocType == 4; Vault or cave; Vault or cave; Vault or cave; Vault or cave
+            detectionMod = 3.0; Rings out; Rings out; Rings out; Rings out
             notification = "Your footsteps ring on the metal floor!"
         EndIf
 
@@ -462,29 +471,31 @@ Function OnFootstep(String materialType)
         detectionMod = 1.4
 
     ElseIf materialType == "Mud" || materialType == "Soil"
-        detectionMod = 0.7   ; Quiet
+        detectionMod = 0.7; Quiet; Quiet; Quiet; Quiet
 
     ElseIf materialType == "Leaves"
-        detectionMod = _isRaining ? 0.8 : 1.3  ; Rain wets leaves, quieter
+        If (_isRaining); Rain wets leaves, quieter; Rain wets leaves, quieter; Rain wets leaves, quieter; Rain wets leaves, quieter
+            detectionMod = 0.8
+        Else
+            detectionMod = 1.3
+        EndIf
 
     ElseIf materialType == "Concrete"
         detectionMod = 1.0
 
     ElseIf materialType == "Carpet" || materialType == "Cloth"
-        detectionMod = 0.4   ; Very quiet
+        detectionMod = 0.4; Very quiet; Very quiet; Very quiet; Very quiet
     EndIf
 
     ; Apply rain/storm masking
     detectionMod *= (1.0 - _currentFootstepMask)
-    detectionMod = Math.Max(detectionMod, 0.1)  ; Never completely silent
+    detectionMod = Math.Max(detectionMod, 0.1); Never completely silent; Never completely silent; Never completely silent; Never completely silent
 
     If notification != "" && detectionMod > 1.2
         Debug.Notification(notification)
     EndIf
 
-    Debug.Trace("[AAI] FOOTSTEP|material=" + materialType + \
-                "|detection_mod=" + detectionMod + \
-                "|rain_mask=" + _currentFootstepMask)
+    Debug.Trace("[AAI] FOOTSTEP|material=" + materialType + "|detection_mod=" + detectionMod + "|rain_mask=" + _currentFootstepMask)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -518,7 +529,15 @@ Function OnCreatureVocalization(Actor creature, String vocType)
 
     ElseIf vocType == "Territorial"
         ; Sustained roar — carries on wind
-        alertRadius = 2500.0 * (_isStorming ? 0.6 : (_currentGunMult > 1.0 ? 1.3 : 1.0))
+        Float _fxTmp1 = 0.6
+        If !(_isStorming)
+            Float _fxTmp2 = 1.3
+            If !(_currentGunMult > 1.0)
+                _fxTmp2 = 1.0
+            EndIf
+            _fxTmp1 = _fxTmp2
+        EndIf
+        alertRadius = 2500.0 * _fxTmp1
         AcousticLog(creature.GetDisplayName() + " territorial roar — " + alertRadius + " unit range")
 
     ElseIf vocType == "Feeding"
@@ -528,7 +547,7 @@ Function OnCreatureVocalization(Actor creature, String vocType)
     EndIf
 
     ; Alert nearby creatures of appropriate type
-    Actor[] nearby = creature.GetActorsInRange(alertRadius, 10)
+    Actor[] nearby = MiscUtil.ScanActors(creature, alertRadius, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -538,9 +557,7 @@ Function OnCreatureVocalization(Actor creature, String vocType)
         i += 1
     EndWhile
 
-    Debug.Trace("[AAI] CREATURE_VOC|species=" + creature.GetDisplayName() + \
-                "|type=" + vocType + "|radius=" + alertRadius + \
-                "|predators=" + attractsPredators)
+    Debug.Trace("[AAI] CREATURE_VOC|species=" + creature.GetDisplayName() + "|type=" + vocType + "|radius=" + alertRadius + "|predators=" + attractsPredators)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -566,3 +583,26 @@ EndFunction
 Function AcousticLog(String msg)
     Debug.Trace("[AAI-Acoustic] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Weather _f4aiLastWeather = None
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Weather wNow = Weather.GetCurrentWeather()
+        If wNow != _f4aiLastWeather
+            Weather wOld = _f4aiLastWeather
+            _f4aiLastWeather = wNow
+            WeatherChanged(wOld, wNow, False, False)
+        EndIf
+        DoGameTimeTick()
+    EndIf
+EndEvent

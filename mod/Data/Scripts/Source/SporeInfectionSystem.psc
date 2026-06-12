@@ -71,87 +71,87 @@
 Scriptname SporeInfectionSystem extends Quest
 
 Quest Property AAIQuest     Auto
-Quest Property GlowManager  Auto  ; GlowMapManager
+GlowMapManager Property GlowManager  Auto; typed so IsVineAlerted/OnSporePlantFired resolve
 
 ; ── Spore Plant References ────────────────────────────────────────────────────
-ObjectReference[] Property SporePlants_All    Auto  ; All managed spore plants
-Keyword           Property kwdSporePlant      Auto  ; AAI_SporePlant keyword
-Keyword           Property kwdTitanSpore      Auto  ; Large variant
-Keyword           Property kwdPuffball        Auto  ; Passive mine variant
-Keyword           Property kwdVenomVine       Auto  ; Melee entangle variant
-Keyword           Property kwdRobot           Auto  ; Immune to infection
-Keyword           Property kwdSynth           Auto  ; Immune to infection
+ObjectReference[] Property SporePlants_All    Auto; All managed spore plants; All managed spore plants; All managed spore plants; All managed spore plants
+Keyword           Property kwdSporePlant      Auto; AAI_SporePlant keyword; AAI_SporePlant keyword; AAI_SporePlant keyword; AAI_SporePlant keyword
+Keyword           Property kwdTitanSpore      Auto; Large variant; Large variant; Large variant; Large variant
+Keyword           Property kwdPuffball        Auto; Passive mine variant; Passive mine variant; Passive mine variant; Passive mine variant
+Keyword           Property kwdVenomVine       Auto; Melee entangle variant; Melee entangle variant; Melee entangle variant; Melee entangle variant
+Keyword           Property kwdRobot           Auto; Immune to infection; Immune to infection; Immune to infection; Immune to infection
+Keyword           Property kwdSynth           Auto; Immune to infection; Immune to infection; Immune to infection; Immune to infection
 
 ; ── Spore Projectile Spells ───────────────────────────────────────────────────
-Spell Property spSporeWarning         Auto  ; Small warning burst
-Spell Property spSporeFullVolley      Auto  ; Full spore cloud
-Spell Property spSporeAreaVolley      Auto  ; Titan Spore AoE burst
-Spell Property spPuffballDetonate     Auto  ; Puffball mine detonation
-Spell Property spVenomEntangle        Auto  ; Venom vine entangle
+Spell Property spSporeWarning         Auto; Small warning burst; Small warning burst; Small warning burst; Small warning burst
+Spell Property spSporeFullVolley      Auto; Full spore cloud; Full spore cloud; Full spore cloud; Full spore cloud
+Spell Property spSporeAreaVolley      Auto; Titan Spore AoE burst; Titan Spore AoE burst; Titan Spore AoE burst; Titan Spore AoE burst
+Spell Property spPuffballDetonate     Auto; Puffball mine detonation; Puffball mine detonation; Puffball mine detonation; Puffball mine detonation
+Spell Property spVenomEntangle        Auto; Venom vine entangle; Venom vine entangle; Venom vine entangle; Venom vine entangle
 
 ; ── Infection Effect Spells (one per stage per type) ─────────────────────────
 ; Hallucinogenic
-Spell Property spHallucinate_1        Auto  ; Mild — slight distortion
-Spell Property spHallucinate_2        Auto  ; Moderate — enemies look friendly
-Spell Property spHallucinate_3        Auto  ; Severe — complete confusion
+Spell Property spHallucinate_1        Auto; Mild — slight distortion; Mild — slight distortion; Mild — slight distortion; Mild — slight distortion
+Spell Property spHallucinate_2        Auto; Moderate — enemies look friendly; Moderate — enemies look friendly; Moderate — enemies look friendly; Moderate — enemies look friendly
+Spell Property spHallucinate_3        Auto; Severe — complete confusion; Severe — complete confusion; Severe — complete confusion; Severe — complete confusion
 ; Paralytic
-Spell Property spParalyze_1           Auto  ; Mild — slight slow
-Spell Property spParalyze_2           Auto  ; Moderate — major slow
-Spell Property spParalyze_3           Auto  ; Severe — near-immobile
+Spell Property spParalyze_1           Auto; Mild — slight slow; Mild — slight slow; Mild — slight slow; Mild — slight slow
+Spell Property spParalyze_2           Auto; Moderate — major slow; Moderate — major slow; Moderate — major slow; Moderate — major slow
+Spell Property spParalyze_3           Auto; Severe — near-immobile; Severe — near-immobile; Severe — near-immobile; Severe — near-immobile
 ; Corrosive
-Spell Property spCorrosive_1          Auto  ; Mild — minor armor damage
-Spell Property spCorrosive_2          Auto  ; Moderate — significant armor
-Spell Property spCorrosive_3          Auto  ; Severe — armor destroyed
+Spell Property spCorrosive_1          Auto; Mild — minor armor damage; Mild — minor armor damage; Mild — minor armor damage; Mild — minor armor damage
+Spell Property spCorrosive_2          Auto; Moderate — significant armor; Moderate — significant armor; Moderate — significant armor; Moderate — significant armor
+Spell Property spCorrosive_3          Auto; Severe — armor destroyed; Severe — armor destroyed; Severe — armor destroyed; Severe — armor destroyed
 ; Radiation
-Spell Property spRadSpore_1           Auto  ; 2 rads/sec
-Spell Property spRadSpore_2           Auto  ; 5 rads/sec
-Spell Property spRadSpore_3           Auto  ; 10 rads/sec (Glowing Sea level)
+Spell Property spRadSpore_1           Auto; 2 rads/sec; 2 rads/sec; 2 rads/sec; 2 rads/sec
+Spell Property spRadSpore_2           Auto; 5 rads/sec; 5 rads/sec; 5 rads/sec; 5 rads/sec
+Spell Property spRadSpore_3           Auto; 10 rads/sec (Glowing Sea level); 10 rads/sec (Glowing Sea level); 10 rads/sec (Glowing Sea level); 10 rads/sec (Glowing Sea level)
 ; Blinding
-Spell Property spBlind_1              Auto  ; Slight visual noise
-Spell Property spBlind_2              Auto  ; Heavy blur
-Spell Property spBlind_3              Auto  ; Near total blindness
+Spell Property spBlind_1              Auto; Slight visual noise; Slight visual noise; Slight visual noise; Slight visual noise
+Spell Property spBlind_2              Auto; Heavy blur; Heavy blur; Heavy blur; Heavy blur
+Spell Property spBlind_3              Auto; Near total blindness; Near total blindness; Near total blindness; Near total blindness
 ; Infectious spread
-Spell Property spInfectionSpread      Auto  ; Applied to nearby actors at Stage 3
+Spell Property spInfectionSpread      Auto; Applied to nearby actors at Stage 3; Applied to nearby actors at Stage 3; Applied to nearby actors at Stage 3; Applied to nearby actors at Stage 3
 
 ; ── Cure Items ────────────────────────────────────────────────────────────────
 MiscObject Property itemAntibiotics   Auto
 MiscObject Property itemRadAway       Auto
-MiscObject Property itemAntidotePlant Auto  ; Rare cure plant
+MiscObject Property itemAntidotePlant Auto; Rare cure plant; Rare cure plant; Rare cure plant; Rare cure plant
 MiscObject Property itemHazmatSuit    Auto
 
 ; ── Visual Effects ─────────────────────────────────────────────────────────────
-ImageSpaceModifier Property imodInfection_1   Auto  ; Mild tint
-ImageSpaceModifier Property imodInfection_2   Auto  ; Moderate blur + tint
-ImageSpaceModifier Property imodInfection_3   Auto  ; Severe distortion
-ImageSpaceModifier Property imodInfection_4   Auto  ; Critical — extreme
-Explosion Property expSporeCloud              Auto  ; Visual spore burst at plant
+ImageSpaceModifier Property imodInfection_1   Auto; Mild tint; Mild tint; Mild tint; Mild tint
+ImageSpaceModifier Property imodInfection_2   Auto; Moderate blur + tint; Moderate blur + tint; Moderate blur + tint; Moderate blur + tint
+ImageSpaceModifier Property imodInfection_3   Auto; Severe distortion; Severe distortion; Severe distortion; Severe distortion
+ImageSpaceModifier Property imodInfection_4   Auto; Critical — extreme; Critical — extreme; Critical — extreme; Critical — extreme
+Explosion Property expSporeCloud              Auto; Visual spore burst at plant; Visual spore burst at plant; Visual spore burst at plant; Visual spore burst at plant
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property SporeEnabled            = True  Auto
 bool  Property InfectionEnabled        = True  Auto
 bool  Property SpreadEnabled           = True  Auto
 float Property UpdateInterval          = 0.08  Auto
-float Property PlantDetectRadius_Walk  = 300.0 Auto  ; Passive detection range
-float Property PlantDetectRadius_Run   = 450.0 Auto  ; Running player detected farther
-float Property PlantDetectRadius_Vine  = 600.0 Auto  ; Vine alert pre-arms at this range
-float Property InfectionSpreadRadius   = 200.0 Auto  ; Spread to NPCs radius
-float Property SpreadChancePerMinute   = 0.20  Auto  ; 20% chance per minute
+float Property PlantDetectRadius_Walk  = 300.0 Auto; Passive detection range; Passive detection range; Passive detection range; Passive detection range
+float Property PlantDetectRadius_Run   = 450.0 Auto; Running player detected farther; Running player detected farther; Running player detected farther; Running player detected farther
+float Property PlantDetectRadius_Vine  = 600.0 Auto; Vine alert pre-arms at this range; Vine alert pre-arms at this range; Vine alert pre-arms at this range; Vine alert pre-arms at this range
+float Property InfectionSpreadRadius   = 200.0 Auto; Spread to NPCs radius; Spread to NPCs radius; Spread to NPCs radius; Spread to NPCs radius
+float Property SpreadChancePerMinute   = 0.20  Auto; 20% chance per minute; 20% chance per minute; 20% chance per minute; 20% chance per minute
 
 ; Infection stage durations in real seconds (30 game-minutes ≈ ~30 real seconds)
-float Property Stage0Duration    = 30.0  Auto  ; Incubation
-float Property Stage1Duration    = 180.0 Auto  ; Mild
-float Property Stage2Duration    = 540.0 Auto  ; Moderate
-float Property Stage3Duration    = 1080.0 Auto ; Severe
-float Property Stage4MaxDuration = 360.0 Auto  ; Critical → lethal if untreated
+float Property Stage0Duration    = 30.0  Auto; Incubation; Incubation; Incubation; Incubation
+float Property Stage1Duration    = 180.0 Auto; Mild; Mild; Mild; Mild
+float Property Stage2Duration    = 540.0 Auto; Moderate; Moderate; Moderate; Moderate
+float Property Stage3Duration    = 1080.0 Auto; Severe; Severe; Severe; Severe
+float Property Stage4MaxDuration = 360.0 Auto; Critical → lethal if untreated; Critical → lethal if untreated; Critical → lethal if untreated; Critical → lethal if untreated
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 ; Player infection state
 bool   _playerInfected     = False
-String _playerSporeType    = ""   ; "hallucinogenic" "paralytic" "corrosive" "radiation" "blinding" "infectious"
-int    _playerStage        = 0    ; 0-4
-float  _infectionStartTime = 0.0  ; Real time infection started
-float  _stageStartTime     = 0.0  ; Real time current stage started
-bool   _hasMask            = False ; Player has hazmat protection
+String _playerSporeType    = ""; "hallucinogenic" "paralytic" "corrosive" "radiation" "blinding" "infectious"; "hallucinogenic" "paralytic" "corrosive" "radiation" "blinding" "infectious"; "hallucinogenic" "paralytic" "corrosive" "radiation" "blinding" "infectious"; "hallucinogenic" "paralytic" "corrosive" "radiation" "blinding" "infectious"
+int    _playerStage        = 0; 0-4; 0-4; 0-4; 0-4
+float  _infectionStartTime = 0.0; Real time infection started; Real time infection started; Real time infection started; Real time infection started
+float  _stageStartTime     = 0.0; Real time current stage started; Real time current stage started; Real time current stage started; Real time current stage started
+bool   _hasMask            = False; Player has hazmat protection; Player has hazmat protection; Player has hazmat protection; Player has hazmat protection
 
 ; Plant arming state
 int    _armedPlantCount    = 0
@@ -173,9 +173,9 @@ Event OnQuestInit()
     _npcInfectionTimes = new float[10]
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnItemEquipped")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnItemUnequipped")
-    RegisterForUpdateGameTime(UpdateInterval)
+    RegisterForRemoteEvent(Game.GetPlayer(), "Actor.OnItemEquipped")
+    RegisterForRemoteEvent(Game.GetPlayer(), "Actor.OnItemUnequipped")
+    ScheduleTick(UpdateInterval)
 
     SporeLog("Spore Infection System initialized")
 EndEvent
@@ -183,9 +183,9 @@ EndEvent
 ; ═══════════════════════════════════════════════════════════════════════════
 ; MAIN TICK
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !SporeEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
 
@@ -201,7 +201,7 @@ Event OnUpdateGameTime()
 
     ; Spread infection
     If SpreadEnabled && _playerInfected && _playerStage >= 3
-        If (realNow - _lastSpreadCheck) >= 60.0  ; Every real minute
+        If (realNow - _lastSpreadCheck) >= 60.0; Every real minute; Every real minute; Every real minute; Every real minute
             _lastSpreadCheck = realNow
             AttemptInfectionSpread()
         EndIf
@@ -212,14 +212,11 @@ Event OnUpdateGameTime()
 
     ; Log state for bridge
     If _playerInfected
-        Debug.Trace("[AAI] SPORE_STATE|infected=true|type=" + _playerSporeType + \
-                    "|stage=" + _playerStage + \
-                    "|npc_count=" + CountInfectedNPCs())
+        Debug.Trace("[AAI] SPORE_STATE|infected=true|type=" + _playerSporeType + "|stage=" + _playerStage + "|npc_count=" + CountInfectedNPCs())
     EndIf
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PLANT DETECTION & FIRING
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -229,8 +226,13 @@ Function CheckSporePlantDetection()
     EndIf
 
     Actor player = Game.GetPlayer()
-    Bool playerRunning = player.GetVelocity().Length() > 250.0
-    Float detectRadius = playerRunning ? PlantDetectRadius_Run : PlantDetectRadius_Walk
+    Bool playerRunning = (player.IsRunning() || player.IsSprinting())
+    Float detectRadius
+    If (playerRunning)
+        detectRadius = PlantDetectRadius_Run
+    Else
+        detectRadius = PlantDetectRadius_Walk
+    EndIf
 
     ; Vine network alert increases detection radius
     If GlowManager != None && GlowManager.IsVineAlerted()
@@ -258,8 +260,8 @@ Function TriggerPlantFire(ObjectReference plant, Float distance, Actor player)
     EndIf
 
     ; Determine plant type and fire accordingly
-    Bool isTitan  = kwdTitanSpore != None && (plant.GetLinkedRef() as Actor)?.HasKeyword(kwdTitanSpore)
-    Bool isPuff   = kwdPuffball   != None && (plant.GetLinkedRef() as Actor)?.HasKeyword(kwdPuffball)
+    Bool isTitan  = kwdTitanSpore != None && (plant.GetLinkedRef() as Actor).HasKeyword(kwdTitanSpore)
+    Bool isPuff   = kwdPuffball   != None && (plant.GetLinkedRef() as Actor).HasKeyword(kwdPuffball)
 
     ; Visual burst effect
     If expSporeCloud != None
@@ -274,7 +276,7 @@ Function TriggerPlantFire(ObjectReference plant, Float distance, Actor player)
     If isPuff
         ; Puffball: immediate AoE detonation
         If spPuffballDetonate != None
-            plant.CastSpell(spPuffballDetonate, player)
+            spPuffballDetonate.Cast(plant, player)
         EndIf
         InfectActor(player, GetRandomSporeType(), distance)
         Debug.Notification("PUFFBALL — spore explosion!")
@@ -282,11 +284,11 @@ Function TriggerPlantFire(ObjectReference plant, Float distance, Actor player)
     ElseIf isTitan
         ; Titan: devastating area volley
         If spSporeAreaVolley != None
-            plant.CastSpell(spSporeAreaVolley, player)
+            spSporeAreaVolley.Cast(plant, player)
         EndIf
         InfectActor(player, GetRandomSporeType(), distance)
         ; Also fire at nearby NPCs
-        Actor[] nearby = plant.GetActorsInRange(500.0, 5)
+        Actor[] nearby = MiscUtil.ScanActors(plant, 500.0, 5)
         Int i = 0
         While i < nearby.Length
             Actor npc = nearby[i]
@@ -300,11 +302,11 @@ Function TriggerPlantFire(ObjectReference plant, Float distance, Actor player)
     Else
         ; Standard spore plant: warning shot first
         If distance > 200.0 && spSporeWarning != None
-            plant.CastSpell(spSporeWarning, player)
+            spSporeWarning.Cast(plant, player)
             Debug.Notification("A spore cloud erupts near you — back away!")
             InfectActor(player, GetRandomSporeType(), distance)
         ElseIf spSporeFullVolley != None
-            plant.CastSpell(spSporeFullVolley, player)
+            spSporeFullVolley.Cast(plant, player)
             InfectActor(player, GetRandomSporeType(), distance)
             Debug.Notification("Spores SATURATE the air! You've breathed them in.")
         EndIf
@@ -313,11 +315,16 @@ EndFunction
 
 String Function GetRandomSporeType()
     Int roll = Utility.RandomInt(1, 100)
-    If roll <= 20  Return "hallucinogenic"
-    ElseIf roll <= 40  Return "paralytic"
-    ElseIf roll <= 55  Return "corrosive"
-    ElseIf roll <= 70  Return "radiation"
-    ElseIf roll <= 85  Return "blinding"
+    If roll <= 20
+        Return "hallucinogenic"
+    ElseIf roll <= 40
+        Return "paralytic"
+    ElseIf roll <= 55
+        Return "corrosive"
+    ElseIf roll <= 70
+        Return "radiation"
+    ElseIf roll <= 85
+        Return "blinding"
     EndIf
     Return "infectious"
 EndFunction
@@ -346,11 +353,9 @@ Function InfectActor(Actor akTarget, String sporeType, Float distance)
         _stageStartTime    = _infectionStartTime
 
         ShowInfectionStageEffect(0)
-        Debug.Notification("[INFECTION] You've been infected with " + sporeType + " spores. " + \
-                           "Symptoms will begin in " + Stage0Duration + " seconds. Find a cure.")
+        Debug.Notification("[INFECTION] You've been infected with " + sporeType + " spores. " + "Symptoms will begin in " + Stage0Duration + " seconds. Find a cure.")
         SporeLog("Player infected: " + sporeType)
-        Debug.Trace("[AAI] SPORE_INFECT|target=player|type=" + sporeType + \
-                    "|distance=" + distance + "|game_time=" + Utility.GetCurrentGameTime())
+        Debug.Trace("[AAI] SPORE_INFECT|target=player|type=" + sporeType + "|distance=" + distance + "|game_time=" + Utility.GetCurrentGameTime())
     Else
         InfectNPC(akTarget, sporeType)
     EndIf
@@ -360,18 +365,30 @@ Function OverridePlayerInfection(String newType)
     ; Clear old infection effects
     ClearInfectionEffects(Game.GetPlayer())
     _playerSporeType = newType
-    _playerStage     = Math.Max(_playerStage - 1, 1) as Int  ; Compound but don't reset
+    _playerStage     = Math.Max(_playerStage - 1, 1) as Int; Compound but don't reset; Compound but don't reset; Compound but don't reset; Compound but don't reset
     ApplyStageEffects(Game.GetPlayer(), _playerStage)
     Debug.Notification("[INFECTION] A new spore type compounds your infection: " + newType)
 EndFunction
 
 Int Function GetSporeTypeSeverity(String stype)
-    If stype == "radiation"      Return 5
-    If stype == "infectious"     Return 4
-    If stype == "corrosive"      Return 3
-    If stype == "paralytic"      Return 2
-    If stype == "hallucinogenic" Return 2
-    If stype == "blinding"       Return 1
+    If stype == "radiation"
+        Return 5
+    EndIf
+    If stype == "infectious"
+        Return 4
+    EndIf
+    If stype == "corrosive"
+        Return 3
+    EndIf
+    If stype == "paralytic"
+        Return 2
+    EndIf
+    If stype == "hallucinogenic"
+        Return 2
+    EndIf
+    If stype == "blinding"
+        Return 1
+    EndIf
     Return 0
 EndFunction
 
@@ -403,7 +420,7 @@ EndFunction
 
 Function ProgressToStage(Int newStage)
     Actor player = Game.GetPlayer()
-    ClearInfectionEffects(player)  ; Remove previous stage effects
+    ClearInfectionEffects(player); Remove previous stage effects; Remove previous stage effects; Remove previous stage effects; Remove previous stage effects
 
     _playerStage    = newStage
     _stageStartTime = Utility.GetCurrentRealTime()
@@ -412,62 +429,93 @@ Function ProgressToStage(Int newStage)
     ShowInfectionStageEffect(newStage)
 
     String stageLabel = ""
-    If newStage == 1  stageLabel = "[INFECTION - MILD] Symptoms beginning."
-    ElseIf newStage == 2  stageLabel = "[INFECTION - MODERATE] You're getting worse. Find a cure."
-    ElseIf newStage == 3  stageLabel = "[INFECTION - SEVERE] Critical state. You may infect others."
-    ElseIf newStage == 4  stageLabel = "[INFECTION - CRITICAL] You are dying. Find the antidote plant NOW."
+    If newStage == 1
+        stageLabel = "[INFECTION - MILD] Symptoms beginning."
+    ElseIf newStage == 2
+        stageLabel = "[INFECTION - MODERATE] You're getting worse. Find a cure."
+    ElseIf newStage == 3
+        stageLabel = "[INFECTION - SEVERE] Critical state. You may infect others."
+    ElseIf newStage == 4
+        stageLabel = "[INFECTION - CRITICAL] You are dying. Find the antidote plant NOW."
     EndIf
 
     Debug.Notification(stageLabel)
     SporeLog("Infection progressed to Stage " + newStage + " (" + _playerSporeType + ")")
-    Debug.Trace("[AAI] SPORE_STAGE|stage=" + newStage + "|type=" + _playerSporeType + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] SPORE_STAGE|stage=" + newStage + "|type=" + _playerSporeType + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 Function ApplyStageEffects(Actor akTarget, Int stage)
-    If stage == 0 Return  ; Incubation — no effects
+    If stage == 0
+        Return
+    EndIf
 
     ; Apply type-specific stage spell
     Spell spToApply = None
     If _playerSporeType == "hallucinogenic"
-        If stage == 1  spToApply = spHallucinate_1
-        ElseIf stage == 2  spToApply = spHallucinate_2
-        ElseIf stage >= 3  spToApply = spHallucinate_3
+        If stage == 1
+            spToApply = spHallucinate_1
+        ElseIf stage == 2
+            spToApply = spHallucinate_2
+        ElseIf stage >= 3
+            spToApply = spHallucinate_3
+        EndIf
     ElseIf _playerSporeType == "paralytic"
-        If stage == 1  spToApply = spParalyze_1
-        ElseIf stage == 2  spToApply = spParalyze_2
-        ElseIf stage >= 3  spToApply = spParalyze_3
+        If stage == 1
+            spToApply = spParalyze_1
+        ElseIf stage == 2
+            spToApply = spParalyze_2
+        ElseIf stage >= 3
+            spToApply = spParalyze_3
+        EndIf
     ElseIf _playerSporeType == "corrosive"
-        If stage == 1  spToApply = spCorrosive_1
-        ElseIf stage == 2  spToApply = spCorrosive_2
-        ElseIf stage >= 3  spToApply = spCorrosive_3
+        If stage == 1
+            spToApply = spCorrosive_1
+        ElseIf stage == 2
+            spToApply = spCorrosive_2
+        ElseIf stage >= 3
+            spToApply = spCorrosive_3
+        EndIf
     ElseIf _playerSporeType == "radiation"
-        If stage == 1  spToApply = spRadSpore_1
-        ElseIf stage == 2  spToApply = spRadSpore_2
-        ElseIf stage >= 3  spToApply = spRadSpore_3
+        If stage == 1
+            spToApply = spRadSpore_1
+        ElseIf stage == 2
+            spToApply = spRadSpore_2
+        ElseIf stage >= 3
+            spToApply = spRadSpore_3
+        EndIf
     ElseIf _playerSporeType == "blinding"
-        If stage == 1  spToApply = spBlind_1
-        ElseIf stage == 2  spToApply = spBlind_2
-        ElseIf stage >= 3  spToApply = spBlind_3
+        If stage == 1
+            spToApply = spBlind_1
+        ElseIf stage == 2
+            spToApply = spBlind_2
+        ElseIf stage >= 3
+            spToApply = spBlind_3
     EndIf
 
     If spToApply != None
-        akTarget.CastSpell(spToApply, akTarget)
+        spToApply.Cast(akTarget, akTarget)
     EndIf
 
     ; Universal HP drain by stage
     ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
     ; HP drain is handled by the spell's magic effect — not scripted per-tick
     ; (using MagicEffect with Damage Health over time)
+    EndIf
 EndFunction
 
 Function ShowInfectionStageEffect(Int stage)
-    If stage == 0 Return
+    If stage == 0
+        Return
+    EndIf
     ImageSpaceModifier imod = None
-    If stage == 1  imod = imodInfection_1
-    ElseIf stage == 2  imod = imodInfection_2
-    ElseIf stage == 3  imod = imodInfection_3
-    ElseIf stage == 4  imod = imodInfection_4
+    If stage == 1
+        imod = imodInfection_1
+    ElseIf stage == 2
+        imod = imodInfection_2
+    ElseIf stage == 3
+        imod = imodInfection_3
+    ElseIf stage == 4
+        imod = imodInfection_4
     EndIf
     If imod != None
         imod.Apply()
@@ -499,10 +547,18 @@ Function ClearInfectionEffects(Actor akTarget)
     EndWhile
 
     ; Remove imagespace
-    If imodInfection_1 != None  imodInfection_1.Remove()
-    If imodInfection_2 != None  imodInfection_2.Remove()
-    If imodInfection_3 != None  imodInfection_3.Remove()
-    If imodInfection_4 != None  imodInfection_4.Remove()
+    If imodInfection_1 != None
+        imodInfection_1.Remove()
+    EndIf
+    If imodInfection_2 != None
+        imodInfection_2.Remove()
+    EndIf
+    If imodInfection_3 != None
+        imodInfection_3.Remove()
+    EndIf
+    If imodInfection_4 != None
+        imodInfection_4.Remove()
+    EndIf
 EndFunction
 
 Function OnInfectionLethal()
@@ -526,17 +582,19 @@ Function AttemptInfectionSpread()
     EndIf
 
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(InfectionSpreadRadius, 6)
+    Actor[] nearby = MiscUtil.ScanActors(player, InfectionSpreadRadius, 6)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead() && npc != player
             ; Skip immune types
             If kwdRobot != None && npc.HasKeyword(kwdRobot)
-                i += 1 Continue
+                i += 1
+                ; TODO: 'Continue' removed — refactor loop to skip remaining body
             EndIf
             If kwdSynth != None && npc.HasKeyword(kwdSynth)
-                i += 1 Continue
+                i += 1
+                ; TODO: 'Continue' removed — refactor loop to skip remaining body
             EndIf
             ; Chance-based spread
             If Utility.RandomFloat(0.0, 1.0) <= SpreadChancePerMinute
@@ -553,12 +611,12 @@ Function InfectNPC(Actor npc, String sporeType)
     While i < 10
         If _infectedNPCs[i] == None || _infectedNPCs[i] == npc
             _infectedNPCs[i]      = npc
-            _npcStages[i]         = 1  ; NPCs start at Stage 1 (no incubation)
+            _npcStages[i]         = 1; NPCs start at Stage 1 (no incubation); NPCs start at Stage 1 (no incubation); NPCs start at Stage 1 (no incubation); NPCs start at Stage 1 (no incubation)
             _npcInfectionTimes[i] = Utility.GetCurrentRealTime()
 
             ; Apply Stage 1 effect to NPC
             If spSporeFullVolley != None
-                npc.CastSpell(spSporeFullVolley, npc)
+                spSporeFullVolley.Cast(npc, npc)
             EndIf
 
             ; Infected NPC behavior: confused, stumbling
@@ -569,8 +627,7 @@ Function InfectNPC(Actor npc, String sporeType)
             npc.EvaluatePackage()
 
             SporeLog("NPC infected: " + npc.GetDisplayName() + " (" + sporeType + ")")
-            Debug.Trace("[AAI] SPORE_NPC|npc=" + npc.GetDisplayName() + \
-                        "|type=" + sporeType + "|game_time=" + Utility.GetCurrentGameTime())
+            Debug.Trace("[AAI] SPORE_NPC|npc=" + npc.GetDisplayName() + "|type=" + sporeType + "|game_time=" + Utility.GetCurrentGameTime())
             Return
         EndIf
         i += 1
@@ -585,7 +642,7 @@ Function UpdateNPCInfections(Float realNow)
             If npc.IsDead()
                 _infectedNPCs[i] = None
                 i += 1
-                Continue
+                ; TODO: 'Continue' removed — refactor loop to skip remaining body
             EndIf
 
             Float elapsed = realNow - _npcInfectionTimes[i]
@@ -623,7 +680,7 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; CURE SYSTEM
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnItemEquipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
+Event Actor.OnItemEquipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
     If akSender != Game.GetPlayer()
         Return
     EndIf
@@ -636,7 +693,7 @@ Event OnItemEquipped(Actor akSender, Form akBaseObject, ObjectReference akRefere
     EndIf
 EndEvent
 
-Event OnItemUnequipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
+Event Actor.OnItemUnequipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
     If akSender != Game.GetPlayer()
         Return
     EndIf
@@ -654,11 +711,11 @@ Function OnCureItemUsed(Form itemUsed)
 
     String cureType = ""
     If itemAntidotePlant != None && itemUsed == itemAntidotePlant as Form
-        cureType = "antidote_plant"  ; Full cure at any stage
+        cureType = "antidote_plant"; Full cure at any stage; Full cure at any stage; Full cure at any stage; Full cure at any stage
     ElseIf itemAntibiotics != None && itemUsed == itemAntibiotics as Form
-        cureType = "antibiotics"     ; Cures Stage 1-2
+        cureType = "antibiotics"; Cures Stage 1-2; Cures Stage 1-2; Cures Stage 1-2; Cures Stage 1-2
     ElseIf itemRadAway != None && itemUsed == itemRadAway as Form
-        cureType = "radaway"         ; Helps radiation spores, reduces others 1 stage
+        cureType = "radaway"; Helps radiation spores, reduces others 1 stage; Helps radiation spores, reduces others 1 stage; Helps radiation spores, reduces others 1 stage; Helps radiation spores, reduces others 1 stage
     EndIf
 
     If cureType == "antidote_plant"
@@ -701,17 +758,45 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API
 ; ═══════════════════════════════════════════════════════════════════════════
-Bool   Function IsPlayerInfected()    Return _playerInfected   EndFunction
-String Function GetSporeType()        Return _playerSporeType  EndFunction
-Int    Function GetInfectionStage()   Return _playerStage      EndFunction
-Bool   Function HasHazmatProtection() Return _hasMask          EndFunction
+Bool   Function IsPlayerInfected()
+    Return _playerInfected
+EndFunction
+String Function GetSporeType()
+    Return _playerSporeType
+EndFunction
+Int    Function GetInfectionStage()
+    Return _playerStage
+EndFunction
+Bool   Function HasHazmatProtection()
+    Return _hasMask
+EndFunction
 
 Function ArmNearbyPlants()
     ; Called by vine network alert — pre-arm all spore plants
-    _armedPlantCount = SporePlants_All != None ? SporePlants_All.Length : 0
+    If (SporePlants_All != None)
+        _armedPlantCount = SporePlants_All.Length
+    Else
+        _armedPlantCount = 0
+    EndIf
     SporeLog("Plants armed via vine network: " + _armedPlantCount)
 EndFunction
 
 Function SporeLog(String msg)
     Debug.Trace("[AAI-Spore] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

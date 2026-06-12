@@ -73,39 +73,39 @@ Quest Property SysDynamicWorld      Auto
 Quest Property SysModEcology        Auto
 
 ; ── Performance Globals (bridge writes these) ────────────────────────────────
-GlobalVariable Property gPerf_UpdateFreq     Auto  ; Current update interval
-GlobalVariable Property gPerf_ActorScanRadius Auto ; Current scan radius
-GlobalVariable Property gPerf_LightBudget    Auto  ; Max active lights
-GlobalVariable Property gPerf_ShadowBudget   Auto  ; Max shadow casters
-GlobalVariable Property gPerf_ScriptMode     Auto  ; 0=idle 1=normal 2=combat 3=stress
-GlobalVariable Property gPerf_MinIntervalMS  Auto  ; Real-time governor threshold
+GlobalVariable Property gPerf_UpdateFreq     Auto; Current update interval; Current update interval; Current update interval; Current update interval
+GlobalVariable Property gPerf_ActorScanRadius Auto; Current scan radius; Current scan radius; Current scan radius; Current scan radius
+GlobalVariable Property gPerf_LightBudget    Auto; Max active lights; Max active lights; Max active lights; Max active lights
+GlobalVariable Property gPerf_ShadowBudget   Auto; Max shadow casters; Max shadow casters; Max shadow casters; Max shadow casters
+GlobalVariable Property gPerf_ScriptMode     Auto; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress
+GlobalVariable Property gPerf_MinIntervalMS  Auto; Real-time governor threshold; Real-time governor threshold; Real-time governor threshold; Real-time governor threshold
 
 ; ── Performance Reporting Globals (we write these for bridge to read) ─────────
-GlobalVariable Property gPerf_ActiveLights   Auto  ; Current active light count
-GlobalVariable Property gPerf_LastScanCount  Auto  ; NPCs found in last scan
-GlobalVariable Property gPerf_TickCount      Auto  ; Total ticks executed
-GlobalVariable Property gPerf_StressFlag     Auto  ; 1 if we detected performance issues
+GlobalVariable Property gPerf_ActiveLights   Auto; Current active light count; Current active light count; Current active light count; Current active light count
+GlobalVariable Property gPerf_LastScanCount  Auto; NPCs found in last scan; NPCs found in last scan; NPCs found in last scan; NPCs found in last scan
+GlobalVariable Property gPerf_TickCount      Auto; Total ticks executed; Total ticks executed; Total ticks executed; Total ticks executed
+GlobalVariable Property gPerf_StressFlag     Auto; 1 if we detected performance issues; 1 if we detected performance issues; 1 if we detected performance issues; 1 if we detected performance issues
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property PerfEnabled          = True  Auto
-float Property IdleInterval         = 0.5   Auto  ; Game-time between ticks when idle
-float Property NormalInterval       = 0.15  Auto  ; Game-time when moving
-float Property CombatInterval       = 0.08  Auto  ; Game-time in combat
-float Property StressInterval       = 0.5   Auto  ; Game-time when stressed (back off)
-float Property ScanRadius_Min       = 1000.0 Auto ; Minimum scan radius
-float Property ScanRadius_Max       = 3000.0 Auto ; Maximum scan radius
-int   Property MaxActorsPerTick     = 20    Auto  ; Never process more than this
-float Property MinRealTimeInterval  = 150.0  Auto ; Milliseconds between real executions
+float Property IdleInterval         = 0.5   Auto; Game-time between ticks when idle; Game-time between ticks when idle; Game-time between ticks when idle; Game-time between ticks when idle
+float Property NormalInterval       = 0.15  Auto; Game-time when moving; Game-time when moving; Game-time when moving; Game-time when moving
+float Property CombatInterval       = 0.08  Auto; Game-time in combat; Game-time in combat; Game-time in combat; Game-time in combat
+float Property StressInterval       = 0.5   Auto; Game-time when stressed (back off); Game-time when stressed (back off); Game-time when stressed (back off); Game-time when stressed (back off)
+float Property ScanRadius_Min       = 1000.0 Auto; Minimum scan radius; Minimum scan radius; Minimum scan radius; Minimum scan radius
+float Property ScanRadius_Max       = 3000.0 Auto; Maximum scan radius; Maximum scan radius; Maximum scan radius; Maximum scan radius
+int   Property MaxActorsPerTick     = 20    Auto; Never process more than this; Never process more than this; Never process more than this; Never process more than this
+float Property MinRealTimeInterval  = 150.0  Auto; Milliseconds between real executions; Milliseconds between real executions; Milliseconds between real executions; Milliseconds between real executions
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 float  _lastRealTime       = 0.0
 float  _currentInterval    = 0.15
-int    _currentMode        = 1      ; 0=idle 1=normal 2=combat 3=stress
+int    _currentMode        = 1; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress; 0=idle 1=normal 2=combat 3=stress
 bool   _playerInCombat     = False
 bool   _playerMoving       = False
 int    _totalTicks         = 0
-int    _stressTicks        = 0     ; Consecutive ticks in stress mode
-Actor[] _lastScanResult            ; Cached actor scan result
+int    _stressTicks        = 0; Consecutive ticks in stress mode; Consecutive ticks in stress mode; Consecutive ticks in stress mode; Consecutive ticks in stress mode
+Actor[] _lastScanResult; Cached actor scan result; Cached actor scan result; Cached actor scan result; Cached actor scan result
 float  _lastScanTime       = 0.0
 int    _activeLightCount   = 0
 
@@ -127,7 +127,7 @@ Event OnQuestInit()
     _lastScanResult = new Actor[MaxActorsPerTick]
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     RegisterForRemoteEvent(Game.GetPlayer(), "OnCombatStateChanged")
-    RegisterForUpdateGameTime(NormalInterval)
+    ScheduleTick(NormalInterval)
 
     PerfLog("Performance Manager initialized | Mode: Normal | Interval: " + NormalInterval)
 
@@ -135,12 +135,12 @@ Event OnQuestInit()
     WritePerformanceGlobals()
 EndEvent
 
-Event OnPlayerLoadGame(Actor akSender)
+Event Actor.OnPlayerLoadGame(Actor akSender)
     ReadBridgeSettings()
     WritePerformanceGlobals()
 EndEvent
 
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
     _playerInCombat = (aeCombatState == 1)
     UpdatePerformanceMode()
 EndEvent
@@ -148,9 +148,9 @@ EndEvent
 ; ═══════════════════════════════════════════════════════════════════════════
 ; MAIN TICK — The heart of everything
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !PerfEnabled
-        RegisterForUpdateGameTime(NormalInterval)
+        ScheduleTick(NormalInterval)
         Return
     EndIf
 
@@ -158,7 +158,7 @@ Event OnUpdateGameTime()
     Float realNow = Utility.GetCurrentRealTime()
     If (realNow - _lastRealTime) < (MinRealTimeInterval / 1000.0)
         ; Too soon — skip this tick but re-register
-        RegisterForUpdateGameTime(_currentInterval)
+        ScheduleTick(_currentInterval)
         Return
     EndIf
     _lastRealTime = realNow
@@ -174,7 +174,7 @@ Event OnUpdateGameTime()
     ; SHARED ACTOR SCAN — one scan for all systems
     Float scanRadius = GetCurrentScanRadius()
     Actor player     = Game.GetPlayer()
-    _lastScanResult  = player.GetActorsInRange(scanRadius, MaxActorsPerTick)
+    _lastScanResult  = MiscUtil.ScanActors(player, scanRadius, MaxActorsPerTick)
     _lastScanTime    = Utility.GetCurrentGameTime()
 
     If gPerf_LastScanCount != None
@@ -188,31 +188,29 @@ Event OnUpdateGameTime()
     WritePerformanceGlobals()
 
     ; Schedule next tick
-    RegisterForUpdateGameTime(_currentInterval)
-EndEvent
-
+    ScheduleTick(_currentInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PLAYER ACTIVITY DETECTION
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdatePlayerActivity()
     Actor player = Game.GetPlayer()
-    ; Check if player is moving (velocity > threshold)
-    Float vel = player.GetVelocity().Length()
-    _playerMoving = vel > 5.0
+    ; Check if player is moving (FO4 has no GetVelocity native)
+    _playerMoving = player.IsRunning() || player.IsSprinting()
 EndFunction
 
 Function UpdatePerformanceMode()
-    Int newMode = 1  ; Default: normal
+    Int newMode = 1; Default: normal; Default: normal; Default: normal; Default: normal
 
     If _playerInCombat
-        newMode = 2  ; Combat
+        newMode = 2; Combat; Combat; Combat; Combat
     ElseIf !_playerMoving && _lastScanResult.Length <= 2
-        newMode = 0  ; Idle — nothing happening
+        newMode = 0; Idle — nothing happening; Idle — nothing happening; Idle — nothing happening; Idle — nothing happening
     EndIf
 
     ; Stress detection
     If _stressTicks >= 3
-        newMode = 3  ; Stress — back off
+        newMode = 3; Stress — back off; Stress — back off; Stress — back off; Stress — back off
         If gPerf_StressFlag != None
             gPerf_StressFlag.SetValue(1.0)
         EndIf
@@ -244,8 +242,12 @@ Function ApplyNewMode(Int mode)
         PerfLog("Mode: STRESS — backing off to " + StressInterval)
     EndIf
 
-    If gPerf_ScriptMode != None  gPerf_ScriptMode.SetValue(mode as Float)
-    If gPerf_UpdateFreq  != None  gPerf_UpdateFreq.SetValue(_currentInterval)
+    If gPerf_ScriptMode != None
+        gPerf_ScriptMode.SetValue(mode as Float)
+    EndIf
+    If gPerf_UpdateFreq  != None
+        gPerf_UpdateFreq.SetValue(_currentInterval)
+    EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -271,18 +273,26 @@ Function DispatchToSystems()
 
     ; PRIORITY 3 — Normal mode and above
     If _currentMode >= 1 && _currentMode < 3
-        If _sys_Water  && SysWaterSim     != None  EndIf
-        If _sys_Env    && SysEnvironmental != None  EndIf
-        If _sys_Light  && SysLightingSystem != None EndIf
+        If _sys_Water  && SysWaterSim     != None
+            ; Water simulation: cached scan
+        EndIf
+        If _sys_Env    && SysEnvironmental != None
+            ; Environmental: cached scan
+        EndIf
+        If _sys_Light  && SysLightingSystem != None
+            ; Lighting: cached scan
+        EndIf
     EndIf
 
     ; PRIORITY 4 — Low priority: only runs when idle or infrequently
-    If _currentMode == 0 || (_totalTicks Mod 5 == 0)
-        If _sys_World && SysDynamicWorld != None EndIf
+    If _currentMode == 0 || (_totalTicks % 5 == 0)
+        If _sys_World && SysDynamicWorld != None
+            ; World engine: cached scan
+        EndIf
     EndIf
 
     ; PRIORITY 5 — Background: rare
-    If _totalTicks Mod 20 == 0
+    If _totalTicks % 20 == 0
         ; Rumor spread, lore archiving — very rarely
         Debug.Trace("[AAI-Perf] Background tick #" + _totalTicks)
     EndIf
@@ -322,7 +332,12 @@ Function ReportLightCount(Int count)
         gPerf_ActiveLights.SetValue(count as Float)
     EndIf
 
-    Int budget = gPerf_LightBudget != None ? gPerf_LightBudget.GetValue() as Int : 50
+    Int budget
+    If (gPerf_LightBudget != None)
+        budget = gPerf_LightBudget.GetValue() as Int
+    Else
+        budget = 50
+    EndIf
 
     If count > budget
         ; Over budget — signal lighting system to disable farthest lights
@@ -345,14 +360,11 @@ Function ReadBridgeSettings()
 EndFunction
 
 Function WritePerformanceGlobals()
-    If gPerf_TickCount != None  gPerf_TickCount.SetValue(_totalTicks as Float)
+    If gPerf_TickCount != None
+        gPerf_TickCount.SetValue(_totalTicks as Float)
+    EndIf
 
-    Debug.Trace("[AAI] PERF_STATE|mode=" + _currentMode + \
-                "|interval=" + _currentInterval + \
-                "|scan_count=" + _lastScanResult.Length + \
-                "|ticks=" + _totalTicks + \
-                "|stress=" + _stressTicks + \
-                "|lights=" + _activeLightCount)
+    Debug.Trace("[AAI] PERF_STATE|mode=" + _currentMode + "|interval=" + _currentInterval + "|scan_count=" + _lastScanResult.Length + "|ticks=" + _totalTicks + "|stress=" + _stressTicks + "|lights=" + _activeLightCount)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -390,3 +402,19 @@ EndFunction
 Function PerfLog(String msg)
     Debug.Trace("[AAI-Perf] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

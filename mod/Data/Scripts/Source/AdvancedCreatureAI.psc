@@ -7,49 +7,49 @@
 Scriptname AdvancedCreatureAI extends ReferenceAlias
 
 ; ── Manager Reference ────────────────────────────────────────────────────────
-Quest        Property AAIQuest           Auto  ; The AdvancedAIManager quest
-Keyword      Property kwdPackBehavior    Auto  ; Custom keyword: AAI_PackBehavior
-Keyword      Property kwdAmbushReady     Auto  ; Custom keyword: AAI_AmbushReady
-Keyword      Property kwdApexPredator    Auto  ; Custom keyword: AAI_ApexPredator (Deathclaw etc.)
-CombatStyle  Property csBerserker        Auto  ; Override for apex predators
-CombatStyle  Property csPackHunter       Auto  ; Override for pack creatures
-CombatStyle  Property csAmbusher         Auto  ; Override for ambush creatures
+Quest        Property AAIQuest           Auto; The AdvancedAIManager quest; The AdvancedAIManager quest; The AdvancedAIManager quest; The AdvancedAIManager quest
+Keyword      Property kwdPackBehavior    Auto; Custom keyword: AAI_PackBehavior; Custom keyword: AAI_PackBehavior; Custom keyword: AAI_PackBehavior; Custom keyword: AAI_PackBehavior
+Keyword      Property kwdAmbushReady     Auto; Custom keyword: AAI_AmbushReady; Custom keyword: AAI_AmbushReady; Custom keyword: AAI_AmbushReady; Custom keyword: AAI_AmbushReady
+Keyword      Property kwdApexPredator    Auto; Custom keyword: AAI_ApexPredator (Deathclaw etc.); Custom keyword: AAI_ApexPredator (Deathclaw etc.); Custom keyword: AAI_ApexPredator (Deathclaw etc.); Custom keyword: AAI_ApexPredator (Deathclaw etc.)
+CombatStyle  Property csBerserker        Auto; Override for apex predators; Override for apex predators; Override for apex predators; Override for apex predators
+CombatStyle  Property csPackHunter       Auto; Override for pack creatures; Override for pack creatures; Override for pack creatures; Override for pack creatures
+CombatStyle  Property csAmbusher         Auto; Override for ambush creatures; Override for ambush creatures; Override for ambush creatures; Override for ambush creatures
 
 ; ── Behavior Properties ──────────────────────────────────────────────────────
-float Property PackAlertRadius   = 1500.0 Auto  ; Alert pack within this radius
-float Property AmbushTriggerDist = 600.0  Auto  ; Reveal ambush at this distance
-bool  Property EnrageBelowHP     = True   Auto  ; Rage state at low HP
-float Property EnrageThreshold   = 0.25   Auto  ; HP fraction for enrage
+float Property PackAlertRadius   = 1500.0 Auto; Alert pack within this radius; Alert pack within this radius; Alert pack within this radius; Alert pack within this radius
+float Property AmbushTriggerDist = 600.0  Auto; Reveal ambush at this distance; Reveal ambush at this distance; Reveal ambush at this distance; Reveal ambush at this distance
+bool  Property EnrageBelowHP     = True   Auto; Rage stateVal at low HP; Rage stateVal at low HP; Rage stateVal at low HP; Rage stateVal at low HP
+float Property EnrageThreshold   = 0.25   Auto; HP fraction for enrage; HP fraction for enrage; HP fraction for enrage; HP fraction for enrage
 
 ; ── State ─────────────────────────────────────────────────────────────────────
 bool _isEnraged   = False
 bool _ambushArmed = False
-Actor _self       = None
+Actor _actor       = None
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; INIT
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
-    _self = GetActorReference()
-    If _self == None
+    _actor = GetActorReference() as Actor
+    If _actor == None
         Return
     EndIf
 
     ; Arm ambush if flagged
-    If kwdAmbushReady != None && _self.HasKeyword(kwdAmbushReady)
+    If kwdAmbushReady != None && _actor.HasKeyword(kwdAmbushReady)
         ArmAmbush()
     EndIf
 
-    RegisterForRemoteEvent(_self, "OnCombatStateChanged")
-    RegisterForRemoteEvent(_self, "OnHit")
-    RegisterForRemoteEvent(_self, "OnDeath")
-    RegisterForRemoteEvent(_self, "OnLoad")
+    RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
+    RegisterForHitEvent(_actor)
+    RegisterForRemoteEvent(_actor, "OnDeath")
+    RegisterForRemoteEvent(_actor, "OnLoad")
 
     ; Override combat style for apex predators
-    If kwdApexPredator != None && _self.HasKeyword(kwdApexPredator) && csBerserker != None
-        _self.SetCombatStyle(csBerserker)
-    ElseIf kwdPackBehavior != None && _self.HasKeyword(kwdPackBehavior) && csPackHunter != None
-        _self.SetCombatStyle(csPackHunter)
+    If kwdApexPredator != None && _actor.HasKeyword(kwdApexPredator) && csBerserker != None
+        _actor.SetCombatStyle(csBerserker)
+    ElseIf kwdPackBehavior != None && _actor.HasKeyword(kwdPackBehavior) && csPackHunter != None
+        _actor.SetCombatStyle(csPackHunter)
     EndIf
 EndEvent
 
@@ -58,49 +58,49 @@ EndEvent
 ; ════════════════════════════════════════════════════════════════════════════
 Function ArmAmbush()
     _ambushArmed = True
-    _self.SetRestrained(True)  ; Hold position until triggered
-    RegisterForUpdateGameTime(0.05)  ; Check player distance every ~3 in-game minutes
-EndEvent
+    _actor.SetRestrained(True); Hold position until triggered; Hold position until triggered; Hold position until triggered; Hold position until triggered
+    ScheduleTick(0.05); Check player distance every ~3 in-game minutes; Check player distance every ~3 in-game minutes; Check player distance every ~3 in-game minutes; Check player distance every ~3 in-game minutes
+EndFunction
 
-Event OnUpdateGameTime()
-    If _ambushArmed && _self != None && !_self.IsDead()
+Function DoGameTimeTick()
+    If _ambushArmed && Self != None && !_actor.IsDead()
         Actor player = Game.GetPlayer()
-        If player != None && _self.GetDistance(player) <= AmbushTriggerDist
+        If player != None && _actor.GetDistance(player) <= AmbushTriggerDist
             TriggerAmbush(player)
         EndIf
-        RegisterForUpdateGameTime(0.05)
+        ScheduleTick(0.05)
     EndIf
-EndEvent
-
+EndFunction
 Function TriggerAmbush(Actor akTarget)
     _ambushArmed = False
-    _self.SetRestrained(False)
-    _self.StartCombat(akTarget)
+    _actor.SetRestrained(False)
+    _actor.StartCombat(akTarget)
 
     ; Alert nearby pack members
-    If kwdPackBehavior != None && _self.HasKeyword(kwdPackBehavior)
+    If kwdPackBehavior != None && _actor.HasKeyword(kwdPackBehavior)
         AlertPack(akTarget)
     EndIf
 
-    Debug.Trace("[AAI-Creature] Ambush triggered: " + _self.GetDisplayName())
+    Debug.Trace("[AAI-Creature] Ambush triggered: " + _actor.GetDisplayName())
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; COMBAT EVENTS
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
-    If aeCombatState == 1  ; Combat entered
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
+    If aeCombatState == 1; Combat entered; Combat entered; Combat entered; Combat entered
         ; Alert pack members
-        If kwdPackBehavior != None && _self.HasKeyword(kwdPackBehavior)
+        If kwdPackBehavior != None && _actor.HasKeyword(kwdPackBehavior)
             AlertPack(akSender.GetCombatTarget() as Actor)
         EndIf
-    ElseIf aeCombatState == 0  ; Combat exited
+    ElseIf aeCombatState == 0; Combat exited; Combat exited; Combat exited; Combat exited
         _isEnraged = False
     EndIf
 EndEvent
 
-Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked, string apMaterial)
-    If EnrageBelowHP && !_isEnraged && _self != None
+Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, Bool abPowerAttack, Bool abSneakAttack, Bool abBashAttack, Bool abHitBlocked, String apMaterial)
+    RegisterForHitEvent(_actor); hit events are single-shot in FO4 — re-arm immediately
+    If EnrageBelowHP && !_isEnraged && Self != None
         CheckEnrageCondition()
     EndIf
 EndEvent
@@ -110,8 +110,8 @@ Function CheckEnrageCondition()
     If avHP == None
         Return
     EndIf
-    Float maxHP = _self.GetBaseValue(avHP)
-    Float curHP = _self.GetValue(avHP)
+    Float maxHP = _actor.GetBaseValue(avHP)
+    Float curHP = _actor.GetValue(avHP)
     If maxHP > 0 && (curHP / maxHP) <= EnrageThreshold
         TriggerEnrage()
     EndIf
@@ -125,22 +125,22 @@ Function TriggerEnrage()
     ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
 
     If avAggr != None
-        _self.SetValue(avAggr, 100.0)
+        _actor.SetValue(avAggr, 100.0)
     EndIf
     If avSpeed != None
-        Float baseSpeed = _self.GetBaseValue(avSpeed)
-        _self.SetValue(avSpeed, baseSpeed * 1.25)  ; 25% speed boost when enraged
+        Float baseSpeed = _actor.GetBaseValue(avSpeed)
+        _actor.SetValue(avSpeed, baseSpeed * 1.25); 25% speed boost when enraged; 25% speed boost when enraged; 25% speed boost when enraged; 25% speed boost when enraged
     EndIf
 
-    _self.EvaluatePackage()
-    Debug.Trace("[AAI-Creature] ENRAGE: " + _self.GetDisplayName())
+    _actor.EvaluatePackage()
+    Debug.Trace("[AAI-Creature] ENRAGE: " + _actor.GetDisplayName())
 
     ; If this is an apex predator, play a berserk behavior
-    If kwdApexPredator != None && _self.HasKeyword(kwdApexPredator) && csBerserker != None
-        _self.SetCombatStyle(csBerserker)
+    If kwdApexPredator != None && _actor.HasKeyword(kwdApexPredator) && csBerserker != None
+        _actor.SetCombatStyle(csBerserker)
     EndIf
 
-    Debug.Notification(_self.GetDisplayName() + " is ENRAGED!")
+    Debug.Notification(_actor.GetDisplayName() + " is ENRAGED!")
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
@@ -151,12 +151,12 @@ Function AlertPack(Actor akTarget)
         Return
     EndIf
 
-    Actor[] nearbyActors = _self.GetActorsInRange(PackAlertRadius, 15)
+    Actor[] nearbyActors = MiscUtil.ScanActors(_actor, PackAlertRadius, 15)
     Int i = 0
     Int alerted = 0
     While i < nearbyActors.Length
         Actor packMember = nearbyActors[i]
-        If packMember != None && packMember != _self && !packMember.IsDead()
+        If packMember != None && packMember != _actor && !packMember.IsDead()
             If kwdPackBehavior == None || packMember.HasKeyword(kwdPackBehavior)
                 If !packMember.IsInCombat()
                     packMember.StartCombat(akTarget)
@@ -168,18 +168,34 @@ Function AlertPack(Actor akTarget)
     EndWhile
 
     If alerted > 0
-        Debug.Trace("[AAI-Creature] Pack alerted: " + alerted + " members by " + _self.GetDisplayName())
+        Debug.Trace("[AAI-Creature] Pack alerted: " + alerted + " members by " + _actor.GetDisplayName())
     EndIf
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; DEATH
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnDeath(Actor akKiller)
+Event Actor.OnDeath(Actor akSender, Actor akKiller)
     ; Death cry — alert remaining pack
-    If kwdPackBehavior != None && _self.HasKeyword(kwdPackBehavior) && akKiller != None
-        AlertPack(akKiller)
+    If kwdPackBehavior != None && _actor.HasKeyword(kwdPackBehavior) && akKiller != None
+        AlertPack(akKiller as Actor)
     EndIf
     _isEnraged   = False
     _ambushArmed = False
+EndEvent
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
 EndEvent

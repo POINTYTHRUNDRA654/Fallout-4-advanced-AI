@@ -41,53 +41,53 @@ Keyword Property kwdFogCrawler      Auto
 Keyword Property kwdAngler          Auto
 Keyword Property kwdHermitCrab      Auto
 Keyword Property kwdGulper          Auto
-Keyword Property kwdFogMirelurk     Auto   ; Fog-adapted Mirelurk variant
-Keyword Property kwdTrilobite        Auto   ; Aquatic Far Harbor creature
+Keyword Property kwdFogMirelurk     Auto; Fog-adapted Mirelurk variant; Fog-adapted Mirelurk variant; Fog-adapted Mirelurk variant; Fog-adapted Mirelurk variant
+Keyword Property kwdTrilobite        Auto; Aquatic Far Harbor creature; Aquatic Far Harbor creature; Aquatic Far Harbor creature; Aquatic Far Harbor creature
 
 ; NUKA-WORLD
-Keyword Property kwdGatorclaw       Auto   ; Deathclaw/gator hybrid
-Keyword Property kwdNukalurk        Auto   ; Nuka-Cola Mirelurk
-Keyword Property kwdCaveCricket     Auto   ; Silent jumping ambush
-Keyword Property kwdBloodworm       Auto   ; Burrowing paralyze worm
-Keyword Property kwdPackMongrel     Auto   ; Trained raider dog
+Keyword Property kwdGatorclaw       Auto; Deathclaw/gator hybrid; Deathclaw/gator hybrid; Deathclaw/gator hybrid; Deathclaw/gator hybrid
+Keyword Property kwdNukalurk        Auto; Nuka-Cola Mirelurk; Nuka-Cola Mirelurk; Nuka-Cola Mirelurk; Nuka-Cola Mirelurk
+Keyword Property kwdCaveCricket     Auto; Silent jumping ambush; Silent jumping ambush; Silent jumping ambush; Silent jumping ambush
+Keyword Property kwdBloodworm       Auto; Burrowing paralyze worm; Burrowing paralyze worm; Burrowing paralyze worm; Burrowing paralyze worm
+Keyword Property kwdPackMongrel     Auto; Trained raider dog; Trained raider dog; Trained raider dog; Trained raider dog
 
 ; ── Abilities ─────────────────────────────────────────────────────────────────
-Spell   Property spFogCrawlerTentacle  Auto  ; AoE sweep
-Spell   Property spAnglerLure          Auto  ; Lure attraction field
-Spell   Property spGulperSwallow       Auto  ; Swallow effect
-Spell   Property spNukalurk            Auto  ; Nuka-Cola radiation burst
-Spell   Property spCaveCricketJump     Auto  ; Leap attack
-Spell   Property spBloodwormParalyze   Auto  ; Paralytic toxin
-Spell   Property spGatorclawTailSweep  Auto  ; Tail whip knockdown
-Spell   Property spRobobrainPsychic    Auto  ; Prediction field (enemy misses more)
-Explosion Property expNukalurk         Auto  ; Nuka-Cola explosion on death
+Spell   Property spFogCrawlerTentacle  Auto; AoE sweep; AoE sweep; AoE sweep; AoE sweep
+Spell   Property spAnglerLure          Auto; Lure attraction field; Lure attraction field; Lure attraction field; Lure attraction field
+Spell   Property spGulperSwallow       Auto; Swallow effect; Swallow effect; Swallow effect; Swallow effect
+Spell   Property spNukalurk            Auto; Nuka-Cola radiation burst; Nuka-Cola radiation burst; Nuka-Cola radiation burst; Nuka-Cola radiation burst
+Spell   Property spCaveCricketJump     Auto; Leap attack; Leap attack; Leap attack; Leap attack
+Spell   Property spBloodwormParalyze   Auto; Paralytic toxin; Paralytic toxin; Paralytic toxin; Paralytic toxin
+Spell   Property spGatorclawTailSweep  Auto; Tail whip knockdown; Tail whip knockdown; Tail whip knockdown; Tail whip knockdown
+Spell   Property spRobobrainPsychic    Auto; Prediction field (enemy misses more); Prediction field (enemy misses more); Prediction field (enemy misses more); Prediction field (enemy misses more)
+Explosion Property expNukalurk         Auto; Nuka-Cola explosion on death; Nuka-Cola explosion on death; Nuka-Cola explosion on death; Nuka-Cola explosion on death
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-Actor  _self            = None
-bool   _shellPhase      = True   ; Hermit Crab starts shelled
-bool   _lureActive      = False  ; Angler lure state
+Actor _actor            = None
+bool   _shellPhase      = True; Hermit Crab starts shelled; Hermit Crab starts shelled; Hermit Crab starts shelled; Hermit Crab starts shelled
+bool   _lureActive      = False; Angler lure stateVal; Angler lure stateVal; Angler lure stateVal; Angler lure stateVal
 bool   _isSwallowing    = False
 float  _lastAbilityTime = 0.0
 float  _initMaxHP       = 0.0
 
 ; ═══════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
-    _self = GetActorReference()
-    If _self == None
+    _actor = GetActorReference() as Actor
+    If _actor == None
         Return
     EndIf
 
     ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
     If avHP != None
-        _initMaxHP = _self.GetBaseValue(avHP)
+        _initMaxHP = _actor.GetBaseValue(avHP)
     EndIf
 
     ApplyDLCProfile()
 
-    RegisterForRemoteEvent(_self, "OnCombatStateChanged")
-    RegisterForRemoteEvent(_self, "OnHit")
-    RegisterForRemoteEvent(_self, "OnDeath")
-    RegisterForUpdateGameTime(0.08)
+    RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
+    RegisterForHitEvent(_actor)
+    RegisterForRemoteEvent(_actor, "OnDeath")
+    ScheduleTick(0.08)
 EndEvent
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -96,105 +96,112 @@ EndEvent
 Function ApplyDLCProfile()
     ; ── GATORCLAW (Nuka-World) ───────────────────────────────────────────────
     ; Deathclaw crossed with alligator radiation — slow on land, devastating in water
-    If kwdGatorclaw != None && _self.HasKeyword(kwdGatorclaw)
+    If kwdGatorclaw != None && _actor.HasKeyword(kwdGatorclaw)
         ; Extra aggression, slightly slower, brutal AoE tail sweep
         ActorValue avAggr = Game.GetFormFromFile(0x000002E7, "Fallout4.esm") as ActorValue
         ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
-        If avAggr != None  _self.SetValue(avAggr, 100.0)
-        If avConf != None  _self.SetValue(avConf, 100.0)
+        If avAggr != None
+            _actor.SetValue(avAggr, 100.0)
+        EndIf
+        If avConf != None
+            _actor.SetValue(avConf, 100.0)
+        EndIf
         Debug.Notification("Gatorclaw detected — tail sweep danger!")
 
     ; ── CAVE CRICKET (Nuka-World) ────────────────────────────────────────────
     ; Silent jumping ambush predator — player hears nothing until impact
-    ElseIf kwdCaveCricket != None && _self.HasKeyword(kwdCaveCricket)
+    ElseIf kwdCaveCricket != None && _actor.HasKeyword(kwdCaveCricket)
         ; Start hidden/still; detect via vibration
-        _self.SetRestrained(True)  ; Wait for player to walk past
+        _actor.SetRestrained(True); Wait for player to walk past; Wait for player to walk past; Wait for player to walk past; Wait for player to walk past
 
     ; ── NUKALURK (Nuka-World) ────────────────────────────────────────────────
     ; Nuka-Cola soaked Mirelurk — glowing, radioactive, explosive death
-    ElseIf kwdNukalurk != None && _self.HasKeyword(kwdNukalurk)
+    ElseIf kwdNukalurk != None && _actor.HasKeyword(kwdNukalurk)
         If spNukalurk != None
-            _self.CastSpell(spNukalurk, _self)  ; Persistent Nuka radiation aura
+            spNukalurk.Cast(_actor, _actor); Persistent Nuka radiation aura; Persistent Nuka radiation aura; Persistent Nuka radiation aura; Persistent Nuka radiation aura
         EndIf
 
     ; ── BLOODWORM (Nuka-World) ───────────────────────────────────────────────
     ; Subterranean — burrows and ambushes from below
-    ElseIf kwdBloodworm != None && _self.HasKeyword(kwdBloodworm)
-        _self.SetRestrained(True)  ; Burrowed — wait for player above
+    ElseIf kwdBloodworm != None && _actor.HasKeyword(kwdBloodworm)
+        _actor.SetRestrained(True); Burrowed — wait for player above; Burrowed — wait for player above; Burrowed — wait for player above; Burrowed — wait for player above
 
     ; ── FOG CRAWLER (Far Harbor) ─────────────────────────────────────────────
     ; Large crustacean ambush predator — uses fog as cover
-    ElseIf kwdFogCrawler != None && _self.HasKeyword(kwdFogCrawler)
+    ElseIf kwdFogCrawler != None && _actor.HasKeyword(kwdFogCrawler)
         ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
-        If avConf != None  _self.SetValue(avConf, 85.0)
+        If avConf != None
+            _actor.SetValue(avConf, 85.0)
 
     ; ── ANGLER (Far Harbor) ──────────────────────────────────────────────────
     ; Sit-and-wait predator — bioluminescent lure attracts prey
-    ElseIf kwdAngler != None && _self.HasKeyword(kwdAngler)
+        EndIf
+    ElseIf kwdAngler != None && _actor.HasKeyword(kwdAngler)
         _lureActive = True
-        _self.SetRestrained(True)  ; Completely still until prey close enough
+        _actor.SetRestrained(True); Completely still until prey close enough; Completely still until prey close enough; Completely still until prey close enough; Completely still until prey close enough
         If spAnglerLure != None
-            _self.CastSpell(spAnglerLure, _self)  ; Activate lure aura
+            spAnglerLure.Cast(_actor, _actor); Activate lure aura; Activate lure aura; Activate lure aura; Activate lure aura
         EndIf
         Debug.Notification("Warning: Something is glowing in the distance...")
 
     ; ── HERMIT CRAB (Far Harbor) ─────────────────────────────────────────────
     ; Massive crustacean using a building as a shell — nearly invulnerable frontal
-    ElseIf kwdHermitCrab != None && _self.HasKeyword(kwdHermitCrab)
-        _shellPhase = True  ; Shell up at start
+    ElseIf kwdHermitCrab != None && _actor.HasKeyword(kwdHermitCrab)
+        _shellPhase = True; Shell up at start; Shell up at start; Shell up at start; Shell up at start
         Debug.Notification("Is that... a building moving?!")
 
     ; ── GULPER (Far Harbor) ──────────────────────────────────────────────────
     ; Amphibious predator — attempts to swallow player/NPCs whole
-    ElseIf kwdGulper != None && _self.HasKeyword(kwdGulper)
+    ElseIf kwdGulper != None && _actor.HasKeyword(kwdGulper)
         ActorValue avAggr = Game.GetFormFromFile(0x000002E7, "Fallout4.esm") as ActorValue
-        If avAggr != None  _self.SetValue(avAggr, 85.0)
+        If avAggr != None
+            _actor.SetValue(avAggr, 85.0)
 
     ; ── ROBOBRAIN (Automatron) ───────────────────────────────────────────────
     ; Human brain in a robot — predicts player movement, flanks intelligently
-    ElseIf kwdRobobrain != None && _self.HasKeyword(kwdRobobrain)
+        EndIf
+    ElseIf kwdRobobrain != None && _actor.HasKeyword(kwdRobobrain)
         If spRobobrainPsychic != None
-            _self.CastSpell(spRobobrainPsychic, _self)  ; Prediction field
+            spRobobrainPsychic.Cast(_actor, _actor); Prediction field; Prediction field; Prediction field; Prediction field
         EndIf
     EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
-    If _self == None || _self.IsDead()
+Function DoGameTimeTick()
+    If _actor == None || _actor.IsDead()
         Return
     EndIf
 
     ; Cave Cricket — release from burrow when player walks overhead
-    If kwdCaveCricket != None && _self.HasKeyword(kwdCaveCricket)
+    If kwdCaveCricket != None && _actor.HasKeyword(kwdCaveCricket)
         Actor player = Game.GetPlayer()
-        Float dist = _self.GetDistance(player)
-        If dist < 400.0 && !_self.IsInCombat()
+        Float dist = _actor.GetDistance(player)
+        If dist < 400.0 && !_actor.IsInCombat()
             ; Player is directly above/near — LEAP
-            _self.SetRestrained(False)
-            _self.StartCombat(player)
+            _actor.SetRestrained(False)
+            _actor.StartCombat(player)
             If spCaveCricketJump != None
-                _self.CastSpell(spCaveCricketJump, player)
+                spCaveCricketJump.Cast(_actor, player)
             EndIf
             Debug.Notification("CAVE CRICKET — ambush from below!")
         EndIf
 
     ; Bloodworm — rise from ground when player close
-    ElseIf kwdBloodworm != None && _self.HasKeyword(kwdBloodworm)
+    ElseIf kwdBloodworm != None && _actor.HasKeyword(kwdBloodworm)
         Actor player = Game.GetPlayer()
-        Float dist = _self.GetDistance(player)
-        If dist < 300.0 && !_self.IsInCombat()
-            _self.SetRestrained(False)
-            _self.StartCombat(player)
+        Float dist = _actor.GetDistance(player)
+        If dist < 300.0 && !_actor.IsInCombat()
+            _actor.SetRestrained(False)
+            _actor.StartCombat(player)
             Debug.Notification("The ground erupts — Bloodworms!")
         EndIf
     EndIf
 
-    RegisterForUpdateGameTime(0.08)
-EndEvent
-
+    ScheduleTick(0.08)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
     If aeCombatState == 1
         HandleDLCCombatEntry()
     ElseIf aeCombatState == 0
@@ -204,68 +211,83 @@ EndEvent
 
 Function HandleDLCCombatEntry()
     ; Angler drops lure, becomes aggressive
-    If kwdAngler != None && _self.HasKeyword(kwdAngler)
+    If kwdAngler != None && _actor.HasKeyword(kwdAngler)
         _lureActive = False
-        _self.SetRestrained(False)
+        _actor.SetRestrained(False)
         Debug.Notification("The Angler drops its lure — it's attacking!")
 
     ; Hermit Crab: stay shelled briefly, then smash
-    ElseIf kwdHermitCrab != None && _self.HasKeyword(kwdHermitCrab)
+    ElseIf kwdHermitCrab != None && _actor.HasKeyword(kwdHermitCrab)
         Debug.Notification("The Hermit Crab retreats into its shell — its SHELL IS A BUILDING!")
         Utility.Wait(2.0)
         _shellPhase = False
         Debug.Notification("The Hermit Crab emerges — MOVE!")
 
     ; Fog Crawler: tentacle sweep on entry
-    ElseIf kwdFogCrawler != None && _self.HasKeyword(kwdFogCrawler)
+    ElseIf kwdFogCrawler != None && _actor.HasKeyword(kwdFogCrawler)
         If spFogCrawlerTentacle != None
-            _self.CastSpell(spFogCrawlerTentacle, Game.GetPlayer())
+            spFogCrawlerTentacle.Cast(_actor, Game.GetPlayer())
         EndIf
 
     ; Gatorclaw: tail sweep warning
-    ElseIf kwdGatorclaw != None && _self.HasKeyword(kwdGatorclaw)
+    ElseIf kwdGatorclaw != None && _actor.HasKeyword(kwdGatorclaw)
         Debug.Notification("GATORCLAW — watch the tail sweep!")
     EndIf
 EndFunction
 
 Function HandleDLCCombatEnd()
     ; Angler: re-arm lure after combat
-    If kwdAngler != None && _self.HasKeyword(kwdAngler)
+    If kwdAngler != None && _actor.HasKeyword(kwdAngler)
         _lureActive = True
         If spAnglerLure != None
-            _self.CastSpell(spAnglerLure, _self)
+            spAnglerLure.Cast(_actor, _actor)
         EndIf
-        _self.SetRestrained(True)
+        _actor.SetRestrained(True)
     EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked, string apMaterial)
+Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, Bool abPowerAttack, Bool abSneakAttack, Bool abBashAttack, Bool abHitBlocked, String apMaterial)
+    RegisterForHitEvent(_actor); hit events are single-shot in FO4 — re-arm immediately
     ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
     Float maxHP = _initMaxHP
-    Float curHP = avHP != None ? _self.GetValue(avHP) : maxHP
-    Float hpPct = maxHP > 0 ? (curHP / maxHP) : 1.0
+    Float curHP
+    If (avHP != None)
+        curHP = _actor.GetValue(avHP)
+    Else
+        curHP = maxHP
+    EndIf
+    Float hpPct
+    If (maxHP > 0)
+        hpPct = (curHP / maxHP)
+    Else
+        hpPct = 1.0
+    EndIf
 
     ; Hermit Crab shell break
-    If kwdHermitCrab != None && _self.HasKeyword(kwdHermitCrab)
+    If kwdHermitCrab != None && _actor.HasKeyword(kwdHermitCrab)
         If _shellPhase && hpPct <= 0.5
             _shellPhase = False
             ; Boost speed and aggression — exposed!
             ActorValue avAggr  = Game.GetFormFromFile(0x000002E7, "Fallout4.esm") as ActorValue
             ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
-            If avAggr  != None  _self.SetValue(avAggr,  100.0)
-            If avSpeed != None  _self.SetValue(avSpeed, _self.GetBaseValue(avSpeed) * 1.4)
+            If avAggr  != None
+                _actor.SetValue(avAggr,  100.0)
+            EndIf
+            If avSpeed != None
+                _actor.SetValue(avSpeed, _actor.GetBaseValue(avSpeed) * 1.4)
+            EndIf
             Debug.Notification("HERMIT CRAB SHELL BROKEN — it's EXPOSED and ENRAGED!")
         EndIf
 
     ; Gulper: attempt swallow when player is close
-    ElseIf kwdGulper != None && _self.HasKeyword(kwdGulper)
+    ElseIf kwdGulper != None && _actor.HasKeyword(kwdGulper)
         Actor aggressor = akAggressor as Actor
         If aggressor != None && !_isSwallowing && spGulperSwallow != None
-            Float dist = _self.GetDistance(aggressor)
+            Float dist = _actor.GetDistance(aggressor)
             If dist < 180.0 && Utility.RandomInt(1, 100) <= 30
                 _isSwallowing = True
-                _self.CastSpell(spGulperSwallow, aggressor)
+                spGulperSwallow.Cast(_actor, aggressor)
                 Debug.Notification("The Gulper tries to SWALLOW you whole!")
                 Utility.Wait(3.0)
                 _isSwallowing = False
@@ -273,34 +295,34 @@ Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource
         EndIf
 
     ; Nukalurk: spray on hit
-    ElseIf kwdNukalurk != None && _self.HasKeyword(kwdNukalurk)
+    ElseIf kwdNukalurk != None && _actor.HasKeyword(kwdNukalurk)
         Actor aggressor = akAggressor as Actor
         If aggressor != None && spNukalurk != None
             Float now = Utility.GetCurrentRealTime()
             If (now - _lastAbilityTime) > 8.0
                 _lastAbilityTime = now
-                _self.CastSpell(spNukalurk, aggressor)
+                spNukalurk.Cast(_actor, aggressor)
             EndIf
         EndIf
 
     ; Gatorclaw: tail sweep on hit (AoE knockdown)
-    ElseIf kwdGatorclaw != None && _self.HasKeyword(kwdGatorclaw)
+    ElseIf kwdGatorclaw != None && _actor.HasKeyword(kwdGatorclaw)
         If spGatorclawTailSweep != None
             Float now = Utility.GetCurrentRealTime()
             If (now - _lastAbilityTime) > 10.0
                 _lastAbilityTime = now
-                _self.CastSpell(spGatorclawTailSweep, Game.GetPlayer())
+                spGatorclawTailSweep.Cast(_actor, Game.GetPlayer())
             EndIf
         EndIf
 
     ; Bloodworm: paralyze on hit
-    ElseIf kwdBloodworm != None && _self.HasKeyword(kwdBloodworm)
+    ElseIf kwdBloodworm != None && _actor.HasKeyword(kwdBloodworm)
         Actor aggressor = akAggressor as Actor
         If aggressor != None && spBloodwormParalyze != None
             Float now = Utility.GetCurrentRealTime()
             If (now - _lastAbilityTime) > 15.0
                 _lastAbilityTime = now
-                _self.CastSpell(spBloodwormParalyze, aggressor)
+                spBloodwormParalyze.Cast(_actor, aggressor)
                 Debug.Notification("Bloodworm venom — PARALYZED!")
             EndIf
         EndIf
@@ -308,36 +330,60 @@ Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource
 EndEvent
 
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnDeath(Actor akKiller)
+Event Actor.OnDeath(Actor akSender, Actor akKiller)
     ; Nukalurk explosion on death
-    If kwdNukalurk != None && _self.HasKeyword(kwdNukalurk) && expNukalurk != None
-        _self.PlaceAtMe(expNukalurk)
+    If kwdNukalurk != None && _actor.HasKeyword(kwdNukalurk) && expNukalurk != None
+        _actor.PlaceAtMe(expNukalurk)
         Debug.Notification("NUKALURK — NUKA-COLA EXPLOSION!")
     EndIf
 
     ; Gatorclaw death roar
-    If kwdGatorclaw != None && _self.HasKeyword(kwdGatorclaw)
+    If kwdGatorclaw != None && _actor.HasKeyword(kwdGatorclaw)
         Debug.Notification("The Gatorclaw falls silent.")
     EndIf
 
     ; Log DLC creature death for bridge
     String species = GetDLCSpeciesName()
-    Debug.Trace("[AAI] CREATURE_DEATH|species=" + species + \
-                "|location=" + _self.GetCurrentLocation().GetDisplayName() + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] CREATURE_DEATH|species=" + species + "|location=" + _actor.GetCurrentLocation().GetName() + "|game_time=" + Utility.GetCurrentGameTime())
 EndEvent
 
 String Function GetDLCSpeciesName()
-    If kwdGatorclaw   != None && _self.HasKeyword(kwdGatorclaw)   Return "Gatorclaw"
-    ElseIf kwdNukalurk    != None && _self.HasKeyword(kwdNukalurk)    Return "Nukalurk"
-    ElseIf kwdCaveCricket != None && _self.HasKeyword(kwdCaveCricket) Return "CaveCricket"
-    ElseIf kwdBloodworm   != None && _self.HasKeyword(kwdBloodworm)   Return "Bloodworm"
-    ElseIf kwdFogCrawler  != None && _self.HasKeyword(kwdFogCrawler)  Return "FogCrawler"
-    ElseIf kwdAngler      != None && _self.HasKeyword(kwdAngler)      Return "Angler"
-    ElseIf kwdHermitCrab  != None && _self.HasKeyword(kwdHermitCrab)  Return "HermitCrab"
-    ElseIf kwdGulper      != None && _self.HasKeyword(kwdGulper)      Return "Gulper"
-    ElseIf kwdRobobrain   != None && _self.HasKeyword(kwdRobobrain)   Return "Robobrain"
-    ElseIf kwdEyebotDrone != None && _self.HasKeyword(kwdEyebotDrone) Return "EyebotDrone"
+    If kwdGatorclaw   != None && _actor.HasKeyword(kwdGatorclaw)
+        Return "Gatorclaw"
+    ElseIf kwdNukalurk    != None && _actor.HasKeyword(kwdNukalurk)
+        Return "Nukalurk"
+    ElseIf kwdCaveCricket != None && _actor.HasKeyword(kwdCaveCricket)
+        Return "CaveCricket"
+    ElseIf kwdBloodworm   != None && _actor.HasKeyword(kwdBloodworm)
+        Return "Bloodworm"
+    ElseIf kwdFogCrawler  != None && _actor.HasKeyword(kwdFogCrawler)
+        Return "FogCrawler"
+    ElseIf kwdAngler      != None && _actor.HasKeyword(kwdAngler)
+        Return "Angler"
+    ElseIf kwdHermitCrab  != None && _actor.HasKeyword(kwdHermitCrab)
+        Return "HermitCrab"
+    ElseIf kwdGulper      != None && _actor.HasKeyword(kwdGulper)
+        Return "Gulper"
+    ElseIf kwdRobobrain   != None && _actor.HasKeyword(kwdRobobrain)
+        Return "Robobrain"
+    ElseIf kwdEyebotDrone != None && _actor.HasKeyword(kwdEyebotDrone)
+        Return "EyebotDrone"
     EndIf
     Return "DLCCreature"
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

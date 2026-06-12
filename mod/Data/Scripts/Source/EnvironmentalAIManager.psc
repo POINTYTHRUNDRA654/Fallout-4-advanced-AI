@@ -55,19 +55,19 @@ Quest Property AAIQuest Auto
 Weather Property weatherClear        Auto
 Weather Property weatherRain         Auto
 Weather Property weatherFog          Auto
-Weather Property weatherRadStorm     Auto  ; Radiation storm
-Weather Property weatherAcidRain     Auto  ; Glowing Sea acid
-Weather Property weatherSnow         Auto  ; Far Harbor blizzard
+Weather Property weatherRadStorm     Auto; Radiation storm; Radiation storm; Radiation storm; Radiation storm
+Weather Property weatherAcidRain     Auto; Glowing Sea acid; Glowing Sea acid; Glowing Sea acid; Glowing Sea acid
+Weather Property weatherSnow         Auto; Far Harbor blizzard; Far Harbor blizzard; Far Harbor blizzard; Far Harbor blizzard
 
 ; ── Globals for current state (read by other scripts) ─────────────────────────
-GlobalVariable Property gEnvWeatherType   Auto  ; 0=Clear 1=Rain 2=Fog 3=RadStorm 4=Acid 5=Snow
-GlobalVariable Property gEnvTimeOfDay     Auto  ; 0–24 float
-GlobalVariable Property gEnvVisibility   Auto  ; 0–1 (1=full, 0=blind)
-GlobalVariable Property gEnvSoundCarry   Auto  ; 0–1 multiplier on detection sound
-GlobalVariable Property gEnvRadLevel     Auto  ; Current outdoor rad level
-GlobalVariable Property gEnvIsNight      Auto  ; 1 if night
-GlobalVariable Property gEnvIsPeakHour   Auto  ; 1 during dawn/dusk predator peak
-GlobalVariable Property gEnvRainMask     Auto  ; 1 if rain masking footsteps
+GlobalVariable Property gEnvWeatherType   Auto; 0=Clear 1=Rain 2=Fog 3=RadStorm 4=Acid 5=Snow; 0=Clear 1=Rain 2=Fog 3=RadStorm 4=Acid 5=Snow; 0=Clear 1=Rain 2=Fog 3=RadStorm 4=Acid 5=Snow; 0=Clear 1=Rain 2=Fog 3=RadStorm 4=Acid 5=Snow
+GlobalVariable Property gEnvTimeOfDay     Auto; 0–24 float; 0–24 float; 0–24 float; 0–24 float
+GlobalVariable Property gEnvVisibility   Auto; 0–1 (1=full, 0=blind); 0–1 (1=full, 0=blind); 0–1 (1=full, 0=blind); 0–1 (1=full, 0=blind)
+GlobalVariable Property gEnvSoundCarry   Auto; 0–1 multiplier on detection sound; 0–1 multiplier on detection sound; 0–1 multiplier on detection sound; 0–1 multiplier on detection sound
+GlobalVariable Property gEnvRadLevel     Auto; Current outdoor rad level; Current outdoor rad level; Current outdoor rad level; Current outdoor rad level
+GlobalVariable Property gEnvIsNight      Auto; 1 if night; 1 if night; 1 if night; 1 if night
+GlobalVariable Property gEnvIsPeakHour   Auto; 1 during dawn/dusk predator peak; 1 during dawn/dusk predator peak; 1 during dawn/dusk predator peak; 1 during dawn/dusk predator peak
+GlobalVariable Property gEnvRainMask     Auto; 1 if rain masking footsteps; 1 if rain masking footsteps; 1 if rain masking footsteps; 1 if rain masking footsteps
 
 ; ── Imagespace Modifiers (create in CK for visual effects) ───────────────────
 ImageSpaceModifier Property imodFog        Auto
@@ -76,9 +76,9 @@ ImageSpaceModifier Property imodNight      Auto
 ImageSpaceModifier Property imodSmoke      Auto
 
 ; ── Spells / Effects ─────────────────────────────────────────────────────────
-Spell Property spRadStormAura  Auto  ; Radiation storm area effect
-Spell Property spAcidRainAura  Auto  ; Acid rain drip damage
-Spell Property spFogDebuff     Auto  ; Fog perception debuff on player
+Spell Property spRadStormAura  Auto; Radiation storm area effect; Radiation storm area effect; Radiation storm area effect; Radiation storm area effect
+Spell Property spAcidRainAura  Auto; Acid rain drip damage; Acid rain drip damage; Acid rain drip damage; Acid rain drip damage
+Spell Property spFogDebuff     Auto; Fog perception debuff on player; Fog perception debuff on player; Fog perception debuff on player; Fog perception debuff on player
 
 ; ── Configuration ─────────────────────────────────────────────────────────────
 bool  Property EnvEnabled           = True  Auto
@@ -88,7 +88,7 @@ bool  Property LightingOn           = True  Auto
 bool  Property TerrainOn            = True  Auto
 bool  Property RadZoneOn            = True  Auto
 bool  Property FireReactionOn       = True  Auto
-float Property UpdateInterval       = 0.1   Auto  ; Every ~2.5 hrs game time
+float Property UpdateInterval       = 0.1   Auto; Every ~2.5 hrs game time; Every ~2.5 hrs game time; Every ~2.5 hrs game time; Every ~2.5 hrs game time
 
 ; ── Internal State ────────────────────────────────────────────────────────────
 int   _currentWeather    = 0
@@ -106,69 +106,97 @@ Event OnQuestInit()
         Return
     EndIf
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(UpdateInterval)
-    RegisterForWeatherChange()
+    ScheduleTick(UpdateInterval)
+    ; weather changes are detected by polling in OnTimerGameTime (FO4 has no weather-change event)
     UpdateEnvironmentState()
     EnvLog("Environmental AI Manager initialized")
 EndEvent
 
-Event OnWeatherChange(Weather akOldWeather, Weather akNewWeather, bool abPrecip, bool abPermaNow)
+Function WeatherChanged(Weather akOldWeather, Weather akNewWeather, Bool abPrecip, Bool abPermaNow)
     If WeatherReactionOn
         HandleWeatherTransition(akOldWeather, akNewWeather)
     EndIf
-EndEvent
-
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; CORE UPDATE TICK
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !EnvEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
     UpdateEnvironmentState()
     ApplyEnvironmentToActors()
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 Function UpdateEnvironmentState()
     ; Time of day
     Float gameTime = Utility.GetCurrentGameTime()
     _currentHour   = (gameTime - Math.Floor(gameTime)) * 24.0
 
     _isNight     = _currentHour < 5.5 || _currentHour > 21.0
-    _isPeakHour  = (_currentHour >= 5.5 && _currentHour <= 7.5) || \
-                   (_currentHour >= 19.0 && _currentHour <= 21.0)
+    _isPeakHour  = (_currentHour >= 5.5 && _currentHour <= 7.5) || (_currentHour >= 19.0 && _currentHour <= 21.0)
 
     ; Update globals so other scripts can read them
-    If gEnvTimeOfDay    != None  gEnvTimeOfDay.SetValue(_currentHour)
-    If gEnvIsNight      != None  gEnvIsNight.SetValue(_isNight ? 1.0 : 0.0)
-    If gEnvIsPeakHour   != None  gEnvIsPeakHour.SetValue(_isPeakHour ? 1.0 : 0.0)
+    If gEnvTimeOfDay    != None
+        gEnvTimeOfDay.SetValue(_currentHour)
+    EndIf
+    If gEnvIsNight      != None
+        Float _fxTmp6 = 1.0
+        If !(_isNight)
+            _fxTmp6 = 0.0
+        EndIf
+        gEnvIsNight.SetValue(_fxTmp6)
+    EndIf
+    If gEnvIsPeakHour   != None
+        Float _fxTmp7 = 1.0
+        If !(_isPeakHour)
+            _fxTmp7 = 0.0
+        EndIf
+        gEnvIsPeakHour.SetValue(_fxTmp7)
+    EndIf
 
     ; Visibility calculation
     Float visibility = 1.0
-    If _isNight     visibility -= 0.4
-    If _fogActive   visibility -= 0.35
-    If _rainActive  visibility -= 0.15
-    If gEnvVisibility != None  gEnvVisibility.SetValue(Math.Clamp(visibility, 0.05, 1.0))
+    If _isNight
+        visibility -= 0.4
+    EndIf
+    If _fogActive
+        visibility -= 0.35
+    EndIf
+    If _rainActive
+        visibility -= 0.15
+    EndIf
+    If gEnvVisibility != None
+        gEnvVisibility.SetValue(Math.Clamp(visibility, 0.05, 1.0))
+    EndIf
 
     ; Sound carry calculation (how far sounds travel)
     Float soundCarry = 1.0
-    If _rainActive   soundCarry -= 0.3   ; Rain masks sounds
-    If _fogActive    soundCarry += 0.1   ; Fog actually amplifies close sounds
-    If _isNight      soundCarry += 0.2   ; Night is quieter, sounds carry farther
-    If gEnvSoundCarry != None  gEnvSoundCarry.SetValue(Math.Clamp(soundCarry, 0.3, 2.0))
+    If _rainActive
+        soundCarry -= 0.3
+    EndIf
+    If _fogActive
+        soundCarry += 0.1
+    EndIf
+    If _isNight
+        soundCarry += 0.2
+    EndIf
+    If gEnvSoundCarry != None
+        gEnvSoundCarry.SetValue(Math.Clamp(soundCarry, 0.3, 2.0))
+    EndIf
 
     ; Rain masking footsteps
-    If gEnvRainMask != None  gEnvRainMask.SetValue(_rainActive ? 1.0 : 0.0)
+    If gEnvRainMask != None
+        Float _fxTmp8 = 1.0
+        If !(_rainActive)
+            _fxTmp8 = 0.0
+        EndIf
+        gEnvRainMask.SetValue(_fxTmp8)
+    EndIf
 
     ; Log state for bridge
-    Debug.Trace("[AAI] ENV_STATE|hour=" + _currentHour + \
-                "|night=" + _isNight + "|peak=" + _isPeakHour + \
-                "|visibility=" + visibility + "|sound=" + soundCarry + \
-                "|weather=" + _currentWeather + \
-                "|rain=" + _rainActive + "|fog=" + _fogActive + \
-                "|radstorm=" + _radStormActive)
+    Debug.Trace("[AAI] ENV_STATE|hour=" + _currentHour + "|night=" + _isNight + "|peak=" + _isPeakHour + "|visibility=" + visibility + "|sound=" + soundCarry + "|weather=" + _currentWeather + "|rain=" + _rainActive + "|fog=" + _fogActive + "|radstorm=" + _radStormActive)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -178,19 +206,25 @@ Function HandleWeatherTransition(Weather oldWeather, Weather newWeather)
     ; Determine new weather type
     _radStormActive = (weatherRadStorm != None && newWeather == weatherRadStorm)
     _fogActive      = (weatherFog      != None && newWeather == weatherFog)
-    _rainActive     = (weatherRain     != None && newWeather == weatherRain) || \
-                      (weatherAcidRain != None && newWeather == weatherAcidRain)
+    _rainActive     = (weatherRain     != None && newWeather == weatherRain) || (weatherAcidRain != None && newWeather == weatherAcidRain)
 
     ; Set global weather type
     int weatherCode = 0
-    If newWeather == weatherRain       weatherCode = 1
-    ElseIf newWeather == weatherFog    weatherCode = 2
-    ElseIf newWeather == weatherRadStorm weatherCode = 3
-    ElseIf newWeather == weatherAcidRain weatherCode = 4
-    ElseIf newWeather == weatherSnow   weatherCode = 5
+    If newWeather == weatherRain
+        weatherCode = 1
+    ElseIf newWeather == weatherFog
+        weatherCode = 2
+    ElseIf newWeather == weatherRadStorm
+        weatherCode = 3
+    ElseIf newWeather == weatherAcidRain
+        weatherCode = 4
+    ElseIf newWeather == weatherSnow
+        weatherCode = 5
     EndIf
     _currentWeather = weatherCode
-    If gEnvWeatherType != None  gEnvWeatherType.SetValue(weatherCode as Float)
+    If gEnvWeatherType != None
+        gEnvWeatherType.SetValue(weatherCode as Float)
+    EndIf
 
     ; Player notification
     If weatherCode != _lastWeatherNotify
@@ -204,7 +238,7 @@ Function HandleWeatherTransition(Weather oldWeather, Weather newWeather)
     EnvLog("Weather changed → " + GetWeatherName(weatherCode))
 EndFunction
 
-Function AnnounceWeather(int code)
+Function AnnounceWeather(Int code)
     If code == 3
         Debug.Notification("Radiation storm rolling in — find cover or pop those Rad-X...")
     ElseIf code == 4
@@ -218,32 +252,38 @@ Function AnnounceWeather(int code)
     EndIf
 EndFunction
 
-Function ApplyWeatherEffects(int code)
+Function ApplyWeatherEffects(Int code)
     Actor player = Game.GetPlayer()
 
     ; Clear previous weather debuffs
-    If spFogDebuff != None   player.DispelSpell(spFogDebuff)
-    If spRadStormAura != None player.DispelSpell(spRadStormAura)
-    If spAcidRainAura != None player.DispelSpell(spAcidRainAura)
+    If spFogDebuff != None
+        player.DispelSpell(spFogDebuff)
+    EndIf
+    If spRadStormAura != None
+        player.DispelSpell(spRadStormAura)
+    EndIf
+    If spAcidRainAura != None
+        player.DispelSpell(spAcidRainAura)
+    EndIf
 
-    If code == 3  ; Radiation storm
+    If code == 3; Radiation storm; Radiation storm; Radiation storm; Radiation storm
         If spRadStormAura != None
-            player.CastSpell(spRadStormAura, player)
+            spRadStormAura.Cast(player, player)
         EndIf
         If imodRadStorm != None
             imodRadStorm.Apply()
         EndIf
         ReactToRadStorm()
 
-    ElseIf code == 4  ; Acid rain
+    ElseIf code == 4; Acid rain; Acid rain; Acid rain; Acid rain
         If spAcidRainAura != None
-            player.CastSpell(spAcidRainAura, player)
+            spAcidRainAura.Cast(player, player)
         EndIf
         ReactToAcidRain()
 
-    ElseIf code == 2  ; Fog
+    ElseIf code == 2; Fog; Fog; Fog; Fog
         If spFogDebuff != None
-            player.CastSpell(spFogDebuff, player)
+            spFogDebuff.Cast(player, player)
         EndIf
         If imodFog != None
             imodFog.Apply()
@@ -252,13 +292,19 @@ Function ApplyWeatherEffects(int code)
     EndIf
 EndFunction
 
-String Function GetWeatherName(int code)
-    If code == 0 Return "Clear"
-    ElseIf code == 1 Return "Rain"
-    ElseIf code == 2 Return "Fog"
-    ElseIf code == 3 Return "RadiationStorm"
-    ElseIf code == 4 Return "AcidRain"
-    ElseIf code == 5 Return "Blizzard"
+String Function GetWeatherName(Int code)
+    If code == 0
+        Return "Clear"
+    ElseIf code == 1
+        Return "Rain"
+    ElseIf code == 2
+        Return "Fog"
+    ElseIf code == 3
+        Return "RadiationStorm"
+    ElseIf code == 4
+        Return "AcidRain"
+    ElseIf code == 5
+        Return "Blizzard"
     EndIf
     Return "Unknown"
 EndFunction
@@ -269,7 +315,7 @@ EndFunction
 Function ReactToRadStorm()
     ; Radiation storm: ghouls go ecstatic, rad-immune surge, others flee
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(3000.0, 20)
+    Actor[] nearby = MiscUtil.ScanActors(player, 3000.0, 20)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -281,12 +327,18 @@ Function ReactToRadStorm()
                     ; Ghoul / rad-immune: SURGE — boost aggression and speed
                     ActorValue avAggr  = Game.GetFormFromFile(0x000002E7, "Fallout4.esm") as ActorValue
                     ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
-                    If avAggr  != None  npc.SetValue(avAggr,  Math.Min(npc.GetBaseValue(avAggr) * 1.4, 100.0))
-                    If avSpeed != None  npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed) * 1.2)
+                    If avAggr  != None
+                        npc.SetValue(avAggr,  Math.Min(npc.GetBaseValue(avAggr) * 1.4, 100.0))
+                    EndIf
+                    If avSpeed != None
+                        npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed) * 1.2)
+                    EndIf
                 ElseIf radResist < 100.0 && !npc.IsPlayerTeammate()
                     ; Non-rad-immune: flee indoors / seek cover
                     ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
-                    If avConf != None  npc.SetValue(avConf, Math.Max(npc.GetValue(avConf) - 30.0, 0.0))
+                    If avConf != None
+                        npc.SetValue(avConf, Math.Max(npc.GetValue(avConf) - 30.0, 0.0))
+                    EndIf
                     npc.EvaluatePackage()
                 EndIf
             EndIf
@@ -299,7 +351,7 @@ EndFunction
 Function ReactToFog()
     ; Fog: all detection halved, ambush creatures activate, Anglers glow
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2000.0, 15)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2000.0, 15)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -308,7 +360,7 @@ Function ReactToFog()
             ActorValue avPerc = Game.GetFormFromFile(0x000002E3, "Fallout4.esm") as ActorValue
             If avPerc != None
                 Float curPerc = npc.GetValue(avPerc)
-                npc.SetValue(avPerc, curPerc * 0.55)  ; 45% reduction in fog
+                npc.SetValue(avPerc, curPerc * 0.55); 45% reduction in fog; 45% reduction in fog; 45% reduction in fog; 45% reduction in fog
             EndIf
         EndIf
         i += 1
@@ -319,7 +371,7 @@ EndFunction
 Function ReactToAcidRain()
     ; Robots go haywire. Organic creatures shelter.
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2500.0, 15)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2500.0, 15)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -327,7 +379,9 @@ Function ReactToAcidRain()
             ; Apply to human NPCs — push them to shelter packages
             If !npc.IsInCombat()
                 ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
-                If avConf != None  npc.SetValue(avConf, Math.Max(npc.GetValue(avConf) - 20.0, 0.0))
+                If avConf != None
+                    npc.SetValue(avConf, Math.Max(npc.GetValue(avConf) - 20.0, 0.0))
+                EndIf
                 npc.EvaluatePackage()
             EndIf
         EndIf
@@ -340,15 +394,17 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ApplyEnvironmentToActors()
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2500.0, 20)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2500.0, 20)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead()
             ApplyTimeOfDayToActor(npc)
-            If TerrainOn  ApplyTerrainToActor(npc, player)
+            If TerrainOn
+                ApplyTerrainToActor(npc, player)
         EndIf
         i += 1
+        EndIf
     EndWhile
 EndFunction
 
@@ -371,7 +427,7 @@ Function ApplyTimeOfDayToActor(Actor npc)
 
     ; PRE-DAWN FATIGUE (guards most tired 04:00–05:30)
     ElseIf _currentHour >= 4.0 && _currentHour < 5.5
-        npc.SetValue(avPerc, basePerc * 0.7)  ; Guards less perceptive
+        npc.SetValue(avPerc, basePerc * 0.7); Guards less perceptive; Guards less perceptive; Guards less perceptive; Guards less perceptive
 
     ; DEEP NIGHT (00:00–04:00): darkness bonus
     ElseIf _currentHour < 4.0 || _currentHour > 22.0
@@ -424,7 +480,7 @@ Function OnFireDetected(ObjectReference fireRef)
         Return
     EndIf
 
-    Actor[] nearby = fireRef.GetActorsInRange(600.0, 10)
+    Actor[] nearby = MiscUtil.ScanActors(fireRef, 600.0, 10)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -450,7 +506,7 @@ Function OnCrowsScattered(ObjectReference crowLocation)
     ; When crows scatter (from combat, explosion, or fast-moving predator)
     ; nearby NPCs become suspicious
     Actor player = Game.GetPlayer()
-    Actor[] nearby = crowLocation.GetActorsInRange(1500.0, 12)
+    Actor[] nearby = MiscUtil.ScanActors(crowLocation, 1500.0, 12)
     Int alerted = 0
     Int i = 0
     While i < nearby.Length
@@ -481,15 +537,23 @@ Function OnExplosionDetected(ObjectReference explRef, String locationType)
 
     ; Base alert radius multiplied by environment
     Float baseRadius = 2000.0
-    Float soundMult  = gEnvSoundCarry != None ? gEnvSoundCarry.GetValue() : 1.0
+    Float soundMult
+    If (gEnvSoundCarry != None)
+        soundMult = gEnvSoundCarry.GetValue()
+    Else
+        soundMult = 1.0
+    EndIf
 
     ; Terrain modifier
-    If locationType == "outdoor"    soundMult *= 1.5   ; Sound carries far outside
-    ElseIf locationType == "indoor" soundMult *= 0.7   ; Muffled indoors but echoes
+    If locationType == "outdoor"
+        soundMult *= 1.5
+    ElseIf locationType == "indoor"
+        soundMult *= 0.7
+    EndIf
 
     Float alertRadius = baseRadius * soundMult
 
-    Actor[] nearby = explRef.GetActorsInRange(alertRadius, 25)
+    Actor[] nearby = MiscUtil.ScanActors(explRef, alertRadius, 25)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -501,8 +565,7 @@ Function OnExplosionDetected(ObjectReference explRef, String locationType)
     EndWhile
 
     EnvLog("Explosion alert: radius=" + alertRadius + " (" + locationType + ") | sound_mult=" + soundMult)
-    Debug.Trace("[AAI] ENV_EXPLOSION|radius=" + alertRadius + "|loc_type=" + locationType + \
-                "|alerted=" + nearby.Length)
+    Debug.Trace("[AAI] ENV_EXPLOSION|radius=" + alertRadius + "|loc_type=" + locationType + "|alerted=" + nearby.Length)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -513,13 +576,15 @@ Function UpdateRadiationZone(Float radLevel, String zoneName)
         Return
     EndIf
 
-    If gEnvRadLevel != None  gEnvRadLevel.SetValue(radLevel)
+    If gEnvRadLevel != None
+        gEnvRadLevel.SetValue(radLevel)
+    EndIf
 
     ; High radiation zones: rad-immune creatures become more aggressive
     ; and non-immune creatures flee or are damaged
-    If radLevel >= 5.0  ; 5+ rads/sec = dangerous zone
+    If radLevel >= 5.0; 5+ rads/sec = dangerous zone; 5+ rads/sec = dangerous zone; 5+ rads/sec = dangerous zone; 5+ rads/sec = dangerous zone
         Actor player = Game.GetPlayer()
-        Actor[] nearby = player.GetActorsInRange(1500.0, 12)
+        Actor[] nearby = MiscUtil.ScanActors(player, 1500.0, 12)
         Int i = 0
         While i < nearby.Length
             Actor npc = nearby[i]
@@ -552,21 +617,64 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API — other scripts call these
 ; ═══════════════════════════════════════════════════════════════════════════
-Float Function GetCurrentHour()     Return _currentHour    EndFunction
-Bool  Function IsNight()            Return _isNight         EndFunction
-Bool  Function IsPeakHour()         Return _isPeakHour      EndFunction
-Bool  Function IsRadStormActive()   Return _radStormActive  EndFunction
-Bool  Function IsFogActive()        Return _fogActive       EndFunction
-Bool  Function IsRaining()          Return _rainActive      EndFunction
+Float Function GetCurrentHour()
+    Return _currentHour
+EndFunction
+Bool  Function IsNight()
+    Return _isNight
+EndFunction
+Bool  Function IsPeakHour()
+    Return _isPeakHour
+EndFunction
+Bool  Function IsRadStormActive()
+    Return _radStormActive
+EndFunction
+Bool  Function IsFogActive()
+    Return _fogActive
+EndFunction
+Bool  Function IsRaining()
+    Return _rainActive
+EndFunction
 
 Float Function GetVisibilityFraction()
-    Return gEnvVisibility != None ? gEnvVisibility.GetValue() : 1.0
+    If (gEnvVisibility != None)
+        Return gEnvVisibility.GetValue()
+    Else
+        Return 1.0
+    EndIf
 EndFunction
 
 Float Function GetSoundCarryMultiplier()
-    Return gEnvSoundCarry != None ? gEnvSoundCarry.GetValue() : 1.0
+    If (gEnvSoundCarry != None)
+        Return gEnvSoundCarry.GetValue()
+    Else
+        Return 1.0
+    EndIf
 EndFunction
 
 Function EnvLog(String msg)
     Debug.Trace("[AAI-Env] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Weather _f4aiLastWeather = None
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Weather wNow = Weather.GetCurrentWeather()
+        If wNow != _f4aiLastWeather
+            Weather wOld = _f4aiLastWeather
+            _f4aiLastWeather = wNow
+            WeatherChanged(wOld, wNow, False, False)
+        EndIf
+        DoGameTimeTick()
+    EndIf
+EndEvent

@@ -1,0 +1,262 @@
+{
+    "modName": "AdvancedAI",
+    "displayName": "Advanced AI System",
+    "minMCMVersion": 11,
+    "pluginRequirements": [],
+    "pages": [
+        {
+            "pageDisplayName": "General",
+            "id": "main",
+            "content": [
+                {
+                    "class": "header",
+                    "text": "Advanced AI System v1.0.0"
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_MASTER",
+                    "text": "Enable Advanced AI",
+                    "help": "Master switch. Disabling turns off all AI enhancement systems.",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_Enabled"
+                    }
+                },
+                {
+                    "class": "empty"
+                },
+                {
+                    "class": "header",
+                    "text": "AI Modules"
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_CREATURES",
+                    "text": "Enhanced Creature AI",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_CreatureAI"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_NPCS",
+                    "text": "Enhanced NPC AI",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_NPCAI"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_COMPANIONS",
+                    "text": "Enhanced Companion AI",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_CompanionAI"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_ROBOTS",
+                    "text": "Enhanced Robot/Synth AI",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_RobotAI"
+                    }
+                },
+                {
+                    "class": "empty"
+                },
+                {
+                    "class": "header",
+                    "text": "Systems"
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_GROUPTACTICS",
+                    "text": "Group Tactics",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_GroupTactics"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_DYNDIFFICULTY",
+                    "text": "Dynamic Difficulty",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_DynamicDifficulty"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_DETECTION",
+                    "text": "Detection Overhaul",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_DetectionOverhaul"
+                    }
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_COMBAT",
+                    "text": "Combat Style Overrides",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_CombatStyleOverride"
+                    }
+                },
+                {
+                    "class": "empty"
+                },
+                {
+                    "class": "header",
+                    "text": "Maintenance"
+                },
+                {
+                    "class": "text",
+                    "id": "BTN_REFRESH",
+                    "text": "Force Refresh All AI",
+                    "value": "Refresh Now"
+                },
+                {
+                    "class": "toggle",
+                    "id": "TOGGLE_DEBUG",
+                    "text": "Debug Logging",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_Debug"
+                    }
+                }
+            ]
+        },
+        {
+            "pageDisplayName": "Difficulty",
+            "id": "difficulty",
+            "content": [
+                {
+                    "class": "header",
+                    "text": "Difficulty Multipliers"
+                },
+                {
+                    "class": "text",
+                    "text": "",
+                    "value": "Higher values = more dangerous AI",
+                    "flags": "disable"
+                },
+                {
+                    "class": "empty"
+                },
+                {
+                    "class": "slider",
+                    "id": "SLIDER_AGGR",
+                    "text": "Aggression Mult",
+                    "help": "Multiplier applied to all NPC aggression values.",
+                    "min": 0.5,
+                    "max": 3.0,
+                    "step": 0.1,
+                    "formatString": "{1}",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_AggressionMult"
+                    }
+                },
+                {
+                    "class": "slider",
+                    "id": "SLIDER_CONF",
+                    "text": "Confidence Mult",
+                    "help": "Multiplier applied to all NPC confidence values.",
+                    "min": 0.5,
+                    "max": 3.0,
+                    "step": 0.1,
+                    "formatString": "{1}",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_ConfidenceMult"
+                    }
+                },
+                {
+                    "class": "slider",
+                    "id": "SLIDER_DET",
+                    "text": "Detection Mult",
+                    "help": "Multiplier applied to detection ranges.",
+                    "min": 0.5,
+                    "max": 2.5,
+                    "step": 0.1,
+                    "formatString": "{1}",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_DetectionMult"
+                    }
+                },
+                {
+                    "class": "slider",
+                    "id": "SLIDER_HP",
+                    "text": "Health Mult",
+                    "help": "Multiplier applied to NPC health pools.",
+                    "min": 1.0,
+                    "max": 4.0,
+                    "step": 0.1,
+                    "formatString": "{1}",
+                    "valueOptions": {
+                        "sourceType": "PropertyValueSource",
+                        "scriptName": "AdvancedAIManager",
+                        "propertyName": "AAI_HealthMult"
+                    }
+                }
+            ]
+        },
+        {
+            "pageDisplayName": "Mossy Bridge",
+            "id": "bridge",
+            "content": [
+                {
+                    "class": "header",
+                    "text": "Mossy AI Bridge"
+                },
+                {
+                    "class": "text",
+                    "text": "",
+                    "value": "Connect Mossy to monitor this mod",
+                    "flags": "disable"
+                },
+                {
+                    "class": "text",
+                    "text": "Bridge Port",
+                    "value": "28485",
+                    "flags": "disable"
+                },
+                {
+                    "class": "text",
+                    "text": "Log Path",
+                    "value": "Documents\\My Games\\Fallout4\\Logs\\Script\\",
+                    "flags": "disable"
+                },
+                {
+                    "class": "empty"
+                },
+                {
+                    "class": "text",
+                    "id": "BTN_BRIDGE_HELP",
+                    "text": "How to connect Mossy",
+                    "value": "View Instructions"
+                }
+            ]
+        }
+    ]
+}

@@ -46,7 +46,7 @@
 Scriptname WaterHazardManager extends Quest
 
 Quest Property AAIQuest         Auto
-Quest Property WaterSim         Auto  ; WaterSimulation reference
+WaterSimulation Property WaterSim Auto; typed so IsIceActive/IsStormWaterActive/IsFloodActive resolve
 
 ; ── Keywords ─────────────────────────────────────────────────────────────────
 Keyword Property kwdMirelurk       Auto
@@ -65,16 +65,16 @@ Keyword Property kwdGhoul          Auto
 Keyword Property kwdSynth          Auto
 
 ; ── Combat Effects ────────────────────────────────────────────────────────────
-Spell Property spUnderwaterSlow      Auto  ; Movement/action speed debuff
-Spell Property spUnderwaterDamage    Auto  ; Oxygen deprivation damage
-Spell Property spRobotShortCircuit   Auto  ; EMP damage for robots
-Spell Property spCurrentForce        Auto  ; Directional force from current
-Spell Property spIceBreach           Auto  ; Creature falls through ice
-Spell Property spCurrentSlow         Auto  ; Slowing current effect
-Spell Property spWeightedSink        Auto  ; Heavy armor/sentry bot sinking
+Spell Property spUnderwaterSlow      Auto; Movement/action speed debuff; Movement/action speed debuff; Movement/action speed debuff; Movement/action speed debuff
+Spell Property spUnderwaterDamage    Auto; Oxygen deprivation damage; Oxygen deprivation damage; Oxygen deprivation damage; Oxygen deprivation damage
+Spell Property spRobotShortCircuit   Auto; EMP damage for robots; EMP damage for robots; EMP damage for robots; EMP damage for robots
+Spell Property spCurrentForce        Auto; Directional force from current; Directional force from current; Directional force from current; Directional force from current
+Spell Property spIceBreach           Auto; Creature falls through ice; Creature falls through ice; Creature falls through ice; Creature falls through ice
+Spell Property spCurrentSlow         Auto; Slowing current effect; Slowing current effect; Slowing current effect; Slowing current effect
+Spell Property spWeightedSink        Auto; Heavy armor/sentry bot sinking; Heavy armor/sentry bot sinking; Heavy armor/sentry bot sinking; Heavy armor/sentry bot sinking
 
 ; ── Explosions ────────────────────────────────────────────────────────────────
-Explosion Property expUnderwaterBlast Auto  ; Pressure wave from underwater explosion
+Explosion Property expUnderwaterBlast Auto; Pressure wave from underwater explosion; Pressure wave from underwater explosion; Pressure wave from underwater explosion; Pressure wave from underwater explosion
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property HazardEnabled         = True  Auto
@@ -84,8 +84,8 @@ bool  Property RobotWaterDamageOn    = True  Auto
 bool  Property IceTraversalOn        = True  Auto
 bool  Property DrowningOn            = True  Auto
 float Property UpdateInterval        = 0.08  Auto
-float Property OxygenDuration        = 30.0  Auto  ; Real seconds before drowning damage
-float Property RobotWaterDamageRate  = 5.0   Auto  ; HP/second for robots in water
+float Property OxygenDuration        = 30.0  Auto; Real seconds before drowning damage; Real seconds before drowning damage; Real seconds before drowning damage; Real seconds before drowning damage
+float Property RobotWaterDamageRate  = 5.0   Auto; HP/second for robots in water; HP/second for robots in water; HP/second for robots in water; HP/second for robots in water
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 float _playerOxygenTimer   = 0.0
@@ -105,14 +105,14 @@ Event OnQuestInit()
     EndIf
     _robotsInWater = new Actor[8]
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerSwimming")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerUnderwater")
-    RegisterForUpdateGameTime(UpdateInterval)
+    ; underwater state polled in OnTimerGameTime (FO4 has no OnPlayerUnderwater event)
+    ScheduleTick(UpdateInterval)
     HazardLog("Water Hazard Manager initialized")
 EndEvent
 
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !HazardEnabled
-        RegisterForUpdateGameTime(UpdateInterval)
+        ScheduleTick(UpdateInterval)
         Return
     EndIf
 
@@ -131,40 +131,43 @@ Event OnUpdateGameTime()
         UpdateOxygenTimer()
     EndIf
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PLAYER SWIMMING STATE
 ; ═══════════════════════════════════════════════════════════════════════════
-Event OnPlayerSwimming(Actor akSender, bool abIsSwimming)
+Event Actor.OnPlayerSwimming(Actor akSender)
+    PlayerSwimStateChanged(True)
+EndEvent
+
+Function PlayerSwimStateChanged(Bool abIsSwimming)
     If abIsSwimming
         _playerOxygenTimer = 0.0
-        ApplyUnderwaterMovement(akSender)
+        ApplyUnderwaterMovement(Game.GetPlayer())
         HazardLog("Player entered water")
     Else
         _playerUnderwater = False
-        RemoveUnderwaterEffects(akSender)
+        RemoveUnderwaterEffects(Game.GetPlayer())
         HazardLog("Player exited water")
     EndIf
-EndEvent
+EndFunction
 
-Event OnPlayerUnderwater(Actor akSender, bool abIsUnderwater)
+Function PlayerUnderwaterChanged(Bool abIsUnderwater)
     _playerUnderwater = abIsUnderwater
     If abIsUnderwater
-        ApplyUnderwaterCombat(akSender)
+        ApplyUnderwaterCombat(Game.GetPlayer())
         HazardLog("Player submerged — underwater combat active")
     Else
-        RemoveUnderwaterEffects(akSender)
+        RemoveUnderwaterEffects(Game.GetPlayer())
     EndIf
-EndEvent
+EndFunction
 
 Function ApplyUnderwaterMovement(Actor akActor)
     If !UnderwaterCombatOn
         Return
     EndIf
     If spUnderwaterSlow != None
-        akActor.CastSpell(spUnderwaterSlow, akActor)
+        spUnderwaterSlow.Cast(akActor, akActor)
     EndIf
 EndFunction
 
@@ -175,20 +178,24 @@ Function ApplyUnderwaterCombat(Actor akActor)
 EndFunction
 
 Function RemoveUnderwaterEffects(Actor akActor)
-    If spUnderwaterSlow   != None  akActor.DispelSpell(spUnderwaterSlow)
-    If spUnderwaterDamage != None  akActor.DispelSpell(spUnderwaterDamage)
+    If spUnderwaterSlow   != None
+        akActor.DispelSpell(spUnderwaterSlow)
+    EndIf
+    If spUnderwaterDamage != None
+        akActor.DispelSpell(spUnderwaterDamage)
+    EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; OXYGEN / DROWNING
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdateOxygenTimer()
-    _playerOxygenTimer += (UpdateInterval * 24.0 * 3600.0)  ; Convert game hours to real seconds approx
+    _playerOxygenTimer += (UpdateInterval * 24.0 * 3600.0); Convert game hours to real seconds approx; Convert game hours to real seconds approx; Convert game hours to real seconds approx; Convert game hours to real seconds approx
 
     If _playerOxygenTimer > OxygenDuration
         ; Start drowning damage
         If spUnderwaterDamage != None
-            Game.GetPlayer().CastSpell(spUnderwaterDamage, Game.GetPlayer())
+            spUnderwaterDamage.Cast(Game.GetPlayer(), Game.GetPlayer())
         EndIf
         Debug.Notification("You're running out of air!")
     EndIf
@@ -199,11 +206,11 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 Function ScanActorsInWater()
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2000.0, 15)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2000.0, 15)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
-        If npc != None && !npc.IsDead() && npc.IsInWater()
+        If npc != None && !npc.IsDead() && npc.IsSwimming()
             HandleActorInWater(npc)
         EndIf
         i += 1
@@ -222,7 +229,7 @@ Function HandleActorInWater(Actor npc)
     ; ── AQUATIC CREATURES — BOOSTED ─────────────────────────────────────────
     If IsAquatic(npc)
         If avSpeed != None
-            npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed) * 1.4)  ; Faster in water
+            npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed) * 1.4); Faster in water; Faster in water; Faster in water; Faster in water
         EndIf
         Return
     EndIf
@@ -230,15 +237,21 @@ Function HandleActorInWater(Actor npc)
     ; ── LAND CREATURES — SLOWED ─────────────────────────────────────────────
     If avSpeed != None
         Float slowMult = 0.65
-        If _stormWaterActive  slowMult = 0.5   ; Worse in storm
-        If _floodActive       slowMult = 0.45  ; Worst in flood
-        If _iceActive         slowMult = 0.4   ; Near freezing
+        If _stormWaterActive
+            slowMult = 0.5
+        EndIf
+        If _floodActive
+            slowMult = 0.45
+        EndIf
+        If _iceActive
+            slowMult = 0.4
+        EndIf
         npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed) * slowMult)
     EndIf
 
     ; Apply current force during storm/flood
     If (_stormWaterActive || _floodActive) && CurrentForcesOn && spCurrentSlow != None
-        npc.CastSpell(spCurrentSlow, npc)
+        spCurrentSlow.Cast(npc, npc)
     EndIf
 EndFunction
 
@@ -256,13 +269,19 @@ Function HandleRobotInWater(Actor robot)
 
     ; Apply short-circuit damage
     If spRobotShortCircuit != None
-        robot.CastSpell(spRobotShortCircuit, robot)
+        spRobotShortCircuit.Cast(robot, robot)
     EndIf
 
     Float damageRate = RobotWaterDamageRate
-    If robotType == "SentryBot"   damageRate *= 2.0  ; Heavy = sinks faster
-    If robotType == "Protectron"  damageRate *= 1.2
-    If robotType == "Assaultron"  damageRate *= 1.5  ; Laser head can't fire wet
+    If robotType == "SentryBot"
+        damageRate *= 2.0
+    EndIf
+    If robotType == "Protectron"
+        damageRate *= 1.2
+    EndIf
+    If robotType == "Assaultron"
+        damageRate *= 1.5
+    EndIf
 
     ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
     If avHP != None
@@ -271,19 +290,29 @@ Function HandleRobotInWater(Actor robot)
 
     ; Sentry Bot sinks and immobilizes
     If robotType == "SentryBot" && spWeightedSink != None
-        robot.CastSpell(spWeightedSink, robot)
+        spWeightedSink.Cast(robot, robot)
         ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
-        If avSpeed != None  robot.SetValue(avSpeed, 0.0)
+        If avSpeed != None
+            robot.SetValue(avSpeed, 0.0)
     EndIf
 
     HazardLog(robotType + " taking water damage: " + damageRate + " HP/tick")
+    EndIf
 EndFunction
 
 String Function GetRobotType(Actor robot)
-    If kwdSentryBot   != None && robot.HasKeyword(kwdSentryBot)   Return "SentryBot"
-    If kwdAssaultron  != None && robot.HasKeyword(kwdAssaultron)  Return "Assaultron"
-    If kwdProtectron  != None && robot.HasKeyword(kwdProtectron)  Return "Protectron"
-    If kwdEyebot      != None && robot.HasKeyword(kwdEyebot)      Return "Eyebot"
+    If kwdSentryBot   != None && robot.HasKeyword(kwdSentryBot)
+        Return "SentryBot"
+    EndIf
+    If kwdAssaultron  != None && robot.HasKeyword(kwdAssaultron)
+        Return "Assaultron"
+    EndIf
+    If kwdProtectron  != None && robot.HasKeyword(kwdProtectron)
+        Return "Protectron"
+    EndIf
+    If kwdEyebot      != None && robot.HasKeyword(kwdEyebot)
+        Return "Eyebot"
+    EndIf
     Return "GenericRobot"
 EndFunction
 
@@ -301,10 +330,10 @@ Function OnActorOnIce(Actor akActor)
     If creatureType == "falls_through"
         ; Too heavy — breaks ice
         If spIceBreach != None
-            akActor.CastSpell(spIceBreach, akActor)
+            spIceBreach.Cast(akActor, akActor)
         EndIf
         If expUnderwaterBlast != None
-            akActor.PlaceAtMe(expUnderwaterBlast)  ; Crack/splash effect
+            akActor.PlaceAtMe(expUnderwaterBlast); Crack/splash effect; Crack/splash effect; Crack/splash effect; Crack/splash effect
         EndIf
         Debug.Notification(akActor.GetDisplayName() + " breaks through the ice!")
         HazardLog(akActor.GetDisplayName() + " fell through ice")
@@ -325,7 +354,7 @@ Function OnActorOnIce(Actor akActor)
 
     ElseIf creatureType == "ambush"
         ; Mirelurk — uses ice as hunting ground, can break from below
-        If Utility.RandomInt(1, 100) <= 20  ; 20% chance to breach
+        If Utility.RandomInt(1, 100) <= 20; 20% chance to breach; 20% chance to breach; 20% chance to breach; 20% chance to breach
             Debug.Notification("Something is moving under the ice!")
             HazardLog("Mirelurk breaching ice surface")
         EndIf
@@ -346,8 +375,7 @@ String Function GetCreatureIceBehavior(Actor akActor)
         Return "slippery"
     EndIf
     ; Mirelurk: uses ice as ambush platform
-    If (kwdMirelurk != None && akActor.HasKeyword(kwdMirelurk)) || \
-       (kwdMirelurkQueen != None && akActor.HasKeyword(kwdMirelurkQueen))
+    If (kwdMirelurk != None && akActor.HasKeyword(kwdMirelurk)) || (kwdMirelurkQueen != None && akActor.HasKeyword(kwdMirelurkQueen))
         Return "ambush"
     EndIf
     ; Radscorpion: light enough, chitinous feet grip ice
@@ -376,17 +404,22 @@ Function OnExplosionNearWater(ObjectReference explRef, Float waterDepth)
     EndIf
 
     ; Underwater explosions create pressure waves — devastating in enclosed spaces
-    Float pressureMult = waterDepth > 100.0 ? 2.5 : 1.5
+    Float pressureMult
+    If (waterDepth > 100.0)
+        pressureMult = 2.5
+    Else
+        pressureMult = 1.5
+    EndIf
 
-    Actor[] nearby = explRef.GetActorsInRange(800.0 * pressureMult, 12)
+    Actor[] nearby = MiscUtil.ScanActors(explRef, 800.0 * pressureMult, 12)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
-        If npc != None && !npc.IsDead() && npc.IsInWater()
+        If npc != None && !npc.IsDead() && npc.IsSwimming()
             ; Additional pressure damage
             ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
             If avHP != None
-                npc.DamageValue(avHP, 50.0 * pressureMult)  ; Devastating concussion
+                npc.DamageValue(avHP, 50.0 * pressureMult); Devastating concussion; Devastating concussion; Devastating concussion; Devastating concussion
             EndIf
         EndIf
         i += 1
@@ -395,20 +428,41 @@ Function OnExplosionNearWater(ObjectReference explRef, Float waterDepth)
     explRef.PlaceAtMe(expUnderwaterBlast)
     Debug.Notification("Underwater explosion — pressure wave!")
     HazardLog("Underwater explosion: depth=" + waterDepth + " mult=" + pressureMult)
-    Debug.Trace("[AAI] UNDERWATER_EXPLOSION|depth=" + waterDepth + \
-                "|pressure_mult=" + pressureMult + "|affected=" + nearby.Length)
+    Debug.Trace("[AAI] UNDERWATER_EXPLOSION|depth=" + waterDepth + "|pressure_mult=" + pressureMult + "|affected=" + nearby.Length)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; HELPERS
 ; ═══════════════════════════════════════════════════════════════════════════
 Bool Function IsAquatic(Actor npc)
-    Return (kwdMirelurk      != None && npc.HasKeyword(kwdMirelurk))      || \
-           (kwdMirelurkQueen != None && npc.HasKeyword(kwdMirelurkQueen)) || \
-           (kwdGulper        != None && npc.HasKeyword(kwdGulper))        || \
-           (kwdFogCrawler    != None && npc.HasKeyword(kwdFogCrawler))
+    Return (kwdMirelurk      != None && npc.HasKeyword(kwdMirelurk))      || (kwdMirelurkQueen != None && npc.HasKeyword(kwdMirelurkQueen)) || (kwdGulper        != None && npc.HasKeyword(kwdGulper))        || (kwdFogCrawler    != None && npc.HasKeyword(kwdFogCrawler))
 EndFunction
 
 Function HazardLog(String msg)
     Debug.Trace("[AAI-WaterHazard] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Bool _f4aiWasSwimming = False
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Bool swNow = Game.GetPlayer().IsSwimming()
+        If swNow != _f4aiWasSwimming
+            _f4aiWasSwimming = swNow
+            If !swNow
+                PlayerSwimStateChanged(False)
+            EndIf
+            PlayerUnderwaterChanged(swNow)
+        EndIf
+        DoGameTimeTick()
+    EndIf
+EndEvent

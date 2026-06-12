@@ -24,6 +24,8 @@ import threading
 import re
 import sqlite3
 import datetime
+import subprocess
+import requests
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -40,6 +42,320 @@ DOCUMENTS_PATH  = Path(os.path.expandvars(r"%USERPROFILE%\Documents\My Games\Fal
 PAPYRUS_LOG     = DOCUMENTS_PATH / "Logs" / "Script" / "Papyrus.0.log"
 FO4_INI         = DOCUMENTS_PATH / "Fallout4.ini"
 MEMORY_DB_PATH  = DOCUMENTS_PATH / "AdvancedAI_Memory.db"
+
+# ── Local AI Engine (KoboldCPP + TinyLlama) ──────────────────────────────────
+# Mossy downloads these to its own runtime folder and tells us where they are.
+# The bridge checks these paths and exposes /engine/status so the Mossy UI
+# can show install state and trigger auto-download via its built-in installer.
+
+def _find_mossy_runtime() -> Path:
+    """Return the best-guess Mossy runtime directory for plugin binaries."""
+    candidates = [
+        Path(os.path.expandvars(r"%APPDATA%\mossy-ai\runtime")),
+        Path(os.path.expandvars(r"%APPDATA%\Mossy\runtime")),
+        Path(os.path.expandvars(r"%LOCALAPPDATA%\mossy-ai\runtime")),
+        Path(os.path.expandvars(r"%LOCALAPPDATA%\Programs\Mossy\resources\runtime")),
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return candidates[0]
+
+
+# The bridge lives at <F4AI base>/bridge/mossy_fo4_bridge.py — derive base from __file__
+_F4AI_BASE: Path = Path(__file__).resolve().parent.parent
+
+
+def _find_kobold_exe() -> Path:
+    """Search all known KoboldCPP install locations."""
+    runtime = _find_mossy_runtime()
+    candidates = [
+        _F4AI_BASE / "runtime" / "koboldcpp.exe",                # same F4AI install tree (any drive/MO2 path)
+        runtime / "koboldcpp.exe",                                 # Mossy userData runtime
+        Path(r"D:\koboldcpp-concedo\koboldcpp.exe"),
+        Path(r"D:\koboldcpp\koboldcpp.exe"),
+        Path(r"C:\koboldcpp\koboldcpp.exe"),
+        Path(os.path.expandvars(r"%LOCALAPPDATA%\koboldcpp\koboldcpp.exe")),
+    ]
+    return next((p for p in candidates if p.exists()), candidates[0])
+
+
+def _find_gguf_model() -> Path:
+    """Search all known model locations."""
+    runtime = _find_mossy_runtime()
+    candidates = [
+        _F4AI_BASE / "models" / "tinyllama-1.1b-chat.gguf",           # same F4AI install tree
+        _F4AI_BASE / "models" / "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        runtime.parent / "models" / "tinyllama-1.1b-chat.gguf",        # Mossy userData models
+        Path(r"D:\koboldcpp-concedo\models\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"),
+        Path(r"D:\koboldcpp-concedo\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"),
+        Path(r"D:\koboldcpp\models\tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"),
+    ]
+    return next((p for p in candidates if p.exists()), candidates[0])
+
+MOSSY_RUNTIME   = _find_mossy_runtime()
+KOBOLD_EXE      = _find_kobold_exe()
+TINYLLAMA_MODEL = _find_gguf_model()
+KOBOLD_API_URL  = "http://127.0.0.1:5001/api/v1/info"
+KOBOLD_PORT     = 5001
+
+# Credits (displayed in engine status so Mossy UI can surface them)
+ENGINE_CREDITS = {
+    "koboldcpp": {
+        "name":    "KoboldCPP",
+        "author":  "LostRuins / Henk717",
+        "license": "AGPL-3.0",
+        "url":     "https://github.com/LostRuins/koboldcpp",
+        "download_url": "https://github.com/LostRuins/koboldcpp/releases/latest/download/koboldcpp.exe",
+    },
+    "tinyllama": {
+        "name":    "TinyLlama 1.1B Chat v1.0 Q4_K_M",
+        "author":  "TinyLlama team — GGUF by TheBloke",
+        "license": "Apache 2.0",
+        "url":     "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+        "download_url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+    },
+}
+
+def _kobold_running() -> bool:
+    """Return True if KoboldCPP is already listening on port 5001."""
+    try:
+        r = requests.get(KOBOLD_API_URL, timeout=2)
+        return r.status_code < 500
+    except Exception:
+        return False
+
+def get_engine_status() -> dict:
+    """Return install + running state for KoboldCPP and TinyLlama."""
+    kobold_installed  = KOBOLD_EXE.exists()
+    model_installed   = TINYLLAMA_MODEL.exists()
+    kobold_running    = _kobold_running()
+
+    return {
+        "runtime_dir":       str(MOSSY_RUNTIME),
+        "kobold_path":       str(KOBOLD_EXE),
+        "model_path":        str(TINYLLAMA_MODEL),
+        "kobold_installed":  kobold_installed,
+        "model_installed":   model_installed,
+        "kobold_running":    kobold_running,
+        "api_url":           f"http://127.0.0.1:{KOBOLD_PORT}/api/v1",
+        "ready":             kobold_installed and model_installed and kobold_running,
+        "credits":           ENGINE_CREDITS,
+    }
+
+def start_kobold_engine() -> dict:
+    """Start KoboldCPP with TinyLlama. Called by Mossy after auto-download."""
+    if _kobold_running():
+        return {"ok": True, "message": "KoboldCPP already running."}
+
+    if not KOBOLD_EXE.exists():
+        return {"ok": False, "message": f"koboldcpp.exe not found at {KOBOLD_EXE}. Run the Mossy initial install."}
+
+    if not TINYLLAMA_MODEL.exists():
+        return {"ok": False, "message": f"TinyLlama model not found at {TINYLLAMA_MODEL}. Run the Mossy initial install."}
+
+    TINYLLAMA_MODEL.parent.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        str(KOBOLD_EXE),
+        "--model",       str(TINYLLAMA_MODEL),
+        "--port",        str(KOBOLD_PORT),
+        "--host",        "127.0.0.1",
+        "--contextsize", "2048",
+        "--threads",     "4",
+        "--blasthreads", "4",
+        "--nommap",
+        "--quiet",
+    ]
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError as exc:
+        return {"ok": False, "message": f"Failed to start KoboldCPP: {exc}"}
+
+    # Wait up to 20s for it to respond
+    for _ in range(10):
+        time.sleep(2)
+        if _kobold_running():
+            return {"ok": True, "message": "KoboldCPP started successfully."}
+
+    return {"ok": False, "message": "KoboldCPP started but did not respond within 20s."}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LLM Inference — llama-cpp-python (primary) → KoboldCPP HTTP (fallback)
+# ─────────────────────────────────────────────────────────────────────────────
+# pip install llama-cpp-python
+# For NVIDIA GPU: pip install llama-cpp-python --extra-index-url
+#   https://abetlen.github.io/llama-cpp-python/whl/cu121
+
+try:
+    from llama_cpp import Llama
+    _LLAMA_AVAILABLE = True
+except ImportError:
+    Llama = None
+    _LLAMA_AVAILABLE = False
+
+_llm        = None   # cached Llama instance
+_llm_lock   = threading.Lock()
+
+# Model search paths — resolved at import time using the same multi-path finder
+_MODEL_CANDIDATES = [
+    _F4AI_BASE / "models" / "tinyllama-1.1b-chat.gguf",          # same F4AI install tree (primary)
+    Path(os.path.expandvars(r"%APPDATA%\mossy-ai\models\tinyllama-1.1b-chat.gguf")),
+    Path(os.path.expandvars(r"%LOCALAPPDATA%\mossy-ai\models\tinyllama-1.1b-chat.gguf")),
+    TINYLLAMA_MODEL,  # resolved by _find_gguf_model() above
+]
+
+def _load_llm():
+    """Lazy-load TinyLlama. Returns None if unavailable."""
+    global _llm
+    if _llm is not None:
+        return _llm
+    if not _LLAMA_AVAILABLE:
+        return None
+    with _llm_lock:
+        if _llm is not None:
+            return _llm
+        try:
+            local = next((p for p in _MODEL_CANDIDATES if p.exists()), None)
+            if local:
+                print(f"[Bridge/LLM] Loading from {local}")
+                _llm = Llama(model_path=str(local), n_ctx=2048, n_threads=4, verbose=False)
+            else:
+                print("[Bridge/LLM] Downloading TinyLlama Q4_K_M from HuggingFace…")
+                _llm = Llama.from_pretrained(
+                    repo_id="TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+                    filename="tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+                    n_ctx=2048, n_threads=4, verbose=False,
+                )
+            print("[Bridge/LLM] Model ready.")
+        except Exception as exc:
+            print(f"[Bridge/LLM] Load failed: {exc}")
+            _llm = None
+    return _llm
+
+# ── NPC system prompt templates ───────────────────────────────────────────────
+
+_NPC_PROMPTS = {
+    "settler": (
+        "You are {name}, a settler surviving in the post-apocalyptic Commonwealth of Fallout 4. "
+        "You are weathered, practical, and wary of strangers. You speak plainly with a hint of exhaustion. "
+        "You work for {faction}. "
+        "{memory}"
+        "Reply in character in 1-2 sentences. Never break character or mention being an AI."
+    ),
+    "companion": (
+        "You are {name}, the Sole Survivor's trusted companion in Fallout 4. "
+        "You have your own personality, opinions, and backstory. "
+        "{memory}"
+        "Reply with your character's voice in 1-2 sentences. Show your personality."
+    ),
+    "raider": (
+        "You are {name}, a ruthless raider in the Fallout 4 Commonwealth. "
+        "You are aggressive, greedy, and dangerous. You mock weakness. "
+        "{memory}"
+        "Reply with menace and bravado in 1-2 sentences."
+    ),
+    "robot": (
+        "You are {name}, a robot unit operating in the Commonwealth. "
+        "You follow your primary directive and speak in a logical, mechanical manner. "
+        "{memory}"
+        "Reply concisely and in-character in 1-2 sentences."
+    ),
+    "ghoul": (
+        "You are {name}, a ghoul who has survived centuries of radiation in the Commonwealth. "
+        "You carry deep wisdom from the old world but are treated as an outcast. "
+        "{memory}"
+        "Reply with the weight of lived experience in 1-2 sentences."
+    ),
+    "default": (
+        "You are {name}, an NPC in the post-apocalyptic Commonwealth of Fallout 4. "
+        "You are part of {faction}. "
+        "{memory}"
+        "Reply in character in 1-2 sentences."
+    ),
+}
+
+_RACE_TO_TYPE = {
+    "ghoul": "ghoul", "feral ghoul": "ghoul",
+    "raider": "raider",
+    "robot": "robot", "mr. handy": "robot", "protectron": "robot",
+    "synth": "robot", "courser": "robot",
+    "settler": "settler", "minuteman": "settler",
+    "companion": "companion",
+}
+
+def _build_system_prompt(mem: dict) -> str:
+    """Build an NPC-specific system prompt from their memory profile."""
+    identity = mem.get("identity", {})
+    name     = identity.get("npc_name", "Unknown")
+    race     = (identity.get("npc_race") or "").lower()
+    faction  = identity.get("npc_faction") or "no known faction"
+
+    npc_type = _RACE_TO_TYPE.get(race, "default")
+    template = _NPC_PROMPTS.get(npc_type, _NPC_PROMPTS["default"])
+
+    # Build memory context string
+    memory_lines = []
+    for m in mem.get("memories", [])[:5]:
+        memory_lines.append(f"- {m.get('detail','')}")
+    rel = (mem.get("relationship") or {}).get("relationship", "stranger")
+    memory_lines.insert(0, f"Your relationship with the player: {rel}.")
+    memory_ctx = "What you remember:\n" + "\n".join(memory_lines) + "\n" if memory_lines else ""
+
+    return template.format(name=name, faction=faction, memory=memory_ctx)
+
+def _build_messages(system: str, dialogue_history: list, player_input: str) -> list:
+    """Build the messages array for create_chat_completion."""
+    messages = [{"role": "system", "content": system}]
+    for d in reversed(dialogue_history[-6:]):  # last 6 lines, chronological
+        role = "user" if d.get("speaker") == "player" else "assistant"
+        messages.append({"role": role, "content": d.get("line", "")})
+    messages.append({"role": "user", "content": player_input})
+    return messages
+
+def generate_npc_dialogue(npc_id: str, player_input: str) -> dict:
+    """
+    Generate an NPC response using llama-cpp-python.
+    Falls back to KoboldCPP HTTP API if llama_cpp is not installed.
+    """
+    mem      = get_npc_memory(npc_id)
+    system   = _build_system_prompt(mem) if mem.get("found") else _NPC_PROMPTS["default"].format(
+        name="Unknown NPC", faction="the Commonwealth", memory="")
+    dialogue = mem.get("dialogue", []) if mem.get("found") else []
+    messages = _build_messages(system, dialogue, player_input)
+
+    # ── Try llama-cpp-python ──────────────────────────────────────────────────
+    llm = _load_llm()
+    if llm is not None:
+        try:
+            result = llm.create_chat_completion(
+                messages=messages,
+                max_tokens=128,
+                temperature=0.75,
+                top_p=0.95,
+                repeat_penalty=1.1,
+                stop=["User:", "Player:", "\n\n"],
+            )
+            text = result["choices"][0]["message"]["content"].strip()
+            return {"ok": True, "text": text, "engine": "llama-cpp-python"}
+        except Exception as exc:
+            print(f"[Bridge/LLM] Inference error: {exc}")
+
+    # ── Fallback: KoboldCPP OpenAI-compat endpoint ────────────────────────────
+    if _kobold_running():
+        try:
+            r = requests.post(
+                f"http://127.0.0.1:{KOBOLD_PORT}/v1/chat/completions",
+                json={"model": "tinyllama", "messages": messages, "max_tokens": 128, "temperature": 0.75},
+                timeout=30,
+            )
+            r.raise_for_status()
+            text = r.json()["choices"][0]["message"]["content"].strip()
+            return {"ok": True, "text": text, "engine": "koboldcpp"}
+        except Exception as exc:
+            return {"ok": False, "error": f"KoboldCPP error: {exc}"}
+
+    return {"ok": False, "error": "No AI engine available. Install llama-cpp-python or start KoboldCPP."}
 
 # Status tracking
 _status = {
@@ -426,6 +742,10 @@ class BridgeHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json({"error": "npc_id required"}, 400)
 
+        # ── Local AI Engine install/run status (used by Mossy UI) ──────────
+        elif path == "/engine/status":
+            self.send_json(get_engine_status())
+
         # ── Ping ────────────────────────────────────────────────────────────
         elif path == "/ping":
             self.send_json({"pong": True, "version": BRIDGE_VERSION})
@@ -492,6 +812,64 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 self.send_json({"context": ctx, "raw": mem})
             else:
                 self.send_json({"context": f"No memory found for NPC {npc_id}.", "raw": mem})
+
+        # ── NPC dialogue generation ───────────────────────────────────────────
+        elif path == "/generate":
+            npc_id       = body.get("npc_id", "")
+            player_input = body.get("player_input", body.get("prompt", ""))
+            if not npc_id or not player_input:
+                self.send_json({"error": "npc_id and player_input required"}, 400)
+                return
+            result = generate_npc_dialogue(npc_id, player_input)
+            if result["ok"]:
+                # Auto-record the generated line into dialogue history
+                mem = get_npc_memory(npc_id)
+                npc_name = mem["identity"]["npc_name"] if mem.get("found") else npc_id
+                record_dialogue(npc_id, npc_name, "npc", "", result["text"])
+                record_dialogue(npc_id, npc_name, "player", "", player_input)
+            self.send_json(result, 200 if result["ok"] else 500)
+
+        # ── General text generation (non-NPC, used by Mossy chat) ────────────
+        elif path == "/generate/text":
+            prompt    = body.get("prompt", "")
+            system    = body.get("system", "You are Mossy, an AI assistant for Fallout 4 modding.")
+            max_tok   = int(body.get("max_tokens", 256))
+            if not prompt:
+                self.send_json({"error": "prompt required"}, 400)
+                return
+            messages = [
+                {"role": "system", "content": system},
+                {"role": "user",   "content": prompt},
+            ]
+            llm = _load_llm()
+            if llm is not None:
+                try:
+                    result = llm.create_chat_completion(
+                        messages=messages, max_tokens=max_tok,
+                        temperature=0.7, top_p=0.95,
+                    )
+                    text = result["choices"][0]["message"]["content"].strip()
+                    self.send_json({"ok": True, "text": text, "engine": "llama-cpp-python"})
+                    return
+                except Exception as exc:
+                    self.send_json({"ok": False, "error": str(exc)}, 500)
+                    return
+            self.send_json({"ok": False, "error": "llama-cpp-python not available"}, 503)
+
+        # ── LLM engine status ─────────────────────────────────────────────────
+        elif path == "/llm/status":
+            self.send_json({
+                "llama_cpp_available": _LLAMA_AVAILABLE,
+                "model_loaded":        _llm is not None,
+                "koboldcpp_running":   _kobold_running(),
+                "model_candidates":    [str(p) for p in _MODEL_CANDIDATES],
+                "model_found":         next((str(p) for p in _MODEL_CANDIDATES if p.exists()), None),
+            })
+
+        # ── Start KoboldCPP engine (called by Mossy after auto-download) ────
+        elif path == "/engine/start":
+            result = start_kobold_engine()
+            self.send_json(result, 200 if result["ok"] else 500)
 
         else:
             self.send_json({"error": "Unknown endpoint"}, 404)

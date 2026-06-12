@@ -69,13 +69,13 @@ Location Property SettlementLocation Auto
 String Property SettlementName = "Unknown Settlement" Auto
 
 ; ── Globals ────────────────────────────────────────────────────────────────────
-GlobalVariable Property gEnvTimeOfDay  Auto  ; From EnvironmentalAIManager
+GlobalVariable Property gEnvTimeOfDay  Auto; From EnvironmentalAIManager; From EnvironmentalAIManager; From EnvironmentalAIManager; From EnvironmentalAIManager
 GlobalVariable Property gEnvIsNight    Auto
 
 ; ── Economy Thresholds ────────────────────────────────────────────────────────
-float Property FoodScarcityThreshold   = 0.5  Auto  ; Below this = scarcity
+float Property FoodScarcityThreshold   = 0.5  Auto; Below this = scarcity; Below this = scarcity; Below this = scarcity; Below this = scarcity
 float Property WaterScarcityThreshold  = 0.5  Auto
-float Property CapsScarcityThreshold   = 50.0 Auto  ; Absolute cap amount
+float Property CapsScarcityThreshold   = 50.0 Auto; Absolute cap amount; Absolute cap amount; Absolute cap amount; Absolute cap amount
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property SchedulesEnabled     = True  Auto
@@ -83,7 +83,7 @@ bool  Property EconomyEnabled       = True  Auto
 bool  Property SocialEnabled        = True  Auto
 bool  Property EventsEnabled        = True  Auto
 bool  Property ExpansionEnabled     = True  Auto
-float Property UpdateInterval       = 0.2   Auto  ; Every ~5 hrs game time
+float Property UpdateInterval       = 0.2   Auto; Every ~5 hrs game time; Every ~5 hrs game time; Every ~5 hrs game time; Every ~5 hrs game time
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 float _currentHour      = 12.0
@@ -91,8 +91,8 @@ bool  _isScarcity       = False
 bool  _isCelebrating    = False
 bool  _inTownMeeting    = False
 int   _daysSinceFuneral = 999
-int   _settlementMorale = 100   ; 0-100
-int   _lastGuardShift   = 0     ; 0=morning 1=afternoon 2=night
+int   _settlementMorale = 100; 0-100; 0-100; 0-100; 0-100
+int   _lastGuardShift   = 0; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night
 float _lastEventTime    = 0.0
 int   _settlersPresent  = 0
 float _lastScarcityCheck = 0.0
@@ -100,27 +100,30 @@ float _lastScarcityCheck = 0.0
 ; ═══════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(UpdateInterval)
+    ScheduleTick(UpdateInterval)
     _lastEventTime = Utility.GetCurrentGameTime()
     SetLog("Settlement life simulation: " + SettlementName)
 EndEvent
 
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     Float gameTime = Utility.GetCurrentGameTime()
     _currentHour   = (gameTime - Math.Floor(gameTime)) * 24.0
 
-    If SchedulesEnabled  UpdateSchedules()
-    If EconomyEnabled    CheckEconomy(gameTime)
-    If EventsEnabled     CheckCommunityEvents(gameTime)
+    If SchedulesEnabled
+        UpdateSchedules()
+    EndIf
+    If EconomyEnabled
+        CheckEconomy(gameTime)
+    EndIf
+    If EventsEnabled
+        CheckCommunityEvents(gameTime)
+    EndIf
 
     ; Log for bridge
-    Debug.Trace("[AAI] SETTLEMENT_STATE|name=" + SettlementName + \
-                "|hour=" + _currentHour + "|morale=" + _settlementMorale + \
-                "|scarcity=" + _isScarcity + "|celebrating=" + _isCelebrating)
+    Debug.Trace("[AAI] SETTLEMENT_STATE|name=" + SettlementName + "|hour=" + _currentHour + "|morale=" + _settlementMorale + "|scarcity=" + _isScarcity + "|celebrating=" + _isCelebrating)
 
-    RegisterForUpdateGameTime(UpdateInterval)
-EndEvent
-
+    ScheduleTick(UpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; DAILY SCHEDULES
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -147,16 +150,25 @@ Function UpdateSchedules()
 EndFunction
 
 int Function GetCurrentShift()
-    If _currentHour >= 6.0 && _currentHour < 14.0   Return 0  ; Morning
-    ElseIf _currentHour >= 14.0 && _currentHour < 22.0 Return 1  ; Afternoon
+    If _currentHour >= 6.0 && _currentHour < 14.0
+        Return 0
+    ElseIf _currentHour >= 14.0 && _currentHour < 22.0
+        Return 1
     EndIf
-    Return 2  ; Night
+    Return 2; Night; Night; Night; Night
 EndFunction
 
-Function OnGuardShiftChange(int oldShift, int newShift)
+Function OnGuardShiftChange(Int oldShift, Int newShift)
     ; The 10 minutes before shift change: guards tired, less alert
     ; The 10 minutes of overlap: extra guards present = safer
-    String shiftName = newShift == 0 ? "Morning" : newShift == 1 ? "Afternoon" : "Night"
+    String shiftName
+    If (newShift == 0)
+        shiftName = "Morning"
+    ElseIf (newShift == 1)
+        shiftName = "Afternoon"
+    Else
+        shiftName = "Night"
+    EndIf
     SetLog("Guard shift → " + shiftName + " | Settlement: " + SettlementName)
 
     If SocialEnabled
@@ -164,30 +176,26 @@ Function OnGuardShiftChange(int oldShift, int newShift)
         ApplyToSettlersWithKeyword(kwdGuard, "shift_change")
     EndIf
 
-    Debug.Trace("[AAI] SETTLEMENT_SHIFT|settlement=" + SettlementName + \
-                "|shift=" + shiftName + "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] SETTLEMENT_SHIFT|settlement=" + SettlementName + "|shift=" + shiftName + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 Function TriggerMealTime(String meal)
     ; NPCs congregate at meal point — conversations triggered here
     ; Log so bridge generates mealtime conversations
-    Debug.Trace("[AAI] MEAL_TIME|settlement=" + SettlementName + \
-                "|meal=" + meal + "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] MEAL_TIME|settlement=" + SettlementName + "|meal=" + meal + "|game_time=" + Utility.GetCurrentGameTime())
 
     If SocialEnabled && !_isScarcity
         ; Healthy settlement: settlers gather, talk, eat together
         SetLog(SettlementName + ": " + meal + " time — settlers gathering")
     ElseIf _isScarcity
         ; Scarcity: reduced meal, tension at the table
-        Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + \
-                    "|type=settlement|topic=resources|context=scarcity_meal")
+        Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + "|type=settlement|topic=resources|context=scarcity_meal")
     EndIf
 EndFunction
 
 Function OpenMarket()
     SetLog(SettlementName + " market open")
-    Debug.Trace("[AAI] MARKET_OPEN|settlement=" + SettlementName + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] MARKET_OPEN|settlement=" + SettlementName + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 Function CloseMarket()
@@ -204,13 +212,23 @@ Function CheckEconomy(Float gameTime)
     EndIf
 
     ; Read current resources from workshop
-    Float food    = Workshop.GetBaseValue(Workshop.food)
-    Float water   = Workshop.GetBaseValue(Workshop.water)
-    Float maxFood = Workshop.GetBaseValue(Workshop.maxFood)
-    Float maxWater = Workshop.GetBaseValue(Workshop.maxWater)
+    Float food    = Workshop.food
+    Float water   = Workshop.water
+    Float maxFood = Workshop.maxFood
+    Float maxWater = Workshop.maxWater
 
-    Float foodRatio  = maxFood  > 0 ? food  / maxFood  : 1.0
-    Float waterRatio = maxWater > 0 ? water / maxWater : 1.0
+    Float foodRatio
+    If (maxFood  > 0)
+        foodRatio = food  / maxFood
+    Else
+        foodRatio = 1.0
+    EndIf
+    Float waterRatio
+    If (maxWater > 0)
+        waterRatio = water / maxWater
+    Else
+        waterRatio = 1.0
+    EndIf
 
     Bool wasScarcity = _isScarcity
     _isScarcity = foodRatio < FoodScarcityThreshold || waterRatio < WaterScarcityThreshold
@@ -224,10 +242,14 @@ Function CheckEconomy(Float gameTime)
 
     ; Continuously update morale based on resources
     Int targetMorale = 100
-    If foodRatio  < 0.3  targetMorale -= 30
-    ElseIf foodRatio  < 0.6  targetMorale -= 15
-    If waterRatio < 0.3  targetMorale -= 25
-    ElseIf waterRatio < 0.6  targetMorale -= 10
+    If foodRatio  < 0.3
+        targetMorale -= 30
+    ElseIf foodRatio  < 0.6
+        targetMorale -= 15
+    If waterRatio < 0.3
+        targetMorale -= 25
+    ElseIf waterRatio < 0.6
+        targetMorale -= 10
 
     ; Smooth morale change
     If _settlementMorale > targetMorale
@@ -236,9 +258,9 @@ Function CheckEconomy(Float gameTime)
         _settlementMorale = Math.Min(_settlementMorale + 1, targetMorale) as Int
     EndIf
 
-    Debug.Trace("[AAI] SETTLEMENT_ECON|settlement=" + SettlementName + \
-                "|food=" + foodRatio + "|water=" + waterRatio + \
-                "|morale=" + _settlementMorale + "|scarcity=" + _isScarcity)
+    Debug.Trace("[AAI] SETTLEMENT_ECON|settlement=" + SettlementName + "|food=" + foodRatio + "|water=" + waterRatio + "|morale=" + _settlementMorale + "|scarcity=" + _isScarcity)
+    EndIf
+    EndIf
 EndFunction
 
 Function OnScarcityBegins(Float foodRatio, Float waterRatio)
@@ -246,11 +268,10 @@ Function OnScarcityBegins(Float foodRatio, Float waterRatio)
     SetLog(SettlementName + " entering scarcity. Food: " + foodRatio + " Water: " + waterRatio)
     Debug.Notification("[" + SettlementName + "] Resources are running low. Settlers are restless.")
 
-    ApplyMoraleToAllSettlers(0.75)  ; Aggression up slightly, mood down
+    ApplyMoraleToAllSettlers(0.75); Aggression up slightly, mood down; Aggression up slightly, mood down; Aggression up slightly, mood down; Aggression up slightly, mood down
 
     ; Request concerned conversations from bridge
-    Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + \
-                "|type=settlement|topic=resources")
+    Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + "|type=settlement|topic=resources")
 EndFunction
 
 Function OnScarcityEnds()
@@ -264,7 +285,7 @@ Function ApplyMoraleToAllSettlers(Float moraleMultiplier)
         Return
     EndIf
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(3000.0, 25)
+    Actor[] nearby = MiscUtil.ScanActors(player, 3000.0, 25)
     Int i = 0
     While i < nearby.Length
         Actor settler = nearby[i]
@@ -284,7 +305,7 @@ Function ApplyToSettlersWithKeyword(Keyword kwd, String context)
         Return
     EndIf
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(2500.0, 20)
+    Actor[] nearby = MiscUtil.ScanActors(player, 2500.0, 20)
     Int i = 0
     While i < nearby.Length
         Actor npc = nearby[i]
@@ -326,8 +347,7 @@ Function TriggerMarketDay(Float gameTime)
     Debug.Notification("[" + SettlementName + "] It's market day. Traders are setting up.")
 
     ; Log for bridge — generate market-day conversations
-    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + \
-                "|event=market_day|game_time=" + gameTime)
+    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + "|event=market_day|game_time=" + gameTime)
 EndFunction
 
 Function TriggerTownMeeting(Float gameTime)
@@ -338,10 +358,9 @@ Function TriggerTownMeeting(Float gameTime)
     _lastEventTime = gameTime
     Debug.Notification("[" + SettlementName + "] Town meeting called — resources are critical.")
 
-    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + \
-                "|event=town_meeting|morale=" + _settlementMorale + "|game_time=" + gameTime)
+    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + "|event=town_meeting|morale=" + _settlementMorale + "|game_time=" + gameTime)
 
-    Utility.Wait(30.0)  ; Meeting lasts 30 real seconds
+    Utility.Wait(30.0); Meeting lasts 30 real seconds; Meeting lasts 30 real seconds; Meeting lasts 30 real seconds; Meeting lasts 30 real seconds
     _inTownMeeting = False
 EndFunction
 
@@ -354,13 +373,11 @@ Function TriggerCelebration(String reason)
     _settlementMorale = Math.Min(_settlementMorale + 20, 100) as Int
     Debug.Notification("[" + SettlementName + "] " + reason + " — the settlement celebrates!")
 
-    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + \
-                "|event=celebration|reason=" + reason + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + "|event=celebration|reason=" + reason + "|game_time=" + Utility.GetCurrentGameTime())
 
-    ApplyMoraleToAllSettlers(1.2)  ; Brief morale boost
+    ApplyMoraleToAllSettlers(1.2); Brief morale boost; Brief morale boost; Brief morale boost; Brief morale boost
 
-    Utility.Wait(120.0)  ; Celebration lasts 2 real minutes
+    Utility.Wait(120.0); Celebration lasts 2 real minutes; Celebration lasts 2 real minutes; Celebration lasts 2 real minutes; Celebration lasts 2 real minutes
     _isCelebrating = False
 EndFunction
 
@@ -374,15 +391,12 @@ Function TriggerFuneral(Actor deceased)
     String deceasedName = deceased.GetDisplayName()
     Debug.Notification("[" + SettlementName + "] The settlement mourns " + deceasedName + ".")
 
-    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + \
-                "|event=funeral|deceased=" + deceasedName + \
-                "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + "|event=funeral|deceased=" + deceasedName + "|game_time=" + Utility.GetCurrentGameTime())
 
-    ApplyMoraleToAllSettlers(0.8)  ; Grief reduces morale
+    ApplyMoraleToAllSettlers(0.8); Grief reduces morale; Grief reduces morale; Grief reduces morale; Grief reduces morale
 
     ; Request somber conversations from bridge
-    Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + \
-                "|type=settlement|topic=relationships|context=grief_" + deceasedName)
+    Debug.Trace("[AAI] CONV_REQUEST|location=" + SettlementName + "|type=settlement|topic=relationships|context=grief_" + deceasedName)
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
@@ -393,27 +407,49 @@ Function CheckExpansionState()
         Return
     EndIf
 
-    Float happiness = Workshop.GetBaseValue(Workshop.happiness)
+    Float happiness = Workshop.happiness
 
     If happiness >= 80 && !_isScarcity
         ; Settlement thriving — log for bridge to track growth
-        Debug.Trace("[AAI] SETTLEMENT_GROWTH|settlement=" + SettlementName + \
-                    "|happiness=" + happiness + "|state=thriving")
+        Debug.Trace("[AAI] SETTLEMENT_GROWTH|settlement=" + SettlementName + "|happiness=" + happiness + "|stateVal=thriving")
     ElseIf happiness < 40 || _isScarcity
         ; Settlement struggling
-        Debug.Trace("[AAI] SETTLEMENT_GROWTH|settlement=" + SettlementName + \
-                    "|happiness=" + happiness + "|state=declining")
+        Debug.Trace("[AAI] SETTLEMENT_GROWTH|settlement=" + SettlementName + "|happiness=" + happiness + "|stateVal=declining")
     EndIf
 EndFunction
 
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API
 ; ═══════════════════════════════════════════════════════════════════════════
-Int  Function GetMorale()       Return _settlementMorale  EndFunction
-Bool Function IsInScarcity()    Return _isScarcity        EndFunction
-Bool Function IsCelebrating()   Return _isCelebrating     EndFunction
-String Function GetName()       Return SettlementName     EndFunction
+Int  Function GetMorale()
+    Return _settlementMorale
+EndFunction
+Bool Function IsInScarcity()
+    Return _isScarcity
+EndFunction
+Bool Function IsCelebrating()
+    Return _isCelebrating
+EndFunction
+String Function GetName()
+    Return SettlementName
+EndFunction
 
 Function SetLog(String msg)
     Debug.Trace("[AAI-Settlement] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

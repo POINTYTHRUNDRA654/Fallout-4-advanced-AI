@@ -60,20 +60,20 @@ Faction Property factionRaiders    Auto
 Faction Property factionGunners    Auto
 
 ; ── World Clock ───────────────────────────────────────────────────────────────
-GlobalVariable Property gWorldDay         Auto  ; Current game day (0–365+)
-GlobalVariable Property gWorldSeason      Auto  ; 0=Spring 1=Summer 2=Fall 3=Winter
-GlobalVariable Property gTotalGameDays    Auto  ; Cumulative days played
+GlobalVariable Property gWorldDay         Auto; Current game day (0–365+); Current game day (0–365+); Current game day (0–365+); Current game day (0–365+)
+GlobalVariable Property gWorldSeason      Auto; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter
+GlobalVariable Property gTotalGameDays    Auto; Cumulative days played; Cumulative days played; Cumulative days played; Cumulative days played
 
 ; ── Threat Tracking Globals ───────────────────────────────────────────────────
 ; For each major threat region — bridge tracks the actual data
 ; These globals are updated by the bridge via the log
-GlobalVariable Property gThreat_NorthBoston  Auto  ; 0-100 threat level
+GlobalVariable Property gThreat_NorthBoston  Auto; 0-100 threat level; 0-100 threat level; 0-100 threat level; 0-100 threat level
 GlobalVariable Property gThreat_GlowingSea   Auto
 GlobalVariable Property gThreat_Cambridge    Auto
 GlobalVariable Property gThreat_Quincy       Auto
 
 ; ── Faction Power Globals ─────────────────────────────────────────────────────
-GlobalVariable Property gPower_Minutemen Auto  ; 0-100
+GlobalVariable Property gPower_Minutemen Auto; 0-100; 0-100; 0-100; 0-100
 GlobalVariable Property gPower_BoS      Auto
 GlobalVariable Property gPower_Railroad Auto
 GlobalVariable Property gPower_Institute Auto
@@ -85,18 +85,18 @@ bool  Property FactionShiftEnabled  = True  Auto
 bool  Property RumorSpreadEnabled   = True  Auto
 bool  Property SeasonalEnabled      = True  Auto
 bool  Property MigrationEnabled     = True  Auto
-float Property WorldUpdateInterval  = 1.0   Auto  ; Every 24 hrs game time
+float Property WorldUpdateInterval  = 1.0   Auto; Every 24 hrs game time; Every 24 hrs game time; Every 24 hrs game time; Every 24 hrs game time
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
 float _lastWorldUpdate   = 0.0
-int   _currentSeason     = 0   ; 0=Spring 1=Summer 2=Fall 3=Winter
+int   _currentSeason     = 0; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter; 0=Spring 1=Summer 2=Fall 3=Winter
 float _currentDayOfYear  = 0.0
 int   _worldDayCount     = 0
 
 ; Active threats array (up to 8 simultaneous tracked threats)
 String[] _activeThreatNames
 float[]  _activeThreatLevels
-float[]  _activeThreatDays    ; How long this threat has existed
+float[]  _activeThreatDays; How long this threat has existed; How long this threat has existed; How long this threat has existed; How long this threat has existed
 String[] _activeThreatLocations
 
 ; Pending rumors
@@ -119,7 +119,7 @@ Event OnQuestInit()
     _rumorOriginLocations  = new String[16]
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForUpdateGameTime(WorldUpdateInterval)
+    ScheduleTick(WorldUpdateInterval)
 
     ; Restore world day from global
     If gWorldDay != None
@@ -129,61 +129,77 @@ Event OnQuestInit()
         _currentSeason = gWorldSeason.GetValue() as Int
     EndIf
 
-    WorldLog("Dynamic World Engine initialized | Day: " + _worldDayCount + " Season: " + GetSeasonName())
+    WorldLog("Dynamic World Engine initialized | Day: " + _worldDayCount + " Season: " + GetCurrentSeason())
 EndEvent
 
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     If !WorldEnabled
-        RegisterForUpdateGameTime(WorldUpdateInterval)
+        ScheduleTick(WorldUpdateInterval)
         Return
     EndIf
 
     Float gameTime = Utility.GetCurrentGameTime()
     _worldDayCount += 1
-    _currentDayOfYear = (_worldDayCount Mod 365) as Float
+    _currentDayOfYear = (_worldDayCount % 365) as Float
 
     ; Update globals
-    If gWorldDay   != None  gWorldDay.SetValue(_worldDayCount as Float)
-    If gTotalGameDays != None  gTotalGameDays.SetValue(gTotalGameDays.GetValue() + 1.0)
+    If gWorldDay   != None
+        gWorldDay.SetValue(_worldDayCount as Float)
+    EndIf
+    If gTotalGameDays != None
+        gTotalGameDays.SetValue(gTotalGameDays.GetValue() + 1.0)
+    EndIf
 
     ; Update season
     UpdateSeason()
 
     ; Run world systems
-    If ThreatGrowthEnabled  UpdateThreatGrowth(gameTime)
-    If FactionShiftEnabled  UpdateFactionPower(gameTime)
-    If RumorSpreadEnabled   UpdateRumorSpread(gameTime)
-    If SeasonalEnabled      ApplySeasonalEffects()
-    If MigrationEnabled && (_worldDayCount Mod 7 == 0)  TriggerMigrationCheck()
+    If ThreatGrowthEnabled
+        UpdateThreatGrowth(gameTime)
+    EndIf
+    If FactionShiftEnabled
+        UpdateFactionPower(gameTime)
+    EndIf
+    If RumorSpreadEnabled
+        UpdateRumorSpread(gameTime)
+    EndIf
+    If SeasonalEnabled
+        ApplySeasonalEffects()
+    EndIf
+    If MigrationEnabled && (_worldDayCount % 7 == 0)
+        TriggerMigrationCheck()
+    EndIf
 
     ; Daily world log for bridge
-    Debug.Trace("[AAI] WORLD_TICK|day=" + _worldDayCount + \
-                "|season=" + GetSeasonName() + \
-                "|day_of_year=" + _currentDayOfYear + \
-                "|game_time=" + gameTime)
+    Debug.Trace("[AAI] WORLD_TICK|day=" + _worldDayCount + "|season=" + GetCurrentSeason() + "|day_of_year=" + _currentDayOfYear + "|game_time=" + gameTime)
 
-    RegisterForUpdateGameTime(WorldUpdateInterval)
-EndEvent
-
+    ScheduleTick(WorldUpdateInterval)
+EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; SEASONS
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdateSeason()
     int newSeason = 0
-    If _currentDayOfYear >= 60.0 && _currentDayOfYear < 151.0   newSeason = 0  ; Spring
-    ElseIf _currentDayOfYear >= 151.0 && _currentDayOfYear < 241.0 newSeason = 1  ; Summer
-    ElseIf _currentDayOfYear >= 241.0 && _currentDayOfYear < 331.0 newSeason = 2  ; Fall
-    Else newSeason = 3  ; Winter
+    If _currentDayOfYear >= 60.0 && _currentDayOfYear < 151.0
+        newSeason = 0
+    ElseIf _currentDayOfYear >= 151.0 && _currentDayOfYear < 241.0
+        newSeason = 1
+    ElseIf _currentDayOfYear >= 241.0 && _currentDayOfYear < 331.0
+        newSeason = 2
+    Else
+        newSeason = 3
     EndIf
 
     If newSeason != _currentSeason
         OnSeasonChange(_currentSeason, newSeason)
         _currentSeason = newSeason
-        If gWorldSeason != None  gWorldSeason.SetValue(_currentSeason as Float)
+        If gWorldSeason != None
+            gWorldSeason.SetValue(_currentSeason as Float)
+    EndIf
     EndIf
 EndFunction
 
-Function OnSeasonChange(int oldSeason, int newSeason)
+Function OnSeasonChange(Int oldSeason, Int newSeason)
     String msg = ""
     If newSeason == 0
         msg = "Spring arrives. Creature breeding season begins — they're more aggressive."
@@ -196,29 +212,27 @@ Function OnSeasonChange(int oldSeason, int newSeason)
     EndIf
     Debug.Notification(msg)
 
-    Debug.Trace("[AAI] SEASON_CHANGE|from=" + GetSeasonName(oldSeason) + \
-                "|to=" + GetSeasonName(newSeason) + \
-                "|day=" + _worldDayCount)
+    Debug.Trace("[AAI] SEASON_CHANGE|from=" + GetSeasonName(oldSeason) + "|to=" + GetSeasonName(newSeason) + "|day=" + _worldDayCount)
     WorldLog("Season changed: " + GetSeasonName(oldSeason) + " → " + GetSeasonName(newSeason))
 EndFunction
 
 Function ApplySeasonalEffects()
     ; Apply season-specific modifiers to all nearby actors
     Actor player = Game.GetPlayer()
-    Actor[] nearby = player.GetActorsInRange(3000.0, 20)
+    Actor[] nearby = MiscUtil.ScanActors(player, 3000.0, 20)
     Float aggrMod  = 1.0
     Float speedMod = 1.0
 
-    If _currentSeason == 0  ; Spring — breeding aggression
+    If _currentSeason == 0; Spring — breeding aggression; Spring — breeding aggression; Spring — breeding aggression; Spring — breeding aggression
         aggrMod = 1.25
-    ElseIf _currentSeason == 1  ; Summer — peak activity
+    ElseIf _currentSeason == 1; Summer — peak activity; Summer — peak activity; Summer — peak activity; Summer — peak activity
         aggrMod = 1.1
         speedMod = 1.05
-    ElseIf _currentSeason == 2  ; Fall — cautious
+    ElseIf _currentSeason == 2; Fall — cautious; Fall — cautious; Fall — cautious; Fall — cautious
         aggrMod = 0.95
-    ElseIf _currentSeason == 3  ; Winter — desperate
-        aggrMod = 1.3   ; Hunger drives aggression
-        speedMod = 0.9  ; Cold slows movement
+    ElseIf _currentSeason == 3; Winter — desperate; Winter — desperate; Winter — desperate; Winter — desperate
+        aggrMod = 1.3; Hunger drives aggression; Hunger drives aggression; Hunger drives aggression; Hunger drives aggression
+        speedMod = 0.9; Cold slows movement; Cold slows movement; Cold slows movement; Cold slows movement
     EndIf
 
     Int i = 0
@@ -238,14 +252,13 @@ Function ApplySeasonalEffects()
     EndWhile
 EndFunction
 
-String Function GetSeasonName()
-    Return GetSeasonName(_currentSeason)
-EndFunction
-
-String Function GetSeasonName(int season)
-    If season == 0 Return "Spring"
-    ElseIf season == 1 Return "Summer"
-    ElseIf season == 2 Return "Fall"
+String Function GetSeasonName(Int season)
+    If season == 0
+        Return "Spring"
+    ElseIf season == 1
+        Return "Summer"
+    ElseIf season == 2
+        Return "Fall"
     EndIf
     Return "Winter"
 EndFunction
@@ -253,18 +266,17 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; THREAT GROWTH SYSTEM
 ; ═══════════════════════════════════════════════════════════════════════════
-Function RegisterThreat(String threatName, String location, Float initialLevel)
+Function RegisterThreat(String threatName, String locationArg, Float initialLevel)
     ; Find an empty slot
     Int i = 0
     While i < 8
-        If _activeThreatNames[i] == "" || _activeThreatNames[i] == None
+        If _activeThreatNames[i] == "" || _activeThreatNames[i] == ""
             _activeThreatNames[i]     = threatName
-            _activeThreatLocations[i] = location
+            _activeThreatLocations[i] = locationArg
             _activeThreatLevels[i]    = initialLevel
             _activeThreatDays[i]      = 0.0
-            WorldLog("Threat registered: " + threatName + " at " + location)
-            Debug.Trace("[AAI] THREAT_REGISTERED|name=" + threatName + \
-                        "|location=" + location + "|level=" + initialLevel)
+            WorldLog("Threat registered: " + threatName + " at " + locationArg)
+            Debug.Trace("[AAI] THREAT_REGISTERED|name=" + threatName + "|locationArg=" + locationArg + "|level=" + initialLevel)
             Return
         EndIf
         i += 1
@@ -278,9 +290,7 @@ Function ResolveThreat(String threatName)
             Float finalLevel = _activeThreatLevels[i]
             Float daysExisted = _activeThreatDays[i]
             WorldLog("Threat resolved: " + threatName + " (existed " + daysExisted + " days)")
-            Debug.Trace("[AAI] THREAT_RESOLVED|name=" + threatName + \
-                        "|days_existed=" + daysExisted + \
-                        "|final_level=" + finalLevel)
+            Debug.Trace("[AAI] THREAT_RESOLVED|name=" + threatName + "|days_existed=" + daysExisted + "|final_level=" + finalLevel)
 
             ; Notify connected settlements to celebrate
             Int j = 0
@@ -298,8 +308,7 @@ Function ResolveThreat(String threatName)
             _activeThreatLocations[i] = ""
 
             ; Add world event for rumor engine
-            RegisterWorldRumor("Wanderer defeated " + threatName + " at " + \
-                              _activeThreatLocations[i], _activeThreatLocations[i])
+            RegisterWorldRumor("Wanderer defeated " + threatName + " at " + _activeThreatLocations[i], _activeThreatLocations[i])
             Return
         EndIf
         i += 1
@@ -309,30 +318,26 @@ EndFunction
 Function UpdateThreatGrowth(Float gameTime)
     Int i = 0
     While i < 8
-        If _activeThreatNames[i] != "" && _activeThreatNames[i] != None
+        If _activeThreatNames[i] != "" && _activeThreatNames[i] != ""
             _activeThreatDays[i] += 1.0
 
             ; Threats grow over time if not addressed
-            Float growthRate = 1.5  ; Level per day
+            Float growthRate = 1.5; Level per day; Level per day; Level per day; Level per day
             _activeThreatLevels[i] = Math.Min(_activeThreatLevels[i] + growthRate, 100.0)
 
             ; Escalation warnings
             Float level = _activeThreatLevels[i]
             Float days  = _activeThreatDays[i]
 
-            If level >= 50.0 && days >= 7.0 && (days as Int) Mod 7 == 0
-                Debug.Notification("[WARNING] " + _activeThreatNames[i] + " is growing stronger. " + \
-                                   "They've had " + (days as Int) + " days to prepare.")
+            If level >= 50.0 && days >= 7.0 && (days as Int) % 7 == 0
+                Debug.Notification("[WARNING] " + _activeThreatNames[i] + " is growing stronger. " + "They've had " + (days as Int) + " days to prepare.")
 
             ElseIf level >= 80.0 && days >= 20.0
-                Debug.Notification("[CRITICAL] " + _activeThreatNames[i] + " has become a major threat! " + \
-                                   "Nearby settlements are in danger.")
+                Debug.Notification("[CRITICAL] " + _activeThreatNames[i] + " has become a major threat! " + "Nearby settlements are in danger.")
                 TriggerMajorThreatEvent(i)
             EndIf
 
-            Debug.Trace("[AAI] THREAT_UPDATE|name=" + _activeThreatNames[i] + \
-                        "|level=" + level + "|days=" + days + \
-                        "|location=" + _activeThreatLocations[i])
+            Debug.Trace("[AAI] THREAT_UPDATE|name=" + _activeThreatNames[i] + "|level=" + level + "|days=" + days + "|location=" + _activeThreatLocations[i])
         EndIf
         i += 1
     EndWhile
@@ -341,11 +346,10 @@ EndFunction
 Function TriggerMajorThreatEvent(Int threatIndex)
     ; A threat that's been ignored too long launches an attack on nearest settlement
     String threatName = _activeThreatNames[threatIndex]
-    String location   = _activeThreatLocations[threatIndex]
+    String locationArg = _activeThreatLocations[threatIndex]
 
     Debug.Notification("[ATTACK] " + threatName + " is moving on nearby settlements!")
-    Debug.Trace("[AAI] MAJOR_THREAT_EVENT|name=" + threatName + \
-                "|location=" + location + "|game_time=" + Utility.GetCurrentGameTime())
+    Debug.Trace("[AAI] MAJOR_THREAT_EVENT|name=" + threatName + "|locationArg=" + locationArg + "|game_time=" + Utility.GetCurrentGameTime())
 
     ; Alert connected settlements
     Int j = 0
@@ -353,8 +357,7 @@ Function TriggerMajorThreatEvent(Int threatIndex)
         If AllSettlements[j] != None
             ; Reduce settlement morale — they're under threat
             ; (Settlement script handles the actual morale reduction)
-            Debug.Trace("[AAI] SETTLEMENT_ALERT|settlement=" + AllSettlements[j].GetName() + \
-                        "|threat=" + threatName)
+            Debug.Trace("[AAI] SETTLEMENT_ALERT|settlement=" + AllSettlements[j].GetName() + "|threat=" + threatName)
         EndIf
         j += 1
     EndWhile
@@ -368,32 +371,37 @@ Function UpdateFactionPower(Float gameTime)
     ; The actual values come from the bridge via log parsing
     ; This function reads the globals and applies local effects
 
-    Float minutemenPower = gPower_Minutemen != None ? gPower_Minutemen.GetValue() : 50.0
-    Float bosPower       = gPower_BoS       != None ? gPower_BoS.GetValue()       : 50.0
+    Float minutemenPower
+    If (gPower_Minutemen != None)
+        minutemenPower = gPower_Minutemen.GetValue()
+    Else
+        minutemenPower = 50.0
+    EndIf
+    Float bosPower
+    If (gPower_BoS       != None)
+        bosPower = gPower_BoS.GetValue()
+    Else
+        bosPower = 50.0
+    EndIf
 
     ; Minutemen losing power: settlements get less help, morale drops
     If minutemenPower < 30.0
         Int j = 0
         While j < AllSettlements.Length
             If AllSettlements[j] != None && AllSettlements[j].IsInScarcity()
-                Debug.Trace("[AAI] FACTION_EFFECT|faction=Minutemen|power=" + minutemenPower + \
-                            "|effect=settlement_neglect|settlement=" + AllSettlements[j].GetName())
+                Debug.Trace("[AAI] FACTION_EFFECT|faction=Minutemen|power=" + minutemenPower + "|effect=settlement_neglect|settlement=" + AllSettlements[j].GetName())
             EndIf
             j += 1
         EndWhile
     EndIf
 
     ; Log for bridge
-    Debug.Trace("[AAI] FACTION_STATE|minutemen=" + minutemenPower + \
-                "|bos=" + bosPower + \
-                "|game_time=" + gameTime)
+    Debug.Trace("[AAI] FACTION_STATE|minutemen=" + minutemenPower + "|bos=" + bosPower + "|game_time=" + gameTime)
 EndFunction
 
 ; External call: player helped a faction
-Function PlayerHelpedFaction(String factionName, Float amount, String location, String reason)
-    Debug.Trace("[AAI] FACTION_BOOST|faction=" + factionName + \
-                "|amount=" + amount + "|location=" + location + \
-                "|reason=" + reason + "|game_time=" + Utility.GetCurrentGameTime())
+Function PlayerHelpedFaction(String factionName, Float amount, String locationArg, String reason)
+    Debug.Trace("[AAI] FACTION_BOOST|faction=" + factionName + "|amount=" + amount + "|locationArg=" + locationArg + "|reason=" + reason + "|game_time=" + Utility.GetCurrentGameTime())
     ; Bridge updates the global power values, which we read next tick
 EndFunction
 
@@ -404,14 +412,12 @@ Function RegisterWorldRumor(String rumorText, String originLocation)
     ; Find empty slot
     Int i = 0
     While i < 16
-        If _pendingRumors[i] == "" || _pendingRumors[i] == None
+        If _pendingRumors[i] == "" || _pendingRumors[i] == ""
             _pendingRumors[i]         = rumorText
             _rumorBirthTimes[i]       = Utility.GetCurrentGameTime()
             _rumorOriginLocations[i]  = originLocation
             WorldLog("Rumor registered: " + rumorText)
-            Debug.Trace("[AAI] RUMOR_BORN|text=" + rumorText + \
-                        "|origin=" + originLocation + \
-                        "|game_time=" + Utility.GetCurrentGameTime())
+            Debug.Trace("[AAI] RUMOR_BORN|text=" + rumorText + "|origin=" + originLocation + "|game_time=" + Utility.GetCurrentGameTime())
             Return
         EndIf
         i += 1
@@ -421,15 +427,19 @@ EndFunction
 Function UpdateRumorSpread(Float gameTime)
     Int i = 0
     While i < 16
-        If _pendingRumors[i] != "" && _pendingRumors[i] != None
+        If _pendingRumors[i] != "" && _pendingRumors[i] != ""
             Float daysOld = (gameTime - _rumorBirthTimes[i]) * 24.0
 
             ; Spread phases: local → regional → Commonwealth-wide → fade
             String spreadState = "unknown"
-            If daysOld < 3.0       spreadState = "local"
-            ElseIf daysOld < 7.0   spreadState = "regional"
-            ElseIf daysOld < 14.0  spreadState = "commonwealth"
-            ElseIf daysOld < 30.0  spreadState = "fading"
+            If daysOld < 3.0
+                spreadState = "local"
+            ElseIf daysOld < 7.0
+                spreadState = "regional"
+            ElseIf daysOld < 14.0
+                spreadState = "commonwealth"
+            ElseIf daysOld < 30.0
+                spreadState = "fading"
             Else
                 ; Rumor has faded — clear it
                 _pendingRumors[i]        = ""
@@ -438,9 +448,7 @@ Function UpdateRumorSpread(Float gameTime)
             EndIf
 
             If spreadState != "unknown"
-                Debug.Trace("[AAI] RUMOR_STATE|text=" + _pendingRumors[i] + \
-                            "|days_old=" + daysOld + "|spread=" + spreadState + \
-                            "|origin=" + _rumorOriginLocations[i])
+                Debug.Trace("[AAI] RUMOR_STATE|text=" + _pendingRumors[i] + "|days_old=" + daysOld + "|spread=" + spreadState + "|origin=" + _rumorOriginLocations[i])
             EndIf
         EndIf
         i += 1
@@ -454,19 +462,17 @@ Function TriggerMigrationCheck()
     ; Seasonal migration events logged for bridge + Mossy display
     String migrationDesc = ""
 
-    If _currentSeason == 2  ; Fall
+    If _currentSeason == 2; Fall; Fall; Fall; Fall
         migrationDesc = "Radstag herds moving south. Predator activity near their routes."
-    ElseIf _currentSeason == 3  ; Winter
+    ElseIf _currentSeason == 3; Winter; Winter; Winter; Winter
         migrationDesc = "Deathclaw pairs seeking new territory. Extreme caution near their path."
-    ElseIf _currentSeason == 0  ; Spring
+    ElseIf _currentSeason == 0; Spring; Spring; Spring; Spring
         migrationDesc = "Mirelurk queens relocating to new nesting sites. Coastal areas dangerous."
     EndIf
 
     If migrationDesc != ""
         Debug.Notification("[Migration] " + migrationDesc)
-        Debug.Trace("[AAI] MIGRATION_EVENT|season=" + GetSeasonName() + \
-                    "|description=" + migrationDesc + \
-                    "|game_time=" + Utility.GetCurrentGameTime())
+        Debug.Trace("[AAI] MIGRATION_EVENT|season=" + GetCurrentSeason() + "|description=" + migrationDesc + "|game_time=" + Utility.GetCurrentGameTime())
         RegisterWorldRumor(migrationDesc, "Wasteland")
     EndIf
 EndFunction
@@ -474,9 +480,15 @@ EndFunction
 ; ═══════════════════════════════════════════════════════════════════════════
 ; PUBLIC API
 ; ═══════════════════════════════════════════════════════════════════════════
-Int    Function GetWorldDay()      Return _worldDayCount  EndFunction
-Int    Function GetSeason()        Return _currentSeason  EndFunction
-String Function GetCurrentSeason() Return GetSeasonName() EndFunction
+Int    Function GetWorldDay()
+    Return _worldDayCount
+EndFunction
+Int    Function GetSeason()
+    Return _currentSeason
+EndFunction
+String Function GetCurrentSeason()
+    Return GetSeasonName(_currentSeason)
+EndFunction
 
 ; Called by AdvancedWorldMemory when player clears a location
 Function OnPlayerClearedLocation(String locationName)
@@ -485,12 +497,28 @@ Function OnPlayerClearedLocation(String locationName)
 EndFunction
 
 ; Called by AdvancedWorldMemory when player kills a named enemy
-Function OnPlayerKilledLeader(String leaderName, String location, String faction)
+Function OnPlayerKilledLeader(String leaderName, String locationArg, String factionArg)
     ResolveThreat(leaderName)
-    RegisterWorldRumor(leaderName + " of " + faction + " was killed near " + location, location)
-    PlayerHelpedFaction("Minutemen", 15.0, location, "enemy_leader_killed")
+    RegisterWorldRumor(leaderName + " of " + factionArg + " was killed near " + locationArg, locationArg)
+    PlayerHelpedFaction("Minutemen", 15.0, locationArg, "enemy_leader_killed")
 EndFunction
 
 Function WorldLog(String msg)
     Debug.Trace("[AAI-World] " + msg)
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        DoGameTimeTick()
+    EndIf
+EndEvent

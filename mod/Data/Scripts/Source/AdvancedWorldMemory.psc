@@ -25,7 +25,7 @@ bool  Property TrackCombatPatterns  = True  Auto
 bool  Property TrackReputation      = True  Auto
 bool  Property TrackPersonalityDrift = True Auto
 bool  Property GenerateLore         = True  Auto
-bool  Property Debug                = False Auto
+bool Property _debugMode                = False Auto
 
 ; ── Playthrough ID ─────────────────────────────────────────────────────────────
 ; A unique string per save. Set on first load, persists via GlobalVariable
@@ -60,11 +60,11 @@ Event OnQuestInit()
     RegisterForRemoteEvent(player, "OnPlayerLoadGame")
     RegisterForRemoteEvent(player, "OnCombatStateChanged")
     RegisterForRemoteEvent(player, "OnLocationChange")
-    RegisterForRemoteEvent(player, "OnLevelUp")
+    ; player level-ups detected by polling in OnTimerGameTime (FO4 has no OnLevelUp event)
     RegisterForRemoteEvent(player, "OnItemEquipped")
-    RegisterForRemoteEvent(player, "OnSneakStateBegin")
-    RegisterForRemoteEvent(player, "OnVATSStart")
-    RegisterForUpdateGameTime(6.0)  ; Periodic reputation decay notification
+    RegisterForRemoteEvent(player, "OnEnterSneaking")
+    RegisterForCameraState(); F4SE — VATS detected via camera state 2
+    ScheduleTick(6.0); Periodic reputation decay notification; Periodic reputation decay notification; Periodic reputation decay notification; Periodic reputation decay notification
 
     WorldLog("World Memory initialized | playthrough=" + _playthroughID)
 EndEvent
@@ -72,7 +72,7 @@ EndEvent
 ; ════════════════════════════════════════════════════════════════════════════
 ; PLAYER EVENTS
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
     If aeCombatState == 1
         ; Combat started
         _usedStealth   = False
@@ -87,54 +87,49 @@ Event OnCombatStateChanged(Actor akSender, int aeCombatState)
     EndIf
 EndEvent
 
-Event OnSneakStateBegin(Actor akTarget, int aiDetectionLevel)
-    If akTarget == Game.GetPlayer()
-        _usedStealth = True
+Event Actor.OnEnterSneaking(Actor akSender)
+    _usedStealth = True
+EndEvent
+
+Event OnPlayerCameraState(Int aiOldState, Int aiNewState)
+    If aiNewState == 2; VATS camera
+        _usedVATS = True
     EndIf
 EndEvent
 
-Event OnVATSStart()
-    _usedVATS = True
-EndEvent
-
-Event OnItemEquipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
+Event Actor.OnItemEquipped(Actor akSender, Form akBaseObject, ObjectReference akReference)
     If akSender == Game.GetPlayer()
         _weaponCategory = ClassifyWeapon(akBaseObject)
     EndIf
 EndEvent
 
-Event OnLocationChange(Actor akSender, ObjectReference akOldLoc, ObjectReference akNewLoc)
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     If akNewLoc == None
         Return
     EndIf
 
-    String locName = akNewLoc.GetDisplayName()
+    String locName = akNewLoc.GetName()
     _locationCount += 1
 
     ; Log world event — player entered location
-    WorldLog("WORLD_EVENT|type=entered_location|subject=Player|location=" + locName + \
-             "|game_time=" + Utility.GetCurrentGameTime())
+    WorldLog("WORLD_EVENT|type=entered_location|subject=Player|location=" + locName + "|game_time=" + Utility.GetCurrentGameTime())
 
     ; Check if this is a notable location worth archiving as lore
     If GenerateLore && IsNotableLocation(akNewLoc)
-        WorldLog("LORE_EVENT|playthrough=" + _playthroughID + \
-                 "|type=location_visit|location=" + locName + \
-                 "|significance=0.4")
+        WorldLog("LORE_EVENT|playthrough=" + _playthroughID + "|type=location_visit|location=" + locName + "|significance=0.4")
     EndIf
 EndEvent
 
-Event OnLevelUp(Actor akSender)
-    Int level = akSender.GetLevel()
-    WorldLog("WORLD_EVENT|type=player_level_up|subject=Player|level=" + level + \
-             "|game_time=" + Utility.GetCurrentGameTime())
+Function PlayerLeveledUp(Int aiNewLevel)
+    Int level = aiNewLevel
+    WorldLog("WORLD_EVENT|type=player_level_up|subject=Player|level=" + level + "|game_time=" + Utility.GetCurrentGameTime())
 
     ; Reputation boost with nearby friendly faction on level-up
     ; (Shows the player is growing in capability — factions notice)
     If TrackReputation
-        LogReputationEvent("Minutemen", 10.0, "PlayerLevelUp",
-                          Game.GetPlayer().GetCurrentLocation().GetDisplayName())
+        LogReputationEvent("Minutemen", 10.0, "PlayerLevelUp", Game.GetPlayer().GetCurrentLocation().GetName())
     EndIf
-EndEvent
+EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; COMBAT PATTERN RECORDING
@@ -150,25 +145,18 @@ Function RecordCombatPattern()
     EndIf
 
     ; Classify location type
-    ObjectReference curLoc = Game.GetPlayer().GetCurrentLocation() as ObjectReference
+    Location curLoc = Game.GetPlayer().GetCurrentLocation()
     String locType = "outdoor"
     If curLoc != None
-        String locName = curLoc.GetDisplayName()
-        If locName.Find("Building") >= 0 || locName.Find("Vault") >= 0 || \
-           locName.Find("Factory") >= 0 || locName.Find("Station") >= 0
+        String locName = curLoc.GetName()
+        If StringUtil.Find(locName, "Building") >= 0 || StringUtil.Find(locName, "Vault") >= 0 || StringUtil.Find(locName, "Factory") >= 0 || StringUtil.Find(locName, "Station") >= 0
             locType = "indoor"
-        ElseIf locName.Find("City") >= 0 || locName.Find("Settlement") >= 0
+        ElseIf StringUtil.Find(locName, "City") >= 0 || StringUtil.Find(locName, "Settlement") >= 0
             locType = "settlement"
         EndIf
     EndIf
 
-    WorldLog("COMBAT_PATTERN|weapon=" + _weaponCategory + \
-             "|approach=" + approach + \
-             "|vats=" + _usedVATS + \
-             "|stealth=" + _usedStealth + \
-             "|cover=" + _usedCover + \
-             "|loc_type=" + locType + \
-             "|game_time=" + Utility.GetCurrentGameTime())
+    WorldLog("COMBAT_PATTERN|weapon=" + _weaponCategory + "|approach=" + approach + "|vats=" + _usedVATS + "|stealth=" + _usedStealth + "|cover=" + _usedCover + "|loc_type=" + locType + "|game_time=" + Utility.GetCurrentGameTime())
 
     _combatCount += 1
 
@@ -181,89 +169,57 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; REPUTATION LOGGING
 ; ════════════════════════════════════════════════════════════════════════════
-Function LogReputationEvent(String faction, Float delta, String reason, String location)
+Function LogReputationEvent(String factionArg, Float delta, String reason, String locationArg)
     If !TrackReputation
         Return
     EndIf
-    WorldLog("REP_EVENT|faction=" + faction + \
-             "|delta=" + delta + \
-             "|reason=" + reason + \
-             "|location=" + location + \
-             "|game_time=" + Utility.GetCurrentGameTime())
+    WorldLog("REP_EVENT|factionArg=" + factionArg + "|delta=" + delta + "|reason=" + reason + "|locationArg=" + locationArg + "|game_time=" + Utility.GetCurrentGameTime())
 EndFunction
 
 ; Call these from other scripts when the player does faction-affecting things
 Function PlayerHelpedFaction(String factionName, Float amount, String reason)
-    LogReputationEvent(factionName, amount, reason,
-                       Game.GetPlayer().GetCurrentLocation().GetDisplayName())
+    LogReputationEvent(factionName, amount, reason, Game.GetPlayer().GetCurrentLocation().GetName())
 EndFunction
 
 Function PlayerHarmedFaction(String factionName, Float amount, String reason)
-    LogReputationEvent(factionName, -amount, reason,
-                       Game.GetPlayer().GetCurrentLocation().GetDisplayName())
+    LogReputationEvent(factionName, -amount, reason, Game.GetPlayer().GetCurrentLocation().GetName())
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; PERSONALITY DRIFT LOGGING
 ; ════════════════════════════════════════════════════════════════════════════
-Function LogPersonalityDrift(String npcId, String npcName,
-                              Float aggrDelta, Float moralDelta,
-                              Float loyalDelta, Float trustDelta,
-                              String reason)
+Function LogPersonalityDrift(String npcId, String npcName, Float aggrDelta, Float moralDelta, Float loyalDelta, Float trustDelta, String reason)
     If !TrackPersonalityDrift
         Return
     EndIf
-    WorldLog("PERSONALITY_DRIFT|npc_id=" + npcId + \
-             "|npc_name=" + npcName + \
-             "|aggr=" + aggrDelta + \
-             "|moral=" + moralDelta + \
-             "|loyal=" + loyalDelta + \
-             "|trust=" + trustDelta + \
-             "|reason=" + reason)
+    WorldLog("PERSONALITY_DRIFT|npc_id=" + npcId + "|npc_name=" + npcName + "|aggr=" + aggrDelta + "|moral=" + moralDelta + "|loyal=" + loyalDelta + "|trust=" + trustDelta + "|reason=" + reason)
 EndFunction
 
 ; Example: companion drift when player does something immoral
 Function CompanionWitnessedImmoral(Actor companion, String eventDesc)
-    LogPersonalityDrift(
-        companion.GetActorBase().GetFormID() as String,
-        companion.GetDisplayName(),
-        0.02,   ; Slightly more aggressive (hardened by witnessing)
-        -0.05,  ; Less moral (compromised)
-        -0.03,  ; Slight loyalty loss
-        -0.08,  ; Trust in player drops
-        "witnessed_immoral_act: " + eventDesc
-    )
+    LogPersonalityDrift( companion.GetActorBase().GetFormID() as String, companion.GetDisplayName(), 0.02, -0.05, -0.03, -0.08, "witnessed_immoral_act: " + eventDesc ); Slightly more aggressive (hardened by witnessing) ; Less moral (compromised) ; Slight loyalty loss ; Trust in player drops; Slightly more aggressive (hardened by witnessing) ; Less moral (compromised) ; Slight loyalty loss ; Trust in player drops
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; WORLD EVENT LOGGING
 ; ════════════════════════════════════════════════════════════════════════════
-Function LogWorldEvent(String eventType, String subject, String location, String faction)
-    WorldLog("WORLD_EVENT|type=" + eventType + \
-             "|subject=" + subject + \
-             "|location=" + location + \
-             "|faction=" + faction + \
-             "|game_time=" + Utility.GetCurrentGameTime())
+Function LogWorldEvent(String eventType, String subject, String locationArg, String factionArg)
+    WorldLog("WORLD_EVENT|type=" + eventType + "|subject=" + subject + "|locationArg=" + locationArg + "|factionArg=" + factionArg + "|game_time=" + Utility.GetCurrentGameTime())
 
     ; Lore generation for significant events
     If GenerateLore && IsSignificantEvent(eventType)
-        WorldLog("LORE_EVENT|playthrough=" + _playthroughID + \
-                 "|type=" + eventType + \
-                 "|subject=" + subject + \
-                 "|location=" + location + \
-                 "|significance=0.75")
+        WorldLog("LORE_EVENT|playthrough=" + _playthroughID + "|type=" + eventType + "|subject=" + subject + "|locationArg=" + locationArg + "|significance=0.75")
     EndIf
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; PERIODIC — Reputation decay notification
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
+Function DoGameTimeTick()
     ; Tell the bridge that time has passed so it can apply rep decay
     WorldLog("TIME_TICK|game_time=" + Utility.GetCurrentGameTime())
-    RegisterForUpdateGameTime(6.0)
-EndEvent
-
+    ScheduleTick(6.0)
+EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; HELPERS
 ; ════════════════════════════════════════════════════════════════════════════
@@ -272,43 +228,61 @@ String Function ClassifyWeapon(Form item)
         Return "unarmed"
     EndIf
     String name = item.GetName()
-    If name.Find("Rifle") >= 0 || name.Find("Laser") >= 0 || name.Find("Plasma") >= 0
+    If StringUtil.Find(name, "Rifle") >= 0 || StringUtil.Find(name, "Laser") >= 0 || StringUtil.Find(name, "Plasma") >= 0
         Return "rifle"
-    ElseIf name.Find("Pistol") >= 0 || name.Find("10mm") >= 0
+    ElseIf StringUtil.Find(name, "Pistol") >= 0 || StringUtil.Find(name, "10mm") >= 0
         Return "pistol"
-    ElseIf name.Find("Shotgun") >= 0
+    ElseIf StringUtil.Find(name, "Shotgun") >= 0
         Return "shotgun"
-    ElseIf name.Find("Sniper") >= 0 || name.Find(".50") >= 0
+    ElseIf StringUtil.Find(name, "Sniper") >= 0 || StringUtil.Find(name, ".50") >= 0
         Return "sniper"
-    ElseIf name.Find("Pipe") >= 0 || name.Find("Minigun") >= 0
+    ElseIf StringUtil.Find(name, "Pipe") >= 0 || StringUtil.Find(name, "Minigun") >= 0
         Return "heavy"
-    ElseIf name.Find("Grenade") >= 0 || name.Find("Mine") >= 0 || name.Find("Fatman") >= 0
+    ElseIf StringUtil.Find(name, "Grenade") >= 0 || StringUtil.Find(name, "Mine") >= 0 || StringUtil.Find(name, "Fatman") >= 0
         Return "explosives"
-    ElseIf name.Find("Knife") >= 0 || name.Find("Bat") >= 0 || name.Find("Machete") >= 0
+    ElseIf StringUtil.Find(name, "Knife") >= 0 || StringUtil.Find(name, "Bat") >= 0 || StringUtil.Find(name, "Machete") >= 0
         Return "melee"
     EndIf
     Return "rifle"
 EndFunction
 
-Bool Function IsNotableLocation(ObjectReference loc)
+Bool Function IsNotableLocation(Location loc)
     If loc == None
         Return False
     EndIf
-    String name = loc.GetDisplayName()
-    Return name.Find("Diamond City") >= 0 || name.Find("Vault") >= 0 || \
-           name.Find("Prydwen") >= 0 || name.Find("Institute") >= 0 || \
-           name.Find("Goodneighbor") >= 0 || name.Find("Castle") >= 0
+    String name = loc.GetName()
+    Return StringUtil.Find(name, "Diamond City") >= 0 || StringUtil.Find(name, "Vault") >= 0 || StringUtil.Find(name, "Prydwen") >= 0 || StringUtil.Find(name, "Institute") >= 0 || StringUtil.Find(name, "Goodneighbor") >= 0 || StringUtil.Find(name, "Castle") >= 0
 EndFunction
 
 Bool Function IsSignificantEvent(String eventType)
-    Return eventType == "cleared_location" || eventType == "killed_boss" || \
-           eventType == "joined_faction"   || eventType == "completed_quest" || \
-           eventType == "found_artifact"   || eventType == "defeated_legend"
+    Return eventType == "cleared_location" || eventType == "killed_boss" || eventType == "joined_faction"   || eventType == "completed_quest" || eventType == "found_artifact"   || eventType == "defeated_legend"
 EndFunction
 
 Function WorldLog(String msg)
     Debug.Trace("[AAI] " + msg)
-    If Debug
+    If _debugMode
         Debug.Notification("[AAI-World] " + msg)
     EndIf
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Int _f4aiLastPlayerLevel = 0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Int lvlNow = Game.GetPlayer().GetLevel()
+        If _f4aiLastPlayerLevel > 0 && lvlNow > _f4aiLastPlayerLevel
+            PlayerLeveledUp(lvlNow)
+        EndIf
+        _f4aiLastPlayerLevel = lvlNow
+        DoGameTimeTick()
+    EndIf
+EndEvent

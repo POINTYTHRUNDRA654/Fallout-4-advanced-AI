@@ -20,20 +20,20 @@ Quest Property AAIQuest Auto
 ; ── Memory Storage (uses F4SE StorageUtil via MCM integration) ───────────────
 ; Memory keys are stored as GlobalVariable integers and string arrays
 ; Persistent across saves because they're stored on the reference
-GlobalVariable Property gMemSlot_01 Auto  ; Recent event slot 1
-GlobalVariable Property gMemSlot_02 Auto  ; Recent event slot 2
-GlobalVariable Property gMemSlot_03 Auto  ; Recent event slot 3
-GlobalVariable Property gLastSeen   Auto  ; Game time of last player encounter
-GlobalVariable Property gAffinity   Auto  ; Current affinity value (mirrors vanilla)
+GlobalVariable Property gMemSlot_01 Auto; Recent event slot 1; Recent event slot 1; Recent event slot 1; Recent event slot 1
+GlobalVariable Property gMemSlot_02 Auto; Recent event slot 2; Recent event slot 2; Recent event slot 2; Recent event slot 2
+GlobalVariable Property gMemSlot_03 Auto; Recent event slot 3; Recent event slot 3; Recent event slot 3; Recent event slot 3
+GlobalVariable Property gLastSeen   Auto; Game time of last player encounter; Game time of last player encounter; Game time of last player encounter; Game time of last player encounter
+GlobalVariable Property gAffinity   Auto; Current affinity value (mirrors vanilla); Current affinity value (mirrors vanilla); Current affinity value (mirrors vanilla); Current affinity value (mirrors vanilla)
 
 ; ── Dialogue Topics (set via CK — companion must have these available) ────────
-Topic Property topicRememberKill      Auto  ; "I remember when you took down that..."
-Topic Property topicRememberLocation  Auto  ; "We've been here before..."
-Topic Property topicRememberConvo     Auto  ; "Last time we talked about..."
-Topic Property topicGreetLongAbsence  Auto  ; "It's been a while since I've seen you"
-Topic Property topicGreetRecent       Auto  ; "Good to see you again so soon"
-Topic Property topicReactPositive     Auto  ; React to player doing something they like
-Topic Property topicReactNegative     Auto  ; React to player doing something they dislike
+Topic Property topicRememberKill      Auto; "I remember when you took down that..."; "I remember when you took down that..."; "I remember when you took down that..."; "I remember when you took down that..."
+Topic Property topicRememberLocation  Auto; "We've been here before..."; "We've been here before..."; "We've been here before..."; "We've been here before..."
+Topic Property topicRememberConvo     Auto; "Last time we talked about..."; "Last time we talked about..."; "Last time we talked about..."; "Last time we talked about..."
+Topic Property topicGreetLongAbsence  Auto; "It's been a while since I've seen you"; "It's been a while since I've seen you"; "It's been a while since I've seen you"; "It's been a while since I've seen you"
+Topic Property topicGreetRecent       Auto; "Good to see you again so soon"; "Good to see you again so soon"; "Good to see you again so soon"; "Good to see you again so soon"
+Topic Property topicReactPositive     Auto; React to player doing something they like; React to player doing something they like; React to player doing something they like; React to player doing something they like
+Topic Property topicReactNegative     Auto; React to player doing something they dislike; React to player doing something they dislike; React to player doing something they dislike; React to player doing something they dislike
 
 ; ── Affinity Properties ───────────────────────────────────────────────────────
 float Property AffinityLike    =  250.0 Auto
@@ -43,9 +43,9 @@ float Property AffinityIdolize =  750.0 Auto
 
 ; ── Personality Properties ────────────────────────────────────────────────────
 ; These define how this specific companion reacts — set per-companion in CK
-float Property PersonalityAggression  = 0.3  Auto  ; 0-1
-float Property PersonalityMorality    = 0.6  Auto  ; 0=evil 1=good
-float Property PersonalityLoyalty     = 0.8  Auto  ; How likely to stay through hard times
+float Property PersonalityAggression  = 0.3  Auto; 0-1; 0-1; 0-1; 0-1
+float Property PersonalityMorality    = 0.6  Auto; 0=evil 1=good; 0=evil 1=good; 0=evil 1=good; 0=evil 1=good
+float Property PersonalityLoyalty     = 0.8  Auto; How likely to stay through hard times; How likely to stay through hard times; How likely to stay through hard times; How likely to stay through hard times
 bool  Property LikesViolence          = False Auto
 bool  Property LikesStealth           = False Auto
 bool  Property LikesGenerosity        = True  Auto
@@ -66,14 +66,14 @@ int Property MEM_SURVIVED_FIGHT = 9  Auto Const
 int Property MEM_PLAYER_LEVEL_UP = 10 Auto Const
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-Actor _self         = None
+Actor _actor         = None
 float _curAffinity  = 0.0
-int   _emotionState = 0  ; 0=neutral 1=happy 2=concerned 3=angry
+int   _emotionState = 0; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
-    _self = GetActorReference()
-    If _self == None
+    _actor = GetActorReference() as Actor
+    If _actor == None
         Return
     EndIf
 
@@ -82,18 +82,19 @@ Event OnAliasInit()
         _curAffinity = gAffinity.GetValue()
     EndIf
 
-    RegisterForRemoteEvent(_self, "OnCombatStateChanged")
-    RegisterForRemoteEvent(_self, "OnHit")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerAcquireItem")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerFastTravelEnd")
+    RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
+    RegisterForHitEvent(_actor)
+    AddInventoryEventFilter(None); receive all item-added events
+    RegisterForRemoteEvent(Game.GetPlayer(), "OnItemAdded")
+    RegisterForPlayerTeleport()
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
-    RegisterForRemoteEvent(Game.GetPlayer(), "OnLevelUp")
+    ; player level-ups detected by polling in OnTimerGameTime (FO4 has no OnLevelUp event)
 
     ; Apply AI enhancements
     ApplyPersonalityAV()
 
     ; Schedule periodic "ambient thoughts"
-    RegisterForUpdateGameTime(1.0)
+    ScheduleTick(1.0)
 EndEvent
 
 ; ════════════════════════════════════════════════════════════════════════════
@@ -106,23 +107,23 @@ Function ApplyPersonalityAV()
     ActorValue avAsst  = Game.GetFormFromFile(0x000002EB, "Fallout4.esm") as ActorValue
 
     If avAggr != None
-        _self.SetValue(avAggr, PersonalityAggression * 100.0)
+        _actor.SetValue(avAggr, PersonalityAggression * 100.0)
     EndIf
     If avConf != None
-        _self.SetValue(avConf, Math.Min(70.0 + (PersonalityLoyalty * 30.0), 100.0))
+        _actor.SetValue(avConf, Math.Min(70.0 + (PersonalityLoyalty * 30.0), 100.0))
     EndIf
     If avMood != None
-        _self.SetValue(avMood, 50.0 + (_curAffinity / 20.0))  ; Mood tracks affinity
+        _actor.SetValue(avMood, 50.0 + (_curAffinity / 20.0)); Mood tracks affinity; Mood tracks affinity; Mood tracks affinity; Mood tracks affinity
     EndIf
     If avAsst != None
-        _self.SetValue(avAsst, 80.0)  ; Companions always helpful
+        _actor.SetValue(avAsst, 80.0); Companions always helpful; Companions always helpful; Companions always helpful; Companions always helpful
     EndIf
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; MEMORY SYSTEM — Record Events
 ; ════════════════════════════════════════════════════════════════════════════
-Function RecordMemory(int memCode)
+Function RecordMemory(Int memCode)
     ; Shift memory slots (slot 3 = oldest, slot 1 = newest)
     If gMemSlot_02 != None && gMemSlot_03 != None
         gMemSlot_03.SetValue(gMemSlot_02.GetValue())
@@ -139,32 +140,31 @@ Function RecordMemory(int memCode)
         gLastSeen.SetValue(Utility.GetCurrentGameTime())
     EndIf
 
-    Debug.Trace("[AAI-Companion] Memory recorded: " + memCode + " for " + _self.GetDisplayName())
+    Debug.Trace("[AAI-Companion] Memory recorded: " + memCode + " for " + _actor.GetDisplayName())
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; MEMORY SYSTEM — Greet Player (check time since last seen)
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnUpdateGameTime()
-    If _self == None || _self.IsDead()
+Function DoGameTimeTick()
+    If _actor == None || _actor.IsDead()
         Return
     EndIf
 
     ; Check if player is nearby and companion should greet
     Actor player = Game.GetPlayer()
-    If player != None && _self.GetDistance(player) < 300.0 && !_self.IsInCombat()
+    If player != None && _actor.GetDistance(player) < 300.0 && !_actor.IsInCombat()
         CheckTimedGreeting()
     EndIf
 
     ; Update mood ActorValue to match current affinity
     ActorValue avMood = Game.GetFormFromFile(0x000002EA, "Fallout4.esm") as ActorValue
     If avMood != None
-        _self.SetValue(avMood, Math.Clamp(50.0 + (_curAffinity / 20.0), 0.0, 100.0))
+        _actor.SetValue(avMood, Math.Clamp(50.0 + (_curAffinity / 20.0), 0.0, 100.0))
     EndIf
 
-    RegisterForUpdateGameTime(1.0)
-EndEvent
-
+    ScheduleTick(1.0)
+EndFunction
 Function CheckTimedGreeting()
     If gLastSeen == None
         Return
@@ -172,15 +172,15 @@ Function CheckTimedGreeting()
 
     Float lastSeen = gLastSeen.GetValue()
     Float now      = Utility.GetCurrentGameTime()
-    Float hoursPassed = (now - lastSeen) * 24.0  ; Convert game days to hours
+    Float hoursPassed = (now - lastSeen) * 24.0; Convert game days to hours; Convert game days to hours; Convert game days to hours; Convert game days to hours
 
     If hoursPassed > 72.0 && topicGreetLongAbsence != None
         ; Been a long time — greet warmly
-        _self.Say(topicGreetLongAbsence, Game.GetPlayer(), False)
+        _actor.Say(topicGreetLongAbsence, Game.GetPlayer(), False)
         gLastSeen.SetValue(now)
     ElseIf hoursPassed > 0.5 && hoursPassed < 2.0 && topicGreetRecent != None
         ; Saw them recently
-        _self.Say(topicGreetRecent, Game.GetPlayer(), False)
+        _actor.Say(topicGreetRecent, Game.GetPlayer(), False)
         gLastSeen.SetValue(now)
     EndIf
 EndFunction
@@ -189,7 +189,7 @@ EndFunction
 ; MEMORY RECALL — can be called from dialogue conditions
 ; Used by CK dialogue conditions: GetScriptVariable / CallFunction
 ; ════════════════════════════════════════════════════════════════════════════
-Bool Function RemembersEvent(int memCode)
+Bool Function RemembersEvent(Int memCode)
     If gMemSlot_01 != None && gMemSlot_01.GetValue() as Int == memCode
         Return True
     EndIf
@@ -209,7 +209,7 @@ Int Function GetMostRecentMemory()
     Return MEM_NONE
 EndFunction
 
-String Function GetMemoryDescription(int memCode)
+String Function GetMemoryDescription(Int memCode)
     If memCode == MEM_KILL_BOSS
         Return "that fight against the boss"
     ElseIf memCode == MEM_STEALTH_KILL
@@ -233,37 +233,38 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; AFFINITY — PLAYER ACTION HOOKS
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnPlayerAcquireItem(Form akBaseItem, int aiItemCount, ObjectReference akItemReference, ObjectReference akContainer)
+; Remote OnItemAdded from the player (OnPlayerAcquireItem does not exist in FO4)
+Event ObjectReference.OnItemAdded(ObjectReference akSender, Form akBaseItem, Int aiItemCount, ObjectReference akItemReference, ObjectReference akSourceContainer)
     ; Track item pickups for personality reactions
     ; (Specific items would be listed in properties — this is the hook)
 EndEvent
 
-Event OnLocationChange(ObjectReference akOldLoc, ObjectReference akNewLoc)
+Event Actor.OnLocationChange(Actor akSender, Location akOldLoc, Location akNewLoc)
     ; Remember important location visits
     If akNewLoc != None
-        String locName = akNewLoc.GetDisplayName()
+        String locName = akNewLoc.GetName()
         If locName != ""
-            RecordMemory(MEM_ENTERED_VAULT)  ; Would check location type in full impl
+            RecordMemory(MEM_ENTERED_VAULT); Would check location type in full impl; Would check location type in full impl; Would check location type in full impl; Would check location type in full impl
         EndIf
     EndIf
 EndEvent
 
-Event OnLevelUp(Actor akSender)
+Function PlayerLeveledUp(Int aiNewLevel)
     RecordMemory(MEM_PLAYER_LEVEL_UP)
     ; React to player leveling
     ActorValue avMood = Game.GetFormFromFile(0x000002EA, "Fallout4.esm") as ActorValue
     If avMood != None
-        _self.SetValue(avMood, Math.Min(_self.GetValue(avMood) + 5.0, 100.0))
+        _actor.SetValue(avMood, Math.Min(_actor.GetValue(avMood) + 5.0, 100.0))
     EndIf
     If topicReactPositive != None
-        _self.Say(topicReactPositive, Game.GetPlayer(), False)
+        _actor.Say(topicReactPositive, Game.GetPlayer(), False)
     EndIf
-EndEvent
+EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; AFFINITY SYSTEM
 ; ════════════════════════════════════════════════════════════════════════════
-Function ModAffinity(float delta)
+Function ModAffinity(Float delta)
     _curAffinity = Math.Clamp(_curAffinity + delta, AffinityLoathe, AffinityIdolize)
 
     ; Persist to global
@@ -273,13 +274,13 @@ Function ModAffinity(float delta)
 
     ; Update emotional state
     If _curAffinity >= AffinityIdolize
-        _emotionState = 1  ; Happy
+        _emotionState = 1; Happy; Happy; Happy; Happy
     ElseIf _curAffinity <= AffinityLoathe
-        _emotionState = 3  ; Angry
+        _emotionState = 3; Angry; Angry; Angry; Angry
     ElseIf _curAffinity <= AffinityDislike
-        _emotionState = 2  ; Concerned
+        _emotionState = 2; Concerned; Concerned; Concerned; Concerned
     Else
-        _emotionState = 0  ; Neutral
+        _emotionState = 0; Neutral; Neutral; Neutral; Neutral
     EndIf
 
     ; Sync to ActorValue mood
@@ -298,15 +299,16 @@ EndFunction
 ; ════════════════════════════════════════════════════════════════════════════
 ; COMBAT
 ; ════════════════════════════════════════════════════════════════════════════
-Event OnCombatStateChanged(Actor akSender, int aeCombatState)
+Event Actor.OnCombatStateChanged(Actor akSender, Actor akTarget, Int aeCombatState)
     If aeCombatState == 1
         ; Record that we survived a fight together
-        RecordMemory(MEM_SURVIVE_FIGHT)
-        ModAffinity(5.0)  ; Small bond from fighting together
+        RecordMemory(MEM_SURVIVED_FIGHT)
+        ModAffinity(5.0); Small bond from fighting together; Small bond from fighting together; Small bond from fighting together; Small bond from fighting together
     EndIf
 EndEvent
 
-Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, bool abPowerAttack, bool abSneakAttack, bool abBashAttack, bool abHitBlocked, string apMaterial)
+Event OnHit(ObjectReference akTarget, ObjectReference akAggressor, Form akSource, Projectile akProjectile, Bool abPowerAttack, Bool abSneakAttack, Bool abBashAttack, Bool abHitBlocked, String apMaterial)
+    RegisterForHitEvent(_actor); hit events are single-shot in FO4 — re-arm immediately
     ; If companion gets hit, slight negative affinity (player dragging them into danger)
     ModAffinity(-1.0)
 EndEvent
@@ -318,14 +320,36 @@ EndEvent
 Function TriggerMemoryDialogue()
     Int recentMem = GetMostRecentMemory()
     If recentMem != MEM_NONE && topicRememberKill != None
-        _self.Say(topicRememberKill, Game.GetPlayer(), False)
+        _actor.Say(topicRememberKill, Game.GetPlayer(), False)
     EndIf
 EndFunction
 
-Function ExternalAffinityMod(float delta, bool fromModder)
+Function ExternalAffinityMod(Float delta, Bool fromModder)
     ; Allow other mods to safely modify affinity through this system
     ModAffinity(delta)
     If fromModder
-        Debug.Trace("[AAI-Companion] External affinity mod: " + delta)
+        Debug.Trace("[AAI] ExternalAffinityMod|delta=" + delta)
     EndIf
 EndFunction
+
+; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
+; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
+Float _f4aiTickHours = 1.0
+Int _f4aiLastPlayerLevel = 0
+
+Function ScheduleTick(Float afHours)
+    _f4aiTickHours = afHours
+    StartTimerGameTime(afHours, 900)
+EndFunction
+
+Event OnTimerGameTime(Int aiTimerID)
+    If aiTimerID == 900
+        StartTimerGameTime(_f4aiTickHours, 900)
+        Int lvlNow = Game.GetPlayer().GetLevel()
+        If _f4aiLastPlayerLevel > 0 && lvlNow > _f4aiLastPlayerLevel
+            PlayerLeveledUp(lvlNow)
+        EndIf
+        _f4aiLastPlayerLevel = lvlNow
+        DoGameTimeTick()
+    EndIf
+EndEvent
