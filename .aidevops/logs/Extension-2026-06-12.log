@@ -37,3 +37,42 @@
 [2026-06-12 04:05:57.403] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
 [2026-06-12 04:06:27.406] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
 [2026-06-12 04:06:27.406] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:06:57.412] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:06:57.412] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:07:27.414] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:07:27.414] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:07:27.414] ensureToolDependencies: poll #4, still waiting for: mcp_aidevops-graph
+[2026-06-12 04:07:57.427] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:07:57.427] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:08:27.431] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:08:27.431] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:08:57.434] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:08:57.434] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:09:27.441] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:09:27.441] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:09:27.441] ensureToolDependencies: poll #8, still waiting for: mcp_aidevops-graph
+[2026-06-12 04:09:57.453] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:09:57.453] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:10:27.467] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:10:27.467] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:10:57.473] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:10:57.473] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:11:27.483] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:11:27.483] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:11:27.483] ensureToolDependencies: poll #12, still waiting for: mcp_aidevops-graph
+[2026-06-12 04:11:57.491] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:11:57.491] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:12:27.499] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:12:27.499] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:12:57.510] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:12:57.510] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:13:27.519] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:13:27.519] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:13:27.519] ensureToolDependencies: poll #16, still waiting for: mcp_aidevops-graph
+[2026-06-12 04:13:57.525] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:13:57.525] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:14:27.531] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:14:27.531] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:14:57.532] isToolAvailable: mcp_aidevops-graph → expectedServer="aidevops-graph", truncatedPrefix=(none)
+[2026-06-12 04:14:57.532] isToolAvailable: mcp_aidevops-graph — fallback fullName match: false
+[2026-06-12 04:15:27.409] Stopped watching for deferred tools after 19 polls (mcp_aidevops-graph still not available after 10 min)
