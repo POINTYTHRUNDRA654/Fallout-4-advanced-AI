@@ -41,5 +41,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add VERSION
           git commit -m "chore: auto-bump alpha version to ${VERSION_VALUE} [skip ci]"
-          git pull --rebase origin ${{ github.ref_name }}
+          git pull --rebase origin ${{ github.ref_name }} || { git rebase --abort; echo "Rebase failed — manual intervention required."; exit 1; }
           git push origin HEAD:${{ github.ref_name }}
