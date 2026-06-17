@@ -39,5 +39,5 @@ Function SendFeedbackToPython(String npcName, Int score)
     jsonPayload += "\"npc_name\": \"" + npcName + "\","
     jsonPayload += "\"reward_score\": " + score as String
     jsonPayload += "}"
-    MiscUtil.WriteToFile(TrainingInputPath, jsonPayload, false)
+    Hydra:IO:File.WriteAllText(TrainingInputPath, jsonPayload)
 EndFunction

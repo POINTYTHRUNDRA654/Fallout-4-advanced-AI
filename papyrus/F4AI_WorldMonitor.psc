@@ -54,11 +54,14 @@ Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableWorldAI)
             WriteWorldState()
-            if (MiscUtil.FileExists(WorldOutputPath))
+            if (Hydra:IO:File.Exists(WorldOutputPath))
                 ProcessWorldDirective()
             endif
         endif
         Utility.Wait(UpdateInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
@@ -70,18 +73,26 @@ Function WriteWorldState()
     String weatherStr = GetWeatherName()
     String timeOfDay = GetTimeOfDay()
     Float  curHour   = GetGameHour()
-    String playerRegion    = GetPlayerRegion()
+    String playerRegion   = GetPlayerRegion()
     Bool   isRaining  = IsRaining()
     Bool   isStorming = IsStorming()
     Bool   isNight    = curHour >= 20.0 || curHour < 6.0
 
+    ; Player context — faction, level, active DLCs
+    String playerFaction = GetPlayerFaction()
+    Int    playerLevel   = Game.GetPlayer().GetLevel()
+    String dlcFlags      = GetActiveDLCs()
+
     ; Share world state via SaveMap for other monitors to read
-    Hydra:SaveMap.SetValue("F4AI_S", "world_season",    season as Var)
-    Hydra:SaveMap.SetValue("F4AI_S", "world_weather",   weatherStr as Var)
-    Hydra:SaveMap.SetValue("F4AI_S", "world_timeofday", timeOfDay as Var)
-    Hydra:SaveMap.SetValue("F4AI_S", "world_hour",      curHour as Var)
-    Hydra:SaveMap.SetValue("F4AI_S", "world_isnight",   isNight as Var)
-    Hydra:SaveMap.SetValue("F4AI_S", "world_israining", isRaining as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_season",         season as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_weather",        weatherStr as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_timeofday",      timeOfDay as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_hour",           curHour as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_isnight",        isNight as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_israining",      isRaining as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_player_faction", playerFaction as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_player_level",   playerLevel as Var)
+    Hydra:SaveMap.SetValue("F4AI_S", "world_ecoRegion",      playerRegion as Var)
 
     ; Write JSON for file-based IPC (bridge + other Papyrus scripts read this)
     String json = "{"
@@ -93,11 +104,14 @@ Function WriteWorldState()
     json += "\"is_night\": " + BoolToStr(isNight) + ","
     json += "\"is_raining\": " + BoolToStr(isRaining) + ","
     json += "\"is_storming\": " + BoolToStr(isStorming) + ","
-    json += "\"player_playerRegion\": \"" + playerRegion + "\""
+    json += "\"player_region\": \"" + playerRegion + "\","
+    json += "\"player_level\": " + playerLevel + ","
+    json += "\"player_faction\": \"" + playerFaction + "\","
+    json += "\"dlc\": \"" + dlcFlags + "\""
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "WorldState")
-    MiscUtil.WriteToFile(WorldStatePath, json, false)
+    Hydra:IO:File.WriteAllText(WorldStatePath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "WorldState")
 
     ; Push world update event to bridge so Mossy stays in sync
@@ -112,7 +126,7 @@ Function WriteWorldState()
     eventJson += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(WorldEventPath, eventJson, false)
+    Hydra:IO:File.WriteAllText(WorldEventPath, eventJson)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 
     Debug.Trace("[F4AI_World] State updated — " + season + " / " + weatherStr + " / " + timeOfDay)
@@ -124,7 +138,7 @@ Function ProcessWorldDirective()
     String targetWeather = Hydra:MemMap.GetValue(WorldOutputPath, "/weather_type") as String
     Float  targetHour    = Hydra:MemMap.GetValue(WorldOutputPath, "/target_hour") as Float
     Hydra:IO:Json.Uncache_TempMap(WorldOutputPath)
-    MiscUtil.DeleteFile(WorldOutputPath)
+    Hydra:IO:File.Delete(WorldOutputPath)
 
     if (directive == "force_weather")
         ApplyWeatherDirective(targetWeather)
@@ -252,20 +266,62 @@ String Function GetPlayerRegion()
     if (locName == "")
         return "The Commonwealth"
     endif
-    if (StringUtil.Find(locName, "Harbor") != -1)
+    if (Hydra:Strings.IndexOf(locName, "Harbor") != -1)
         return "Far Harbor"
-    elseif (StringUtil.Find(locName, "Nuka") != -1)
+    elseif (Hydra:Strings.IndexOf(locName, "Nuka") != -1)
         return "Nuka-World"
-    elseif (StringUtil.Find(locName, "Glowing Sea") != -1)
+    elseif (Hydra:Strings.IndexOf(locName, "Glowing Sea") != -1)
         return "Glowing Sea"
-    elseif (StringUtil.Find(locName, "Institute") != -1)
+    elseif (Hydra:Strings.IndexOf(locName, "Institute") != -1)
         return "The Institute"
-    elseif (StringUtil.Find(locName, "Diamond City") != -1)
+    elseif (Hydra:Strings.IndexOf(locName, "Diamond City") != -1)
         return "Diamond City"
-    elseif (StringUtil.Find(locName, "Goodneighbor") != -1)
+    elseif (Hydra:Strings.IndexOf(locName, "Goodneighbor") != -1)
         return "Goodneighbor"
     endif
     return locName
+EndFunction
+
+; ── Player Context ────────────────────────────────────────────────────────────
+
+String Function GetPlayerFaction()
+    Actor player = Game.GetPlayer()
+    Faction minutemen = Game.GetForm(0x0002A8A8) as Faction
+    Faction bos       = Game.GetForm(0x0001AEBE) as Faction
+    Faction railroad  = Game.GetForm(0x000403C5) as Faction
+    Faction institute = Game.GetForm(0x000362FE) as Faction
+    if (player.IsInFaction(institute))
+        return "Institute"
+    elseif (player.IsInFaction(bos))
+        return "Brotherhood of Steel"
+    elseif (player.IsInFaction(railroad))
+        return "Railroad"
+    elseif (player.IsInFaction(minutemen))
+        return "Minutemen"
+    endif
+    return "None"
+EndFunction
+
+String Function GetActiveDLCs()
+    ; Detect installed DLCs by probing for their main archive files via Hydra.
+    ; These BA2s only exist on disk when the DLC is genuinely installed.
+    String result = ""
+    if (Hydra:IO:File.Exists("Data/DLCCoast - Main.ba2"))
+        result += "Far Harbor,"
+    endif
+    if (Hydra:IO:File.Exists("Data/DLCNukaWorld - Main.ba2"))
+        result += "Nuka-World,"
+    endif
+    if (Hydra:IO:File.Exists("Data/DLCRobot - Main.ba2"))
+        result += "Automatron,"
+    endif
+    if (Hydra:IO:File.Exists("Data/DLCworkshop01 - Main.ba2"))
+        result += "Wasteland Workshop,"
+    endif
+    if (result == "")
+        return "Base Game Only"
+    endif
+    return result
 EndFunction
 
 ; ── Helpers ───────────────────────────────────────────────────────────────────

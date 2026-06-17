@@ -33,6 +33,10 @@ EndEvent
 Function InitMonitor()
     _loopGen += 1
     Int myGen = _loopGen
+    Utility.Wait(1.0)
+    if (myGen != _loopGen)
+        return
+    endif
     if (EnableEcoAI)
         WriteWorldStateToSaveMap()
         MonitorLoop(myGen)
@@ -42,25 +46,42 @@ EndFunction
 Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableEcoAI)
-            ScanEcosystem()
-            if (MiscUtil.FileExists(EcoOutputPath))
+            ScanEcosystem(myGen)
+            if (Hydra:IO:File.Exists(EcoOutputPath))
                 ProcessEcosystemDirective()
             endif
         endif
         Utility.Wait(ScanInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
 ; ── Ecosystem Scan ────────────────────────────────────────────────────────────
 
-Function ScanEcosystem()
+Function ScanEcosystem(Int myGen)
+    if (Hydra:TempMap.GetValue("F4AI_T", "eco_scanning") as Bool)
+        return
+    endif
+    Bool bTrue = true
+    Hydra:TempMap.SetValue("F4AI_T", "eco_scanning", bTrue as Var)
+
     Actor player = Game.GetPlayer()
     String ecoRegion = Hydra:SaveMap.GetValue("F4AI_S", "world_ecoRegion") as String
     String season = Hydra:SaveMap.GetValue("F4AI_S", "world_season") as String
 
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
+    ; stale stack returning after a load/new-game — drop results silently
+    if (myGen != _loopGen)
+        Bool bFalse = false
+        Hydra:TempMap.SetValue("F4AI_T", "eco_scanning", bFalse as Var)
+        return
+    endif
     if (refs == None)
+        Bool bFalse = false
+        Hydra:TempMap.SetValue("F4AI_T", "eco_scanning", bFalse as Var)
         return
     endif
 
@@ -118,6 +139,9 @@ Function ScanEcosystem()
     String territoryOwner = Hydra:SaveMap.GetValue("F4AI_S", "eco_territory_" + ecoRegion) as String
 
     SendEcosystemEvent(ecoRegion, season, predatorCount, preyCount, deathclawCount, mirelurKCount, radscorpCount, yaogualCount, bloatflyCount, brahmInCount, dogCount, radroachCount, ecoState, territoryOwner)
+
+    Bool bFalse = false
+    Hydra:TempMap.SetValue("F4AI_T", "eco_scanning", bFalse as Var)
 EndFunction
 
 ; ── Territory ─────────────────────────────────────────────────────────────────
@@ -216,7 +240,7 @@ Function SendEcosystemEvent(String ecoRegion, String season, Int predators, Int 
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(EcoInputPath, json, false)
+    Hydra:IO:File.WriteAllText(EcoInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 EndFunction
 
@@ -228,7 +252,7 @@ Function ProcessEcosystemDirective()
     String targetRegion = Hydra:MemMap.GetValue(EcoOutputPath, "/target_ecoRegion") as String
     String newOwner     = Hydra:MemMap.GetValue(EcoOutputPath, "/new_owner") as String
     Hydra:IO:Json.Uncache_TempMap(EcoOutputPath)
-    MiscUtil.DeleteFile(EcoOutputPath)
+    Hydra:IO:File.Delete(EcoOutputPath)
 
     if (directive == "migrate")
         Hydra:TempMap.SetValue("F4AI_T", "eco_migrate_species", species as Var)
@@ -310,14 +334,21 @@ EndFunction
 ; ── Helpers ───────────────────────────────────────────────────────────────────
 
 Function WriteWorldStateToSaveMap()
-    ; Read world_state.json if WorldMonitor already wrote it, without deleting it
-    if (!MiscUtil.FileExists("Data/F4AI/world_state.json"))
+    ; Read world_state.json written by WorldMonitor and propagate to SaveMap so
+    ; ScanEcosystem() can read world_ecoRegion + world_season without re-parsing the file.
+    if (!Hydra:IO:File.Exists("Data/F4AI/world_state.json"))
         return
     endif
     Hydra:IO:Json.Cache_TempMap("Data/F4AI/world_state.json")
-    String season = Hydra:MemMap.GetValue("Data/F4AI/world_state.json", "/season") as String
-    String ecoRegion = Hydra:MemMap.GetValue("Data/F4AI/world_state.json", "/player_ecoRegion") as String
+    String season    = Hydra:MemMap.GetValue("Data/F4AI/world_state.json", "/season") as String
+    String ecoRegion = Hydra:MemMap.GetValue("Data/F4AI/world_state.json", "/player_region") as String
     Hydra:IO:Json.Uncache_TempMap("Data/F4AI/world_state.json")
-    ; NOTE: do NOT delete world_state.json — WorldMonitor owns it
-    ; Only read season/region from it here; SaveMap holds live values
+    ; NOTE: do NOT delete world_state.json — WorldMonitor owns it.
+    ; Propagate values to SaveMap so ScanEcosystem reads them without re-parsing each tick.
+    if (season != "")
+        Hydra:SaveMap.SetValue("F4AI_S", "world_season", season as Var)
+    endif
+    if (ecoRegion != "")
+        Hydra:SaveMap.SetValue("F4AI_S", "world_ecoRegion", ecoRegion as Var)
+    endif
 EndFunction

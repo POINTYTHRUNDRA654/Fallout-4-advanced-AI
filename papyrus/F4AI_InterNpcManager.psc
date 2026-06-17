@@ -18,21 +18,21 @@ Function InitiateNpcDialogue(Actor ActorA, Actor ActorB)
     jsonPayload += "\"location\": \"" + Game.GetPlayer().GetCurrentLocation().GetName() + "\""
     jsonPayload += "}"
 
-    MiscUtil.WriteToFile(InterNpcInputPath, jsonPayload, false)
+    Hydra:IO:File.WriteAllText(InterNpcInputPath, jsonPayload)
     WaitForInterNpcAudio(ActorA, ActorB)
 EndFunction
 
 Function WaitForInterNpcAudio(Actor ActorA, Actor ActorB)
     Int timeout = 0
-    While (!MiscUtil.FileExists(InterNpcOutputPath) && timeout < 40)
+    While (!Hydra:IO:File.Exists(InterNpcOutputPath) && timeout < 40)
         Utility.Wait(0.2)
         timeout += 1
     EndWhile
 
-    if (MiscUtil.FileExists(InterNpcOutputPath))
+    if (Hydra:IO:File.Exists(InterNpcOutputPath))
         F4AI_AudioOutputSound.Play(ActorA)
         Utility.Wait(3.5)
         F4AI_AudioOutputSound.Play(ActorB)
-        MiscUtil.DeleteFile(InterNpcOutputPath)
+        Hydra:IO:File.Delete(InterNpcOutputPath)
     endif
 EndFunction

@@ -47,21 +47,27 @@ EndFunction
 Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableNPCAI)
-            ScanForSocialOpportunities()
-            if (MiscUtil.FileExists(SocialOutputPath))
+            ScanForSocialOpportunities(myGen)
+            if (Hydra:IO:File.Exists(SocialOutputPath))
                 ProcessSocialDirective()
             endif
         endif
         Utility.Wait(ScanInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
 ; ── Social Scan ───────────────────────────────────────────────────────────────
 
-Function ScanForSocialOpportunities()
+Function ScanForSocialOpportunities(Int myGen)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
+    if (myGen != _loopGen)
+        return
+    endif
     if (refs == None || refs.Length < 2)
         return
     endif
@@ -98,7 +104,8 @@ Function ScanForSocialOpportunities()
     endif
 
     String pairKey  = GetPairKey(npcA, npcB)
-    Float lastTalk  = Hydra:SaveMap.GetValue("F4AI_S", "social_lastalk_" + pairKey) as Float
+    Float lastTalkDef = 0.0
+    Float lastTalk    = Hydra:SaveMap.GetValueOrDefault("F4AI_S", "social_lastalk_" + pairKey, lastTalkDef as Var) as Float
     Float gameTime  = Utility.GetCurrentGameTime() * 24.0
     if ((gameTime - lastTalk) < (ConvoCooldown / 3600.0))
         return
@@ -123,7 +130,7 @@ Function SendSocialEvent(Actor npcA, Actor npcB, String pairKey)
     String relLabel = RelationshipLabel(relScore)
     String season    = Hydra:SaveMap.GetValue("F4AI_S", "world_season") as String
     String timeOfDay = Hydra:SaveMap.GetValue("F4AI_S", "world_timeofday") as String
-    String weatherStr   = Hydra:SaveMap.GetValue("F4AI_S", "world_weatherStr") as String
+    String weatherStr   = Hydra:SaveMap.GetValue("F4AI_S", "world_weather") as String
     String lastTopic = Hydra:SaveMap.GetValue("F4AI_S", "social_lasttopic_" + pairKey) as String
 
     String json = "{"
@@ -136,11 +143,11 @@ Function SendSocialEvent(Actor npcA, Actor npcB, String pairKey)
     json += "\"last_topic\": \"" + lastTopic + "\","
     json += "\"season\": \"" + season + "\","
     json += "\"time_of_day\": \"" + timeOfDay + "\","
-    json += "\"weatherStr\": \"" + weatherStr + "\""
+    json += "\"weather\": \"" + weatherStr + "\""
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(SocialInputPath, json, false)
+    Hydra:IO:File.WriteAllText(SocialInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 
     Debug.Trace("[F4AI_NPC] Social event: " + nameA + " <-> " + nameB + " [" + relLabel + "]")
@@ -156,7 +163,7 @@ Function ProcessSocialDirective()
     String lineB     = Hydra:MemMap.GetValue(SocialOutputPath, "/line_b") as String
     Float  relDelta  = Hydra:MemMap.GetValue(SocialOutputPath, "/relationship_delta") as Float
     Hydra:IO:Json.Uncache_TempMap(SocialOutputPath)
-    MiscUtil.DeleteFile(SocialOutputPath)
+    Hydra:IO:File.Delete(SocialOutputPath)
 
     Actor npcA = FindNPCByFormID(idA as Int)
     Actor npcB = FindNPCByFormID(idB as Int)
@@ -211,15 +218,15 @@ Function ExecuteConversation(Actor npcA, Actor npcB, String lineA, String lineB)
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(InterNpcInputPath, json, false)
+    Hydra:IO:File.WriteAllText(InterNpcInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 
-    Float pauseA = 2.5 + (StringUtil.GetLength(lineA) as Float) / 13.0
+    Float pauseA = 2.5 + (Hydra:Strings.Size(lineA) as Float) / 13.0
     Debug.Notification(nameA + ": " + lineA)
     Utility.WaitMenuMode(pauseA)
     Debug.Notification(nameB + ": " + lineB)
 
-    Float pauseB = 2.5 + (StringUtil.GetLength(lineB) as Float) / 13.0
+    Float pauseB = 2.5 + (Hydra:Strings.Size(lineB) as Float) / 13.0
     Utility.WaitMenuMode(pauseB)
 
     npcA.SetLookAt(None, true)
@@ -245,7 +252,7 @@ Function ExecuteWarn(Actor npcA, Actor npcB, String line)
     npcA.SetAlert(true)
     npcB.SetAlert(true)
     Debug.Notification(npcA.GetActorBase().GetName() + ": " + line)
-    Float pause = 2.5 + (StringUtil.GetLength(line) as Float) / 13.0
+    Float pause = 2.5 + (Hydra:Strings.Size(line) as Float) / 13.0
     Utility.WaitMenuMode(pause)
     npcA.SetLookAt(None, true)
     npcA.EvaluatePackage()
@@ -261,10 +268,10 @@ Function ExecuteArgue(Actor npcA, Actor npcB, String lineA, String lineB)
     String nameA = npcA.GetActorBase().GetName()
     String nameB = npcB.GetActorBase().GetName()
     Debug.Notification(nameA + ": " + lineA)
-    Float pauseA = 2.5 + (StringUtil.GetLength(lineA) as Float) / 13.0
+    Float pauseA = 2.5 + (Hydra:Strings.Size(lineA) as Float) / 13.0
     Utility.WaitMenuMode(pauseA)
     Debug.Notification(nameB + ": " + lineB)
-    Float pauseB = 2.5 + (StringUtil.GetLength(lineB) as Float) / 13.0
+    Float pauseB = 2.5 + (Hydra:Strings.Size(lineB) as Float) / 13.0
     Utility.WaitMenuMode(pauseB)
 
     npcA.SetLookAt(None, true)
@@ -278,7 +285,7 @@ Function ExecuteThreaten(Actor npcA, Actor npcB, String line)
     npcA.SetAlert(true)
     npcB.SetAlert(true)
     Debug.Notification(npcA.GetActorBase().GetName() + ": " + line)
-    Float pause = 2.5 + (StringUtil.GetLength(line) as Float) / 13.0
+    Float pause = 2.5 + (Hydra:Strings.Size(line) as Float) / 13.0
     Utility.WaitMenuMode(pause)
     Float newRel = GetRelationship(GetPairKey(npcA, npcB))
     if (newRel < -75.0)
@@ -306,7 +313,7 @@ Function ExecuteComfort(Actor npcA, Actor npcB, String line)
     npcA.SetLookAt(npcB, true)
     npcB.SetLookAt(npcA, true)
     Debug.Notification(npcA.GetActorBase().GetName() + ": " + line)
-    Float pause = 2.5 + (StringUtil.GetLength(line) as Float) / 13.0
+    Float pause = 2.5 + (Hydra:Strings.Size(line) as Float) / 13.0
     Utility.WaitMenuMode(pause)
     npcA.SetLookAt(None, true)
     npcB.SetLookAt(None, true)
@@ -317,11 +324,13 @@ EndFunction
 ; ── Relationship System ───────────────────────────────────────────────────────
 
 Float Function GetRelationship(String pairKey)
-    return Hydra:SaveMap.GetValue("F4AI_S", "rel_" + pairKey) as Float
+    Float relDef = 0.0
+    return Hydra:SaveMap.GetValueOrDefault("F4AI_S", "rel_" + pairKey, relDef as Var) as Float
 EndFunction
 
 Function UpdateRelationship(String pairKey, Float delta)
-    Float current  = Hydra:SaveMap.GetValue("F4AI_S", "rel_" + pairKey) as Float
+    Float curDef  = 0.0
+    Float current = Hydra:SaveMap.GetValueOrDefault("F4AI_S", "rel_" + pairKey, curDef as Var) as Float
     Float newScore = current + delta
     if (newScore > 100.0)
         newScore = 100.0
@@ -361,7 +370,7 @@ EndFunction
 
 Actor Function FindNPCByFormID(Int formID)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
     if (refs == None)
         return None

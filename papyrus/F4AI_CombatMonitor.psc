@@ -14,7 +14,7 @@ Scriptname F4AI:F4AI_CombatMonitor extends ReferenceAlias
 String Property CombatInputPath  = "Data/F4AI/combat_event.json"    Auto Const
 String Property CombatOutputPath = "Data/F4AI/combat_directive.json" Auto Const
 Float  Property ScanRadius        = 3000.0 Auto   ; ~55 in-game meters
-Float  Property ScanInterval      = 2.0    Auto   ; seconds between scans
+Float  Property ScanInterval      = 10.0   Auto   ; seconds between scans
 Float  Property FleeHealthDefault = 0.25   Auto   ; flee below 25% HP by default
 Bool   Property EnableCombatAI    = true   Auto
 Int    Property _loopGen          = 0      Auto Hidden  ; incremented each InitMonitor to kill stale loops
@@ -40,21 +40,24 @@ EndFunction
 Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableCombatAI)
-            ScanCombatants()
+            ScanCombatants(myGen)
         endif
         Utility.Wait(ScanInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
 ; ── Combat Scan ───────────────────────────────────────────────────────────────
 
-Function ScanCombatants()
+Function ScanCombatants(Int myGen)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
-    if (kActorTypeNPC == None)
-        return  ; VM not fully thawed yet — Hydra timer will retry next tick
-    endif
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
+    if (myGen != _loopGen)
+        return
+    endif
     if (refs == None)
         return
     endif
@@ -75,7 +78,7 @@ Function ScanCombatants()
         i += 1
     EndWhile
 
-    if (MiscUtil.FileExists(CombatOutputPath))
+    if (Hydra:IO:File.Exists(CombatOutputPath))
         ProcessCombatDirective()
     endif
 EndFunction
@@ -161,7 +164,7 @@ Function SendCombatEvent(Actor npc, String npcID, String npcName, Float hpPct, F
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(CombatInputPath, json, false)
+    Hydra:IO:File.WriteAllText(CombatInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 EndFunction
 
@@ -175,7 +178,7 @@ Function ProcessCombatDirective()
     Bool   learnCover    = Hydra:MemMap.GetValue(CombatOutputPath, "/prefers_cover") as Bool
     String newTargetName = Hydra:MemMap.GetValue(CombatOutputPath, "/new_target") as String
     Hydra:IO:Json.Uncache_TempMap(CombatOutputPath)
-    MiscUtil.DeleteFile(CombatOutputPath)
+    Hydra:IO:File.Delete(CombatOutputPath)
 
     if (learnedFlee > 0.0)
         Hydra:SaveMap.SetValue("F4AI_S", "cmbt_flee_" + npcID, learnedFlee as Var)
@@ -222,10 +225,7 @@ EndFunction
 
 Function ExecuteChangeTarget(Actor npc, String targetName)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
-    if (kActorTypeNPC == None)
-        return
-    endif
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
     if (refs == None)
         return
@@ -251,10 +251,7 @@ EndFunction
 
 Actor Function FindNPCByID(String npcID)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
-    if (kActorTypeNPC == None)
-        return None
-    endif
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
     if (refs == None)
         return None

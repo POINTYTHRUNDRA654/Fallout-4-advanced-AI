@@ -4,9 +4,9 @@
   "minMCMVersion": 11,
   "pluginRequirements": [
     {
-      "name": "AdvancedAI.esp",
-      "file": "AdvancedAI.esp",
-      "label": "Advanced AI System",
+      "name": "Fallout 4 Advanced AI - Mossy Industries.esp",
+      "file": "Fallout 4 Advanced AI - Mossy Industries.esp",
+      "label": "Fallout 4 Advanced AI - Mossy Industries",
       "url": "https://www.nexusmods.com/fallout4"
     }
   ],
@@ -243,6 +243,30 @@
             "storageType": "GlobalVariable",
             "storageID": "AAI_gExternalMemory"
           }
+        },
+        {
+          "type": "section",
+          "text": "Push-to-Talk NPC Dialogue"
+        },
+        {
+          "type": "text",
+          "text": "Default hotkey: Left Alt (keyboard)  |  A button (controller)",
+          "help": "Press near any NPC to trigger AI dialogue. The bridge must be running."
+        },
+        {
+          "type": "text",
+          "text": "If hotkeys stop responding after loading a save, open the console and type:",
+          "help": ""
+        },
+        {
+          "type": "text",
+          "text": "  StopQuest F4AI_MainQuest   then   StartQuest F4AI_MainQuest",
+          "help": "Paste each command into the console tilde (~) menu one at a time."
+        },
+        {
+          "type": "text",
+          "text": "Bridge status: watch for [F4AI] Sent to <NPC>... in the top-left HUD",
+          "help": "This notification appears immediately when Left Alt is pressed. If you don't see it, the bridge_input write failed — check the Papyrus log."
         }
       ]
     }

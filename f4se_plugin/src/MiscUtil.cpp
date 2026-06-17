@@ -1,5 +1,5 @@
 ﻿// F4AI_MiscUtil.dll  — self-contained F4SE plugin (no external "common" library required)
-// Provides MiscUtil Papyrus native functions for Fallout 4 (F4SE 0.06.x)
+// Provides MiscUtil Papyrus native functions for Fallout 4 (F4SE 0.07.x NG)
 // FileExists, ReadFromFile, WriteToFile, DeleteFile
 
 // Preamble: must come before any F4SE header
@@ -481,9 +481,55 @@ bool RegisterFunctions(VirtualMachine* vm)
     return true;
 }
 
+// ── F4SE 0.7.x NG version declaration ─────────────────────────────────────────
+// Required for F4SE 0.7.x (FO4 NG / AE, game ver ≥ 1.10.984) to load this DLL.
+// Without this export, F4SE silently rejects the plugin with "no version data 0".
+// Game version 0x010B0DD0 = GET_EXE_VERSION(1, 11, 221, 0) confirmed from
+// f4se_loader log: dwFileVersionMS=0001000B, dwFileVersionLS=00DD0000.
+//
+// If F4SEPluginVersionData is not in your copy of f4se/PluginAPI.h (old 0.6.x
+// headers), define it here manually — the struct layout is stable across 0.7.x.
+#ifndef F4SEPLUGINVERSIONDATA_DEFINED
+#define F4SEPLUGINVERSIONDATA_DEFINED
+// F4SE 0.7.x NG layout — verified against f4se_1_11_xxx sources.
+// Old 0.6.x headers had a supportEmail[252] field here that shifted
+// compatibleVersions to the wrong offset (+0x30C vs the correct +0x210),
+// causing F4SE to read all-zero and reject the plugin as incompatible.
+struct F4SEPluginVersionData
+{
+    enum { kVersion = 1 };
+    UInt32 dataVersion;            // +0x000  must be kVersion (1)
+    UInt32 pluginVersion;          // +0x004  your plugin version
+    char   name[256];              // +0x008
+    char   author[256];            // +0x108
+    UInt32 addressIndependence;    // +0x208  0 = not address-independent
+    UInt32 structCompatibility;    // +0x20C  0 = not struct-compatible
+    UInt32 compatibleVersions[16]; // +0x210  zero-terminated packed game versions
+    UInt32 seVersionRequired;      // +0x250  minimum F4SE version (0 = any)
+    UInt32 reserved[10];           // +0x254
+};
+#endif
+
 // F4SE plugin entry points
 extern "C"
 {
+    // ── New NG API (F4SE 0.7.x): version struct ──────────────────────────────
+    // F4SE reads this BEFORE calling F4SEPlugin_Load. All working plugins show
+    // "(00000001 PluginName version) loaded correctly" in f4se.log.
+    __declspec(dllexport) F4SEPluginVersionData F4SEPlugin_Version =
+    {
+        F4SEPluginVersionData::kVersion,  // dataVersion = 1
+        1,                                // pluginVersion
+        "F4AI MiscUtil",                  // name
+        "F4AI",                           // author
+        0,                                // addressIndependence
+        0,                                // structCompatibility
+        { 0x010B0DD0, 0 },               // compatibleVersions: FO4 1.11.221.0
+        0,                                // seVersionRequired
+        { 0 }                             // reserved
+    };
+
+    // ── Old API (0.6.x): kept for safety, may not be called by 0.7.x ─────────
     __declspec(dllexport) bool F4SEPlugin_Query(const F4SEInterface* f4se, PluginInfo* info)
     {
         info->infoVersion = PluginInfo::kInfoVersion;
@@ -493,13 +539,15 @@ extern "C"
         return true;
     }
 
+    // ── Load (called by both 0.6.x and 0.7.x after version check passes) ─────
+    // NOTE: Papyrus registration is disabled until F4SE 0.7.8 source headers
+    // are installed at D:\src\f4se. The 0.6.x PapyrusVM.h has the wrong
+    // VirtualMachine vtable layout for FO4 1.11.221.0 and crashes the game
+    // at RegisterPapyrusFunctions_Hook. Download f4se_0_07_08_src.7z from
+    // f4se.silverlock.org, extract to D:\src\f4se, then re-enable this.
     __declspec(dllexport) bool F4SEPlugin_Load(const F4SEInterface* f4se)
     {
         g_pluginHandle = f4se->GetPluginHandle();
-        g_papyrus = static_cast<F4SEPapyrusInterface*>(
-            f4se->QueryInterface(kInterface_Papyrus));
-        if(!g_papyrus) return false;
-        g_papyrus->Register(RegisterFunctions);
         return true;
     }
 }

@@ -37,5 +37,5 @@ Function TriggerVisualScan()
     jsonPayload += "}"
 
     Debug.Notification("Scanning object via AI receptors...")
-    MiscUtil.WriteToFile(VisionTriggerPath, jsonPayload, false)
+    Hydra:IO:File.WriteAllText(VisionTriggerPath, jsonPayload)
 EndFunction

@@ -95,6 +95,9 @@ set SCRIPT_DIR=%~dp0
 set OUTPUT_DIR=%SCRIPT_DIR%compiled_pex
 set STAGING=%SCRIPT_DIR%_compile_staging
 
+REM ── MO2 mod folder — update this if you move your MO2 instance ────────────────
+set MO2_MOD_DIR=E:\Mod.Organizer-2.5.2 Game Mods\Fallout 4 Advanced AI - Mossy Industries
+
 REM Clean and recreate staging — scripts must be in F4AI\ subfolder to match namespace
 if exist "%STAGING%" rmdir /s /q "%STAGING%"
 mkdir "%STAGING%\F4AI"
@@ -200,6 +203,61 @@ if exist "%SCRIPT_DIR%mod\Data\Scripts\Source\*.psc" (
 REM ── Cleanup staging ───────────────────────────────────────────────────────────
 rmdir /s /q "%STAGING%" >nul 2>&1
 
+REM ── Deploy: project mod folder ────────────────────────────────────────────────
+echo. >> "%LOG%"
+echo [F4AI] Deploying to project mod folder... >> "%LOG%"
+echo [F4AI] Deploying to project mod folder...
+robocopy "%OUTPUT_DIR%" "%SCRIPT_DIR%mod\Data\Scripts" *.pex /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+robocopy "%OUTPUT_DIR%\F4AI" "%SCRIPT_DIR%mod\Data\Scripts\F4AI" *.pex /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+echo [F4AI] Project deploy done. >> "%LOG%"
+
+REM ── Deploy to MO2 mod folder ───────────────────────────────────────────────────
+REM MO2 mod root = Data root (flat layout — no Data\ subfolder).
+REM Scripts\F4AI\ at mod root maps to Data\Scripts\F4AI\ in-game.
+echo [F4AI] Deploying to MO2 mod folder... >> "%LOG%"
+echo [F4AI] Deploying to MO2 mod folder...
+if not exist "%MO2_MOD_DIR%" (
+    echo [WARN] MO2_MOD_DIR not found: %MO2_MOD_DIR% >> "%LOG%"
+    echo [WARN] MO2_MOD_DIR not found: %MO2_MOD_DIR%
+    goto :mo2_skip
+)
+
+echo [F4AI]   Scripts: %MO2_MOD_DIR%\Scripts\F4AI >> "%LOG%"
+if not exist "%MO2_MOD_DIR%\Scripts\F4AI" mkdir "%MO2_MOD_DIR%\Scripts\F4AI"
+robocopy "%OUTPUT_DIR%" "%MO2_MOD_DIR%\Scripts" *.pex /IS /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+robocopy "%OUTPUT_DIR%\F4AI" "%MO2_MOD_DIR%\Scripts\F4AI" *.pex /IS /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+
+echo [F4AI] MO2 deploy done. >> "%LOG%"
+echo [F4AI] MO2 deploy done.
+
+REM ── Deploy Hydra static data files (SaveMap namespace registrations, etc.) ──────
+echo [F4AI] Deploying Hydra data files... >> "%LOG%"
+echo [F4AI] Deploying Hydra data files...
+if exist "%SCRIPT_DIR%mod\Data\Hydra" (
+    robocopy "%SCRIPT_DIR%mod\Data\Hydra" "%MO2_MOD_DIR%\Hydra" /E /IS /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+    echo [F4AI] Hydra data deploy done. >> "%LOG%"
+    echo [F4AI] Hydra data deploy done.
+)
+
+:mo2_skip
+
 REM ── Summary ───────────────────────────────────────────────────────────────────
 echo.
-echo ──────────────�
+echo ==============================================================================
+if %ERRORS% EQU 0 (
+    if %MOD_ERRORS% EQU 0 (
+        echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY.
+        echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY. >> "%LOG%"
+    ) else (
+        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED.
+        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED. >> "%LOG%"
+    )
+) else (
+    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED.
+    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED. >> "%LOG%"
+)
+echo See compile_log.txt for full details.
+echo ==============================================================================
+echo.
+endlocal
+pause�

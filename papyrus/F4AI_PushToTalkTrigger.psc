@@ -1,35 +1,43 @@
 Scriptname F4AI:F4AI_PushToTalkTrigger extends ReferenceAlias
 
-String Property InputPath = "Data/F4AI/bridge_input.json" Auto Const
-String Property TextOutPath = "Data/F4AI/text_out.txt" Auto Const
-; Keyboard fallback (Left Alt = 56). Set to -1 to disable keyboard trigger.
-Int Property ActivationKey = 56 Auto Const
-; Controller/game-control trigger — "Activate" = A button on Xbox, E on keyboard.
-; Set UseControllerActivate = true to use the controller A button instead of / in addition to ActivationKey.
-Bool Property UseControllerActivate = true Auto Const
+; Base paths — used to build per-NPC paths at runtime via GetNPCPaths()
+String Property InputBasePath  = "Data/F4AI/bridge_input" Auto Const
+String Property TextOutBasePath = "Data/F4AI/text_out"    Auto Const
+; Legacy single-file fallback (kept for bridge compatibility)
+String Property InputPath   = "Data/F4AI/bridge_input.json" Auto Const
+String Property TextOutPath = "Data/F4AI/text_out.txt"      Auto Const
+; Keyboard fallback. Set to -1 to disable.
+Int Property ActivationKey = -1 Auto Const
+; D-pad Left on Xbox controller (keycode 268). Set to -1 to disable.
+; If D-pad left doesn't fire, try 277 or 265 — the exact code can vary by F4SE version.
+Int Property DPadLeftKey = 268 Auto Const
 ; Assign the F4AI_Voice Sound record in CK — plays the generated WAV on the NPC
 Sound Property F4AI_VoiceSound Auto
 Actor ActiveTarget
 
 Event OnInit()
+    RegisterKeys()
+    Debug.Notification("[F4AI PTT] Push-to-talk ready. Press D-pad Left near an NPC.")
+EndEvent
+
+Event OnPlayerLoadGame()
+    RegisterKeys()
+EndEvent
+
+Function RegisterKeys()
     if (ActivationKey >= 0)
         RegisterForKey(ActivationKey)
     endif
-    if (UseControllerActivate)
-        RegisterForControl("Activate")
+    if (DPadLeftKey >= 0)
+        RegisterForKey(DPadLeftKey)
     endif
-EndEvent
+EndFunction
 
-; ── Controller / remapped-key activation (A button on Xbox) ─────────────────
-Event OnControlDown(String asControlName)
-    if (asControlName == "Activate")
-        TryTriggerAI()
-    endif
-EndEvent
-
-; ── Keyboard fallback (Left Alt) ────────────────────────────────────────────
+; ── D-pad Left / keyboard trigger ───────────────────────────────────────────
+; D-pad Left fires AI directly — no vanilla dialogue conflict.
+; A/E still opens vanilla dialogue as normal.
 Event OnKeyDown(Int aiKeyCode)
-    if (aiKeyCode == ActivationKey)
+    if (aiKeyCode == DPadLeftKey || aiKeyCode == ActivationKey)
         TryTriggerAI()
     endif
 EndEvent
@@ -46,17 +54,33 @@ Function TriggerAIForSpeaker(Actor akSpeaker)
     RestrainMovementOnly(akSpeaker)
 
     String npcName      = akSpeaker.GetActorBase().GetName()
+    if (npcName == "")
+        npcName = "Stranger"
+    endif
     String locName      = Game.GetPlayer().GetCurrentLocation().GetName()
     String raceField    = InjectRaceContext(akSpeaker)
     String weatherField = "\"weather\": \"" + GetCurrentWeatherName() + "\""
-    String swimmingStr  = "false"
-    if (Game.GetPlayer().IsSwimming())
-        swimmingStr = "true"
-    endif
+    ; NOTE: Actor.IsSwimming() is not exposed in FO4 Papyrus — omit swimming field
     String jsonPayload = "{\"npc_name\": \"" + npcName + "\", \"location\": \"" + locName + "\", "
-    jsonPayload += raceField + ", " + weatherField + ", \"is_swimming\": " + swimmingStr + ", \"player_speech\": \"\"}"
-    MiscUtil.WriteToFile(InputPath, jsonPayload, false)
+    jsonPayload += raceField + ", " + weatherField + ", \"player_speech\": \"\"}"
+    String npcInputPath = GetNPCInputPath(akSpeaker)
+    Hydra:IO:File.WriteAllText(npcInputPath, jsonPayload)
+    Debug.Notification("[F4AI] Sent to " + npcName + "...")
     WaitForVoiceReturn(akSpeaker)
+EndFunction
+
+; ── Per-NPC file paths ───────────────────────────────────────────────────────
+; Each NPC gets its own bridge_input_<formID>.json / text_out_<formID>.txt so
+; multiple crowd NPCs can have requests in-flight simultaneously without
+; overwriting each other's files.
+String Function GetNPCInputPath(Actor akNPC)
+    Int formID = akNPC.GetActorBase().GetFormID()
+    return InputBasePath + "_" + formID + ".json"
+EndFunction
+
+String Function GetNPCTextOutPath(Actor akNPC)
+    Int formID = akNPC.GetActorBase().GetFormID()
+    return TextOutBasePath + "_" + formID + ".txt"
 EndFunction
 
 ; ── Shared trigger logic ─────────────────────────────────────────────────────
@@ -87,63 +111,56 @@ Function TryTriggerAI()
 
     ; Build JSON payload with full environment context
     String npcName = lookTarget.GetActorBase().GetName()
+    if (npcName == "")
+        npcName = "Stranger"
+    endif
     String locName = Game.GetPlayer().GetCurrentLocation().GetName()
     String raceField = InjectRaceContext(lookTarget)
     String weatherField = "\"weather\": \"" + GetCurrentWeatherName() + "\""
-    String swimmingStr = "false"
-    if (Game.GetPlayer().IsSwimming())
-        swimmingStr = "true"
-    endif
-    String swimmingField = "\"is_swimming\": " + swimmingStr
     ; player_speech is intentionally empty — bridge will run STT if enable_stt = 1
     String jsonPayload = "{\"npc_name\": \"" + npcName + "\", \"location\": \"" + locName + "\", "
-    jsonPayload += raceField + ", " + weatherField + ", " + swimmingField + ", \"player_speech\": \"\"}"
-    MiscUtil.WriteToFile(InputPath, jsonPayload, false)
+    jsonPayload += raceField + ", " + weatherField + ", \"player_speech\": \"\"}"
+    ; Write to per-NPC file so crowd NPCs don't overwrite each other
+    String npcInputPath = GetNPCInputPath(lookTarget)
+    Hydra:IO:File.WriteAllText(npcInputPath, jsonPayload)
+    Debug.Notification("[F4AI] Sent to " + npcName + "...")
     WaitForVoiceReturn(lookTarget)
 EndFunction
 
 Function WaitForVoiceReturn(Actor targetNPC)
     String npcName = targetNPC.GetActorBase().GetName()
+    ; Per-NPC response file — isolates this NPC from other simultaneous requests
+    String npcTextOutPath = GetNPCTextOutPath(targetNPC)
     Int checksCompleted = 0
-    Bool fileFound = false
-    ; Wait up to 12 seconds (60 × 0.2s) — Mossy cloud AI may take a moment
-    While (!fileFound && checksCompleted < 60)
-        if (MiscUtil.FileExists(TextOutPath))
-            fileFound = true
-        else
+    String responseText = ""
+    ; Poll by reading directly — avoids relying on Exists which can lag behind VFS
+    While (responseText == "" && checksCompleted < 300)
+        responseText = Hydra:IO:File.ReadAllText(npcTextOutPath)
+        if (responseText == "")
             Utility.WaitMenuMode(0.2)
             checksCompleted += 1
         endif
     EndWhile
+    Hydra:IO:File.Delete(npcTextOutPath)
 
-    if (!fileFound)
-        targetNPC.SetRestrained(false)
-        targetNPC.SetLookAt(None, true)
-        Debug.Notification("[F4AI] No response received — is the bridge running?")
-        return
-    endif
-
-    ; Read the response and clean up the file
-    String responseText = MiscUtil.ReadFromFile(TextOutPath)
-    MiscUtil.DeleteFile(TextOutPath)
-
-    ; Show subtitle as an on-screen notification
     if (responseText != "")
-        Debug.Notification(npcName + ": " + responseText)
+        String displayText = Hydra:Strings.Truncate(responseText, 220)
+        Debug.Notification(npcName + ": " + displayText)
 
-        ; Play generated voice WAV through the NPC
         if (F4AI_VoiceSound != None)
             F4AI_VoiceSound.Play(targetNPC)
         endif
 
-        ; Hold dialogue pose for reading time
-        Float displayTime = 2.5 + (StringUtil.GetLength(responseText) as Float) / 13.0
+        Float displayTime = 2.5 + (Hydra:Strings.Size(responseText) as Float) / 13.0
         Utility.WaitMenuMode(displayTime)
+    else
+        Debug.Notification("[F4AI] No response — is the bridge running?")
     endif
 
-    targetNPC.SetRestrained(false)
-    targetNPC.SetLookAt(None, true)
-    ResetFaceAnimations(targetNPC)
+    if (targetNPC != None)
+        targetNPC.SetRestrained(false)
+        ResetFaceAnimations(targetNPC)
+    endif
 EndFunction
 
 Function RestrainMovementOnly(Actor targetNPC)
@@ -207,18 +224,31 @@ String Function InjectRaceContext(Actor targetNPC)
 EndFunction
 
 ; ── Targeting ────────────────────────────────────────────────────────────────
-; Vanilla fallback when F4SE raycast is disabled or unavailable.
-; Finds the closest living, non-player NPC within 1200 game units (~22m).
+; Use FindAllReferencesWithKeyword so we can skip dead actors and pick the
+; closest living NPC — FindClosestActorFromRef returns exactly one actor and
+; that actor may be a nearby dead body from a just-finished fight.
 Actor Function GetNearestNPC()
     Actor player = Game.GetPlayer()
-    Float x = player.GetPositionX()
-    Float y = player.GetPositionY()
-    Float z = player.GetPositionZ()
-    Actor nearest = Game.FindClosestActor(x, y, z, 1200.0)
-    if (nearest == None || nearest == player || nearest.IsDead())
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
+    ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, 2500.0)
+    if (refs == None)
         return None
     endif
-    return nearest
+    Float bestDist = 99999999.0
+    Actor bestActor = None
+    Int i = 0
+    While (i < refs.Length)
+        Actor a = refs[i] as Actor
+        if (a != None && a != player && !a.IsDead())
+            Float d = player.GetDistance(a)
+            if (d < bestDist)
+                bestDist = d
+                bestActor = a
+            endif
+        endif
+        i += 1
+    EndWhile
+    return bestActor
 EndFunction
 
 String Function GetCurrentWeatherName()
@@ -246,11 +276,3 @@ String Function GetCurrentWeatherName()
     return "Overcast"
 EndFunction
 
-Event OnUnload()
-    UnregisterForKey(ActivationKey)
-    if (ActiveTarget != None)
-        ActiveTarget.SetRestrained(false)
-        ActiveTarget.SetLookAt(None, true)
-    endif
-    MiscUtil.DeleteFile("Data/F4AI/bridge_input.json")
-EndEvent

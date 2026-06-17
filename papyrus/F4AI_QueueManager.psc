@@ -66,15 +66,15 @@ Function ExecuteAITranslationThread(Actor targetNPC)
     jsonPayload += "\"player_speech\": \"" + sampleSpeech + "\""
     jsonPayload += "}"
 
-    if (MiscUtil.FileExists(OutputPath))
-        MiscUtil.DeleteFile(OutputPath)
+    if (Hydra:IO:File.Exists(OutputPath))
+        Hydra:IO:File.Delete(OutputPath)
     endif
-    MiscUtil.WriteToFile(InputPath, jsonPayload, false)
+    Hydra:IO:File.WriteAllText(InputPath, jsonPayload)
 
     Int safetyTicks = 0
     Bool payloadReturned = false
     While (!payloadReturned && safetyTicks < 40)
-        if (MiscUtil.FileExists(OutputPath))
+        if (Hydra:IO:File.Exists(OutputPath))
             payloadReturned = true
         else
             Utility.WaitMenuMode(0.2)
@@ -83,41 +83,41 @@ Function ExecuteAITranslationThread(Actor targetNPC)
     EndWhile
 
     if (payloadReturned)
-        String rawJson = MiscUtil.ReadFromFile(OutputPath)
-        MiscUtil.DeleteFile(OutputPath)
+        String rawJson = Hydra:IO:File.ReadAllText(OutputPath)
+        Hydra:IO:File.Delete(OutputPath)
 
-        Int keyPos = StringUtil.Find(rawJson, "\"subtitle_text\": \"")
+        Int keyPos = Hydra:Strings.IndexOf(rawJson, "\"subtitle_text\": \"")
         String cleanSubtitle = ""
         if (keyPos != -1)
             Int subStart = keyPos + 18
-            Int subEnd = StringUtil.Find(rawJson, "\", \"audio_file\"")
+            Int subEnd = Hydra:Strings.IndexOf(rawJson, "\", \"audio_file\"")
             if (subEnd > subStart)
-                cleanSubtitle = StringUtil.Substring(rawJson, subStart, subEnd - subStart)
+                cleanSubtitle = Hydra:Strings.Substring(rawJson, subStart, subEnd - subStart)
             endif
         endif
 
-        Int durStart = StringUtil.Find(rawJson, "\"display_duration\": ") + 20
+        Int durStart = Hydra:Strings.IndexOf(rawJson, "\"display_duration\": ") + 20
         Float displayTime = 2.5
         if (durStart > 19)
-            Int durEnd = StringUtil.Find(rawJson, ",", durStart)
+            Int durEnd = Hydra:Strings.IndexOf(rawJson, ",", durStart)
             if (durEnd == -1)
-                durEnd = StringUtil.Find(rawJson, "}", durStart)
+                durEnd = Hydra:Strings.IndexOf(rawJson, "}", durStart)
             endif
             if (durEnd > durStart)
-                displayTime = StringUtil.Substring(rawJson, durStart, durEnd - durStart) as Float
+                displayTime = Hydra:Strings.Substring(rawJson, durStart, durEnd - durStart) as Float
             endif
         endif
 
         Int emotionID = 0
-        Int emoStart = StringUtil.Find(rawJson, "\"emotion_id\": ")
+        Int emoStart = Hydra:Strings.IndexOf(rawJson, "\"emotion_id\": ")
         if (emoStart != -1)
             emoStart += 14
-            Int emoEnd = StringUtil.Find(rawJson, ",", emoStart)
+            Int emoEnd = Hydra:Strings.IndexOf(rawJson, ",", emoStart)
             if (emoEnd == -1)
-                emoEnd = StringUtil.Find(rawJson, "}", emoStart)
+                emoEnd = Hydra:Strings.IndexOf(rawJson, "}", emoStart)
             endif
             if (emoEnd > emoStart)
-                emotionID = StringUtil.Substring(rawJson, emoStart, emoEnd - emoStart) as Int
+                emotionID = Hydra:Strings.Substring(rawJson, emoStart, emoEnd - emoStart) as Int
             endif
         endif
 

@@ -42,7 +42,7 @@ EndFunction
 Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableCreatureAI)
-            if (MiscUtil.FileExists(DirectivePath))
+            if (Hydra:IO:File.Exists(DirectivePath))
                 ProcessDirectiveFile()
             endif
             ProcessMigrationDirective()
@@ -60,7 +60,7 @@ Function ProcessDirectiveFile()
     String species   = Hydra:MemMap.GetValue(DirectivePath, "/species") as String
     Float  intensity = Hydra:MemMap.GetValue(DirectivePath, "/intensity") as Float
     Hydra:IO:Json.Uncache_TempMap(DirectivePath)
-    MiscUtil.DeleteFile(DirectivePath)
+    Hydra:IO:File.Delete(DirectivePath)
 
     if (intensity == 0.0)
         intensity = 0.5
@@ -298,10 +298,7 @@ EndFunction
 
 Actor[] Function FindCreaturesBySpecies(String species)
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
-    if (kActorTypeNPC == None)
-        return None
-    endif
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
     if (refs == None)
         return None
@@ -337,10 +334,7 @@ EndFunction
 
 Actor[] Function FindNearbyPrey()
     Actor player = Game.GetPlayer()
-    Keyword kActorTypeNPC = Game.GetForm(0x00013294) as Keyword
-    if (kActorTypeNPC == None)
-        return None
-    endif
+    Keyword kActorTypeNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = player.FindAllReferencesWithKeyword(kActorTypeNPC, ScanRadius)
     if (refs == None)
         return None

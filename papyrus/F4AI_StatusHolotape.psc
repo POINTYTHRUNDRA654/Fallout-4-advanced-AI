@@ -19,8 +19,8 @@ String Property StatusFilePath = "Data/F4AI/bridge_status.json" Auto Const
 Function ShowBridgeStatus()
     String statusJson = ""
 
-    if (MiscUtil.FileExists(StatusFilePath))
-        statusJson = MiscUtil.ReadFromFile(StatusFilePath)
+    if (Hydra:IO:File.Exists(StatusFilePath))
+        statusJson = Hydra:IO:File.ReadAllText(StatusFilePath)
     endif
 
     if (statusJson == "")
@@ -44,8 +44,8 @@ Function ShowBridgeStatus()
 
     ; Truncate response if very long so the box stays readable
     Int maxLen = 80
-    if (StringUtil.GetLength(response) > maxLen)
-        response = StringUtil.Substring(response, 0, maxLen) + "..."
+    if (Hydra:Strings.Size(response) > maxLen)
+        response = Hydra:Strings.Substring(response, 0, maxLen) + "..."
     endif
 
     String sourceLine = ""
@@ -90,7 +90,7 @@ Function ShowMemoryStatus()
     Int i = 0
     While (i < 8)
         String memPath = memBase + "NPC_Memories/" + knownNPCs[i] + ".json"
-        if (MiscUtil.FileExists(memPath))
+        if (Hydra:IO:File.Exists(memPath))
             memCount += 1
             foundList += "  " + knownNPCs[i] + "\n"
         endif
@@ -115,14 +115,14 @@ EndFunction
 
 String Function _ExtractField(String jsonText, String fieldKey)
     String searchKey = "\"" + fieldKey + "\": \""
-    Int keyPos = StringUtil.Find(jsonText, searchKey)
+    Int keyPos = Hydra:Strings.IndexOf(jsonText, searchKey)
     if (keyPos == -1)
         return ""
     endif
-    Int valueStart = keyPos + StringUtil.GetLength(searchKey)
-    Int valueEnd = StringUtil.Find(jsonText, "\"", valueStart)
+    Int valueStart = keyPos + Hydra:Strings.Size(searchKey)
+    Int valueEnd = Hydra:Strings.IndexOf(jsonText, "\"", valueStart)
     if (valueEnd <= valueStart)
         return ""
     endif
-    return StringUtil.Substring(jsonText, valueStart, valueEnd - valueStart)
+    return Hydra:Strings.Substring(jsonText, valueStart, valueEnd - valueStart)
 EndFunction

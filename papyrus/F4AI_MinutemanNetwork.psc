@@ -55,11 +55,14 @@ Function MonitorLoop(Int myGen)
         if (EnableNetwork)
             CheckForAttackAlerts()
             CheckForAidRequests()
-            if (MiscUtil.FileExists(NetworkOutputPath))
+            if (Hydra:IO:File.Exists(NetworkOutputPath))
                 ProcessNetworkDirective()
             endif
         endif
         Utility.Wait(NetworkScanInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
@@ -113,7 +116,7 @@ Function AddNetworkLink(Int fromID, Int toID)
     String linkKey  = "net_links_" + fromID
     String existing = Hydra:SaveMap.GetValue("F4AI_S", linkKey) as String
     String toIDStr  = toID as String
-    if (StringUtil.Find(existing, toIDStr) == -1)
+    if (Hydra:Strings.IndexOf(existing, toIDStr) == -1)
         if (existing == "")
             Hydra:SaveMap.SetValue("F4AI_S", linkKey, toIDStr as Var)
         else
@@ -126,6 +129,9 @@ EndFunction
 ; ── Attack Response ───────────────────────────────────────────────────────────
 
 Function CheckForAttackAlerts()
+    if (!Hydra:TempMap.ContainsKey("F4AI_T", "mmnet_attacked_id"))
+        return
+    endif
     Int attackedID = Hydra:TempMap.GetValue("F4AI_T", "mmnet_attacked_id") as Int
     if (attackedID == 0)
         return
@@ -193,14 +199,14 @@ Function MobilizeConnectedSettlements(Int attackedID, String attackedName, Strin
     Bool done = false
 
     While (!done)
-        Int commaPos = StringUtil.Find(links, ",", searchStart)
+        Int commaPos = Hydra:Strings.IndexOf(links, ",", searchStart)
         String token = ""
 
         if (commaPos == -1)
-            token = StringUtil.Substring(links, searchStart, -1)
+            token = Hydra:Strings.Substring(links, searchStart)
             done = true
         else
-            token = StringUtil.Substring(links, searchStart, commaPos - searchStart)
+            token = Hydra:Strings.Substring(links, searchStart, commaPos - searchStart)
             searchStart = commaPos + 1
         endif
 
@@ -256,7 +262,7 @@ Function CheckForAidRequests()
     if (aidRequest == "")
         return
     endif
-    Int targetID = Hydra:TempMap.GetValue("F4AI_T", "mmnet_aid_target_id") as Int
+    Int targetID = Hydra:TempMap.GetValueOrDefault("F4AI_T", "mmnet_aid_target_id", (0 as Int) as Var) as Int
 
     Hydra:TempMap.SetValue("F4AI_T", "mmnet_aid_request", "" as Var)
     Hydra:TempMap.SetValue("F4AI_T", "mmnet_aid_target_id", (0) as Var)
@@ -289,7 +295,7 @@ Function SendNetworkAttackEvent(Int attackedID, String attackedName, String link
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(NetworkInputPath, json, false)
+    Hydra:IO:File.WriteAllText(NetworkInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 EndFunction
 
@@ -301,7 +307,7 @@ Function ProcessNetworkDirective()
     String fromIDStr    = Hydra:MemMap.GetValue(NetworkOutputPath, "/from_id") as String
     String toIDStr      = Hydra:MemMap.GetValue(NetworkOutputPath, "/to_id") as String
     Hydra:IO:Json.Uncache_TempMap(NetworkOutputPath)
-    MiscUtil.DeleteFile(NetworkOutputPath)
+    Hydra:IO:File.Delete(NetworkOutputPath)
 
     if (advisoryMsg != "")
         Debug.Notification("[Minuteman Intel] " + advisoryMsg)
@@ -330,13 +336,13 @@ Function LogMutualAid(Int fromID, Int toID, String fromName, String toName)
     entry += "\"to\": \"" + toName + "\","
     entry += "\"timestamp\": " + Utility.GetCurrentGameTime()
     entry += "}\n"
-    MiscUtil.WriteToFile("Data/F4AI/mutual_aid_log.json", entry, true)
+    Hydra:IO:File.AppendAllText("Data/F4AI/mutual_aid_log.json", entry)
 EndFunction
 
 Function PersistNetworkState(WorkshopScript[] workshops, Int ownedCount)
-    Int sanctDefense = Hydra:SaveMap.GetValue("F4AI_S", "settle_defense_" + SanctuaryID) as Int
-    Int rrDefense    = Hydra:SaveMap.GetValue("F4AI_S", "settle_defense_" + RedRocketID) as Int
-    Int abDefense    = Hydra:SaveMap.GetValue("F4AI_S", "settle_defense_" + AbernathyID) as Int
+    Int sanctDefense = Hydra:SaveMap.GetValueOrDefault("F4AI_S", "settle_defense_" + SanctuaryID, (0 as Int) as Var) as Int
+    Int rrDefense    = Hydra:SaveMap.GetValueOrDefault("F4AI_S", "settle_defense_" + RedRocketID, (0 as Int) as Var) as Int
+    Int abDefense    = Hydra:SaveMap.GetValueOrDefault("F4AI_S", "settle_defense_" + AbernathyID, (0 as Int) as Var) as Int
 
     String json = "{"
     json += "\"total_settlements\": " + ownedCount + ","
@@ -347,7 +353,7 @@ Function PersistNetworkState(WorkshopScript[] workshops, Int ownedCount)
     json += "},"
     json += "\"last_mapped\": " + Utility.GetCurrentGameTime()
     json += "}"
-    MiscUtil.WriteToFile(MemoryPath, json, false)
+    Hydra:IO:File.WriteAllText(MemoryPath, json)
 EndFunction
 
 ; ── Helpers ───────────────────────────────────────────────────────────────────
@@ -386,7 +392,7 @@ EndFunction
 ; ── Helpers ───────────────────────────────────────────────────────────────────
 
 Actor[] Function GetSettlers(WorkshopScript ws)
-    Keyword kWsNPC = Game.GetForm(0x000AEBA5) as Keyword
+    Keyword kWsNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = (ws as ObjectReference).FindAllReferencesWithKeyword(kWsNPC, 3000.0)
     if (refs == None)
         return None

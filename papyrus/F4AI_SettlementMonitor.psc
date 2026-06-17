@@ -49,6 +49,9 @@ Function InitMonitor()
     endif
     WorkshopParent = Game.GetForm(0x0002058E) as Quest
     Utility.WaitMenuMode(5.0)
+    if (myGen != _loopGen)
+        return
+    endif
     MonitorLoop(myGen)
 EndFunction
 
@@ -56,11 +59,14 @@ Function MonitorLoop(Int myGen)
     While (myGen == _loopGen)
         if (EnableSettlementAI)
             ScanAllSettlements()
-            if (MiscUtil.FileExists(SettlementOutputPath))
+            if (Hydra:IO:File.Exists(SettlementOutputPath))
                 ProcessSettlementDirective()
             endif
         endif
         Utility.Wait(ScanInterval)
+        if (myGen != _loopGen)
+            return
+        endif
     EndWhile
 EndFunction
 
@@ -109,14 +115,43 @@ Function ProcessWorkshop(WorkshopScript ws, WorkshopParentScript wsParent)
         wsName = "Settlement_" + wsID
     endif
 
-    ; Read workshop resource values via vanilla ActorValues (verify FormIDs in FO4Edit if wrong at runtime)
+    ; Read workshop resource values via WorkshopParentScript's runtime ActorValue array.
+    ; Indices: Food=0, Happiness=1, Safety/Defense=3, Water=4, Power=5, Beds=6
+    ; (mirrors WorkshopRatingFood/Water/etc. constants in vanilla WorkshopParentScript)
     Int population  = GetSettlers(ws).Length
-    Int food        = ws.GetValue(Game.GetForm(0x000004D7) as ActorValue) as Int
-    Int water       = ws.GetValue(Game.GetForm(0x000004D8) as ActorValue) as Int
-    Int power       = ws.GetValue(Game.GetForm(0x000004D9) as ActorValue) as Int
-    Int defense     = ws.GetValue(Game.GetForm(0x000004DA) as ActorValue) as Int
-    Int beds        = ws.GetValue(Game.GetForm(0x000004DB) as ActorValue) as Int
-    Int happiness   = ws.GetValue(Game.GetForm(0x000002E3) as ActorValue) as Int
+    ActorValue[] ratings = wsParent.WorkshopRatingValues
+    Int food      = 0
+    Int happiness = 0
+    Int defense   = 0
+    Int water     = 0
+    Int power     = 0
+    Int beds      = 0
+    if (ratings != None && ratings.Length >= 7)
+        ActorValue avFood    = ratings[0]
+        ActorValue avHappy   = ratings[1]
+        ActorValue avDefense = ratings[3]
+        ActorValue avWater   = ratings[4]
+        ActorValue avPower   = ratings[5]
+        ActorValue avBeds    = ratings[6]
+        if (avFood    != None)
+            food      = ws.GetValue(avFood)    as Int
+        endif
+        if (avHappy   != None)
+            happiness = ws.GetValue(avHappy)   as Int
+        endif
+        if (avDefense != None)
+            defense   = ws.GetValue(avDefense) as Int
+        endif
+        if (avWater   != None)
+            water     = ws.GetValue(avWater)   as Int
+        endif
+        if (avPower   != None)
+            power     = ws.GetValue(avPower)   as Int
+        endif
+        if (avBeds    != None)
+            beds      = ws.GetValue(avBeds)    as Int
+        endif
+    endif
     Bool underAttack = false ; bUnderAttack not externally accessible; attack detection via Hydra events
 
     Int estimatedPlots = EstimatePlotCount(ws)
@@ -181,7 +216,7 @@ Function OnSettlementAttacked(WorkshopScript ws, Int wsID, String wsName, Int po
     json += "}"
 
     Hydra:Mutex.LockGlobal("F4AI", "Bridge")
-    MiscUtil.WriteToFile(SettlementInputPath, json, false)
+    Hydra:IO:File.WriteAllText(SettlementInputPath, json)
     Hydra:Mutex.UnlockGlobal("F4AI", "Bridge")
 
     Debug.Notification(wsName + " is under attack!")
@@ -199,7 +234,7 @@ Function OnAttackResolved(WorkshopScript ws, Int wsID, String wsName)
     outcomeJson += "}"
 
     String historyPath = MemoryBasePath + wsName + "_history.json"
-    MiscUtil.WriteToFile(historyPath, outcomeJson + "\n", true)
+    Hydra:IO:File.AppendAllText(historyPath, outcomeJson + "\n")
 
     Bool bFalse = false
     Hydra:TempMap.SetValue("F4AI_T", "mmnet_attack_" + wsID, bFalse as Var)
@@ -215,7 +250,7 @@ Function ProcessSettlementDirective()
     Int    wsID         = Hydra:MemMap.GetValue(SettlementOutputPath, "/settlement_id") as Int
     String fromSettlement = Hydra:MemMap.GetValue(SettlementOutputPath, "/aid_from") as String
     Hydra:IO:Json.Uncache_TempMap(SettlementOutputPath)
-    MiscUtil.DeleteFile(SettlementOutputPath)
+    Hydra:IO:File.Delete(SettlementOutputPath)
 
     WorkshopScript ws = GetWorkshopByID(wsID)
     if (ws == None)
@@ -332,21 +367,8 @@ Function PersistSettlementState(Int wsID, String wsName, Int pop, Int defense, I
     json += "\"last_updated\": " + Utility.GetCurrentGameTime()
     json += "}"
 
-    ; Replace spaces in settlement name for safe file path
-    ; (pure StringUtil loop — Hydra:Regex does not exist)
-    String safeName = ""
-    Int charIdx = 0
-    Int nameLen = StringUtil.GetLength(wsName)
-    While charIdx < nameLen
-        String ch = StringUtil.GetChar(wsName, charIdx)
-        If ch == " "
-            safeName += "_"
-        Else
-            safeName += ch
-        EndIf
-        charIdx += 1
-    EndWhile
-    MiscUtil.WriteToFile(MemoryBasePath + safeName + "_state.json", json, false)
+    String safeName = Hydra:Strings.Replace(wsName, " ", "_")
+    Hydra:IO:File.WriteAllText(MemoryBasePath + safeName + "_state.json", json)
 EndFunction
 
 ; ── Triangle of Death ─────────────────────────────────────────────────────────
@@ -404,7 +426,7 @@ String Function BoolToStr(Bool b)
 EndFunction
 
 Actor[] Function GetSettlers(WorkshopScript ws)
-    Keyword kWsNPC = Game.GetForm(0x000AEBA5) as Keyword
+    Keyword kWsNPC = Game.GetCommonProperties().ActorTypeNPC
     ObjectReference[] refs = (ws as ObjectReference).FindAllReferencesWithKeyword(kWsNPC, 3000.0)
     if (refs == None)
         return None

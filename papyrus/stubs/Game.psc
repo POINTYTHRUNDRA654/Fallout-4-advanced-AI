@@ -7,6 +7,7 @@ Actor  Function FindClosestActorFromRef(ObjectReference arCenter, Float afRadius
 Actor  Function FindRandomActorFromRef(ObjectReference arCenter, Float afRadius) Global Native
 Form   Function GetFormFromFile(Int aiFormID, String asFilename) Global Native
 Form   Function GetForm(Int aiFormID) Global Native
+CommonPropertiesScript Function GetCommonProperties() Global Native
 Float  Function GetCurrentGameTime() Global Native
 Int    Function GetDifficulty() Global Native
 Bool   Function IsInMainMenu() Global Native
