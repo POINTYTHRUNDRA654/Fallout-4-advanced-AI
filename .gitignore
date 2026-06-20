@@ -1,22 +1,42 @@
-# Python bytecode
+# Python build artifacts
 __pycache__/
 *.py[cod]
-*.pyo
+*$py.class
+build/
+build_output/
+build_temp/
+dist/
+*.spec
+*.egg-info/
 
 # Pytest cache
 .pytest_cache/
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
 
 # Virtual environments
 .venv/
 venv/
 env/
 
+# Fallout 4 engine artifacts and logs
+*.pex
+*.esp
+*.tmp
+*.jpg
+*.wav
+f4ai_crash_log.txt
+f4ai_patcher.bat
+
+# Local release staging artifacts (keep guide only)
+release_staging/*
+!release_staging/README.md
+
 # Editor directories
 .idea/
 .vscode/
 *.swp
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.sln.docstates
