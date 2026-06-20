@@ -390,3 +390,76 @@ Final checks:
 - Build executable with required runtime dependencies.
 - Ship default `config.json` and baseline voice pair in core package.
 - Ensure testers run local free Kobold backend before game launch.
+
+---
+
+## Advanced AI Subsystems (Radiant AI Engine Extensions)
+
+This section documents the three core Radiant AI subsystems implemented as both a Python reference library (`src/ai/`) and Papyrus mod scripts (`Scripts/Source/`).
+
+### 1. Daily Life Routines (`src/ai/daily_routines.py` / `AdvancedAI_DailyRoutines.psc`)
+
+Priority-ordered AI Package stack evaluated each game-hour tick. Midnight-crossing windows supported (e.g. 22:00–06:00 sleep). Falls back to `SandboxBehaviour` (random ambient object interaction) when no package matches.
+
+```python
+from src.ai.daily_routines import AIPackageScheduler
+
+scheduler = AIPackageScheduler()
+settler   = AIPackageScheduler.build_settler_schedule("Marcy Long")
+pkg = scheduler.tick(settler, current_hour=9)   # → PackageType.WORK
+pkg = scheduler.tick(settler, current_hour=23)  # → PackageType.SLEEP
+```
+
+**Pre-built schedules:**
+- `build_settler_schedule(name)` – wake, farm, relax, sleep
+- `build_guard_schedule(name)` – patrol by day, sleep at night
+
+### 2. Combat Logic (`src/ai/combat_ai.py` / `AdvancedAI_CombatLogic.psc`)
+
+- **NavMesh** – grid of `NavNode` cells with cover classification (`OPEN / LOW_COVER / HIGH_COVER / HIGH_GROUND`)
+- **Cover-seeking** – nearest reachable node, `HIGH_COVER` preferred over `LOW_COVER`
+- **Flanking** – moves attacker to a covered position off-axis from target
+- **Detection** – `HIDDEN → CAUTION → DANGER` driven by `visibility × light_level + noise × 0.5`
+- **Morale/flee** – triggers when faction average health < 25 % or named leader dies; all survivors flagged `is_fleeing`
+
+```python
+from src.ai.combat_ai import CombatAI, NavMesh, NavNode, CoverType, CombatantNPC
+
+mesh = NavMesh()
+mesh.add_node(NavNode(x=0, y=0, cover=CoverType.OPEN))
+mesh.add_node(NavNode(x=1, y=0, cover=CoverType.HIGH_COVER))
+
+npc    = CombatantNPC("Raider", x=0, y=0, health=80, max_health=100)
+target = CombatantNPC("Player", x=3, y=3, health=100, max_health=100)
+ai     = CombatAI(mesh)
+
+best_cover = ai.seek_cover(npc, target)
+```
+
+### 3. Radiant Quest Generation (`src/ai/radiant_quests.py` / `AdvancedAI_RadiantQuests.psc`)
+
+Director fills three template slots dynamically from live game state:
+
+| Slot | Logic |
+|---|---|
+| Target location | Uncleared dungeon within player's level range |
+| Hostile faction | Weighted random (Raiders / Super Mutants / Ghouls / Gunners / Institute) |
+| Kidnapped settler | Random available settler; falls back to *Clear Location* if none |
+
+```python
+from src.ai.radiant_quests import RadiantQuestDirector
+
+director = RadiantQuestDirector.default_commonwealth(player_level=15)
+quest    = director.generate_quest()
+print(quest.description)
+# "Raiders have kidnapped Jun Long and are holding them at Corvega Assembly Plant. Rescue them!"
+```
+
+### Running the reference tests
+
+```bash
+python -m pip install pytest
+pytest tests/
+```
+
+All 63 unit tests cover the three subsystems above.

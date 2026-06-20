@@ -7,6 +7,15 @@ build_output/
 build_temp/
 dist/
 *.spec
+*.egg-info/
+
+# Pytest cache
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Fallout 4 engine artifacts and logs
 *.pex
@@ -20,6 +29,11 @@ f4ai_patcher.bat
 # Local release staging artifacts (keep guide only)
 release_staging/*
 !release_staging/README.md
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
 
 # Visual Studio
 .vs/
