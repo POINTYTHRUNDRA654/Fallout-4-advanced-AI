@@ -524,7 +524,7 @@ extern "C"
         "F4AI",                           // author
         0,                                // addressIndependence
         0,                                // structCompatibility
-        { 0x010B0DD0, 0 },               // compatibleVersions: FO4 1.11.221.0
+        { 0x010B0BF0, 0x010B0DD0, 0 },   // compatibleVersions: FO4 1.11.191.0 and 1.11.221.0
         0,                                // seVersionRequired
         { 0 }                             // reserved
     };
@@ -540,14 +540,13 @@ extern "C"
     }
 
     // ── Load (called by both 0.6.x and 0.7.x after version check passes) ─────
-    // NOTE: Papyrus registration is disabled until F4SE 0.7.8 source headers
-    // are installed at D:\src\f4se. The 0.6.x PapyrusVM.h has the wrong
-    // VirtualMachine vtable layout for FO4 1.11.221.0 and crashes the game
-    // at RegisterPapyrusFunctions_Hook. Download f4se_0_07_08_src.7z from
-    // f4se.silverlock.org, extract to D:\src\f4se, then re-enable this.
     __declspec(dllexport) bool F4SEPlugin_Load(const F4SEInterface* f4se)
     {
         g_pluginHandle = f4se->GetPluginHandle();
+        g_papyrus = (F4SEPapyrusInterface*)f4se->QueryInterface(kInterface_Papyrus);
+        if (g_papyrus) {
+            g_papyrus->Register(RegisterFunctions);
+        }
         return true;
     }
 }

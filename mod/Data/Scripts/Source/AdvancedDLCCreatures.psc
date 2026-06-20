@@ -63,12 +63,12 @@ Spell   Property spRobobrainPsychic    Auto; Prediction field (enemy misses more
 Explosion Property expNukalurk         Auto; Nuka-Cola explosion on death; Nuka-Cola explosion on death; Nuka-Cola explosion on death; Nuka-Cola explosion on death
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-Actor _actor            = None
-bool   _shellPhase      = True; Hermit Crab starts shelled; Hermit Crab starts shelled; Hermit Crab starts shelled; Hermit Crab starts shelled
-bool   _lureActive      = False; Angler lure stateVal; Angler lure stateVal; Angler lure stateVal; Angler lure stateVal
-bool   _isSwallowing    = False
-float  _lastAbilityTime = 0.0
-float  _initMaxHP       = 0.0
+Actor _actor
+bool   _shellPhase; Hermit Crab starts shelled
+bool   _lureActive; Angler lure state
+bool   _isSwallowing
+float  _lastAbilityTime
+float  _initMaxHP
 
 ; ═══════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
@@ -76,6 +76,9 @@ Event OnAliasInit()
     If _actor == None
         Return
     EndIf
+
+    _shellPhase    = True
+    _f4aiTickHours = 1.0
 
     ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
     If avHP != None
@@ -374,7 +377,7 @@ EndFunction
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
+Float _f4aiTickHours
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

@@ -190,7 +190,7 @@ EndFunction
 ; OXYGEN / DROWNING
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdateOxygenTimer()
-    _playerOxygenTimer += (UpdateInterval * 24.0 * 3600.0); Convert game hours to real seconds approx; Convert game hours to real seconds approx; Convert game hours to real seconds approx; Convert game hours to real seconds approx
+    _playerOxygenTimer += (UpdateInterval * 180.0); Game hours to real seconds at 20x timescale
 
     If _playerOxygenTimer > OxygenDuration
         ; Start drowning damage
@@ -294,9 +294,8 @@ Function HandleRobotInWater(Actor robot)
         ActorValue avSpeed = Game.GetFormFromFile(0x00000036, "Fallout4.esm") as ActorValue
         If avSpeed != None
             robot.SetValue(avSpeed, 0.0)
-    EndIf
-
-    HazardLog(robotType + " taking water damage: " + damageRate + " HP/tick")
+        EndIf
+        HazardLog(robotType + " taking water damage: " + damageRate + " HP/tick")
     EndIf
 EndFunction
 
@@ -458,9 +457,7 @@ Event OnTimerGameTime(Int aiTimerID)
         Bool swNow = Game.GetPlayer().IsSwimming()
         If swNow != _f4aiWasSwimming
             _f4aiWasSwimming = swNow
-            If !swNow
-                PlayerSwimStateChanged(False)
-            EndIf
+            PlayerSwimStateChanged(swNow)
             PlayerUnderwaterChanged(swNow)
         EndIf
         DoGameTimeTick()

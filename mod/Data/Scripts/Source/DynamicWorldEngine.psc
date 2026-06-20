@@ -195,7 +195,7 @@ Function UpdateSeason()
         _currentSeason = newSeason
         If gWorldSeason != None
             gWorldSeason.SetValue(_currentSeason as Float)
-    EndIf
+        EndIf
     EndIf
 EndFunction
 
@@ -270,7 +270,7 @@ Function RegisterThreat(String threatName, String locationArg, Float initialLeve
     ; Find an empty slot
     Int i = 0
     While i < 8
-        If _activeThreatNames[i] == "" || _activeThreatNames[i] == ""
+        If _activeThreatNames[i] == ""
             _activeThreatNames[i]     = threatName
             _activeThreatLocations[i] = locationArg
             _activeThreatLevels[i]    = initialLevel
@@ -287,8 +287,9 @@ Function ResolveThreat(String threatName)
     Int i = 0
     While i < 8
         If _activeThreatNames[i] == threatName
-            Float finalLevel = _activeThreatLevels[i]
-            Float daysExisted = _activeThreatDays[i]
+            Float finalLevel    = _activeThreatLevels[i]
+            Float daysExisted   = _activeThreatDays[i]
+            String threatLocation = _activeThreatLocations[i]
             WorldLog("Threat resolved: " + threatName + " (existed " + daysExisted + " days)")
             Debug.Trace("[AAI] THREAT_RESOLVED|name=" + threatName + "|days_existed=" + daysExisted + "|final_level=" + finalLevel)
 
@@ -308,7 +309,7 @@ Function ResolveThreat(String threatName)
             _activeThreatLocations[i] = ""
 
             ; Add world event for rumor engine
-            RegisterWorldRumor("Wanderer defeated " + threatName + " at " + _activeThreatLocations[i], _activeThreatLocations[i])
+            RegisterWorldRumor("Wanderer defeated " + threatName + " at " + threatLocation, threatLocation)
             Return
         EndIf
         i += 1
@@ -318,7 +319,7 @@ EndFunction
 Function UpdateThreatGrowth(Float gameTime)
     Int i = 0
     While i < 8
-        If _activeThreatNames[i] != "" && _activeThreatNames[i] != ""
+        If _activeThreatNames[i] != ""
             _activeThreatDays[i] += 1.0
 
             ; Threats grow over time if not addressed

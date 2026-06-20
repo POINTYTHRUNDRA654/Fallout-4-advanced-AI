@@ -66,9 +66,9 @@ int Property MEM_SURVIVED_FIGHT = 9  Auto Const
 int Property MEM_PLAYER_LEVEL_UP = 10 Auto Const
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-Actor _actor         = None
-float _curAffinity  = 0.0
-int   _emotionState = 0; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry; 0=neutral 1=happy 2=concerned 3=angry
+Actor _actor
+float _curAffinity
+int   _emotionState; 0=neutral 1=happy 2=concerned 3=angry
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
@@ -89,6 +89,8 @@ Event OnAliasInit()
     RegisterForPlayerTeleport()
     RegisterForRemoteEvent(Game.GetPlayer(), "OnLocationChange")
     ; player level-ups detected by polling in OnTimerGameTime (FO4 has no OnLevelUp event)
+
+    _f4aiTickHours = 1.0
 
     ; Apply AI enhancements
     ApplyPersonalityAV()
@@ -334,8 +336,8 @@ EndFunction
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
-Int _f4aiLastPlayerLevel = 0
+Float _f4aiTickHours
+Int _f4aiLastPlayerLevel
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

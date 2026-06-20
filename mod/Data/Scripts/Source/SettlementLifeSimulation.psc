@@ -86,19 +86,23 @@ bool  Property ExpansionEnabled     = True  Auto
 float Property UpdateInterval       = 0.2   Auto; Every ~5 hrs game time; Every ~5 hrs game time; Every ~5 hrs game time; Every ~5 hrs game time
 
 ; ── Internal State ─────────────────────────────────────────────────────────────
-float _currentHour      = 12.0
-bool  _isScarcity       = False
-bool  _isCelebrating    = False
-bool  _inTownMeeting    = False
-int   _daysSinceFuneral = 999
-int   _settlementMorale = 100; 0-100; 0-100; 0-100; 0-100
-int   _lastGuardShift   = 0; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night
-float _lastEventTime    = 0.0
-int   _settlersPresent  = 0
-float _lastScarcityCheck = 0.0
+float _currentHour
+bool  _isScarcity
+bool  _isCelebrating
+bool  _inTownMeeting
+int   _daysSinceFuneral
+int   _settlementMorale; 0-100; 0-100; 0-100; 0-100
+int   _lastGuardShift; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night; 0=morning 1=afternoon 2=night
+float _lastEventTime
+int   _settlersPresent
+float _lastScarcityCheck
 
 ; ═══════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
+    _currentHour      = 12.0
+    _daysSinceFuneral = 999
+    _settlementMorale = 100
+    _f4aiTickHours    = 1.0
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     ScheduleTick(UpdateInterval)
     _lastEventTime = Utility.GetCurrentGameTime()
@@ -242,14 +246,16 @@ Function CheckEconomy(Float gameTime)
 
     ; Continuously update morale based on resources
     Int targetMorale = 100
-    If foodRatio  < 0.3
+    If foodRatio < 0.3
         targetMorale -= 30
-    ElseIf foodRatio  < 0.6
+    ElseIf foodRatio < 0.6
         targetMorale -= 15
+    EndIf
     If waterRatio < 0.3
         targetMorale -= 25
     ElseIf waterRatio < 0.6
         targetMorale -= 10
+    EndIf
 
     ; Smooth morale change
     If _settlementMorale > targetMorale
@@ -259,8 +265,6 @@ Function CheckEconomy(Float gameTime)
     EndIf
 
     Debug.Trace("[AAI] SETTLEMENT_ECON|settlement=" + SettlementName + "|food=" + foodRatio + "|water=" + waterRatio + "|morale=" + _settlementMorale + "|scarcity=" + _isScarcity)
-    EndIf
-    EndIf
 EndFunction
 
 Function OnScarcityBegins(Float foodRatio, Float waterRatio)
@@ -324,7 +328,7 @@ Function CheckCommunityEvents(Float gameTime)
         Return
     EndIf
 
-    Float daysSinceLastEvent = (gameTime - _lastEventTime) * 24.0 / 24.0
+    Float daysSinceLastEvent = (gameTime - _lastEventTime)
 
     ; Weekly market day (every 7 game days — random day-of-week)
     If daysSinceLastEvent >= 7.0
@@ -360,8 +364,7 @@ Function TriggerTownMeeting(Float gameTime)
 
     Debug.Trace("[AAI] COMMUNITY_EVENT|settlement=" + SettlementName + "|event=town_meeting|morale=" + _settlementMorale + "|game_time=" + gameTime)
 
-    Utility.Wait(30.0); Meeting lasts 30 real seconds; Meeting lasts 30 real seconds; Meeting lasts 30 real seconds; Meeting lasts 30 real seconds
-    _inTownMeeting = False
+    StartTimer(30.0, 51)
 EndFunction
 
 ; Called by DynamicWorldEngine when player clears a nearby threat
@@ -377,9 +380,16 @@ Function TriggerCelebration(String reason)
 
     ApplyMoraleToAllSettlers(1.2); Brief morale boost; Brief morale boost; Brief morale boost; Brief morale boost
 
-    Utility.Wait(120.0); Celebration lasts 2 real minutes; Celebration lasts 2 real minutes; Celebration lasts 2 real minutes; Celebration lasts 2 real minutes
-    _isCelebrating = False
+    StartTimer(120.0, 52)
 EndFunction
+
+Event OnTimer(Int aiTimerID)
+    If aiTimerID == 51
+        _inTownMeeting = False
+    ElseIf aiTimerID == 52
+        _isCelebrating = False
+    EndIf
+EndEvent
 
 ; Called when a settler dies
 Function TriggerFuneral(Actor deceased)
@@ -440,7 +450,7 @@ EndFunction
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
+Float _f4aiTickHours
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

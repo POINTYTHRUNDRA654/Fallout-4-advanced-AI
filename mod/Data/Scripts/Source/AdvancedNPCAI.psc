@@ -28,10 +28,10 @@ MiscObject Property itemMedX       Auto
 MiscObject Property itemJet        Auto
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-bool  _moraleBroken   = False
-bool  _tacticsApplied = False
-Actor _actor           = None
-float _lastMedicCheck = 0.0
+bool  _moraleBroken
+bool  _tacticsApplied
+Actor _actor
+float _lastMedicCheck
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
@@ -163,7 +163,7 @@ Function HealNearbyAllies()
     Int i = 0
     While i < nearby.Length
         Actor ally = nearby[i]
-        If ally != None && ally != _actor && !ally.IsDead() && ally.IsPlayerTeammate()
+        If ally != None && ally != _actor && !ally.IsDead()
             ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
             If avHP != None
                 Float maxHP = ally.GetBaseValue(avHP)

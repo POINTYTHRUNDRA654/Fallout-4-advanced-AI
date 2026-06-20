@@ -122,9 +122,9 @@ ImageSpaceModifier Property imodFloodVision  Auto; Murky flood water; Murky floo
 ImageSpaceModifier Property imodIceGlare     Auto; Ice/snow glare; Ice/snow glare; Ice/snow glare; Ice/snow glare
 
 ; ── Static / Activator for debris ────────────────────────────────────────────
-Static Property debrisPlank    Auto; Floating debris objects; Floating debris objects; Floating debris objects; Floating debris objects
-Static Property debrisBarrel   Auto
-Static Property debrisCrate    Auto
+Form Property debrisPlank    Auto; Floating debris objects; Floating debris objects; Floating debris objects; Floating debris objects
+Form Property debrisBarrel   Auto
+Form Property debrisCrate    Auto
 
 ; ── Configuration ──────────────────────────────────────────────────────────────
 bool  Property WaterEnabled          = True  Auto
@@ -324,12 +324,12 @@ Function ActivateAquaticCreatures(Bool storm)
                     EndIf
                     If avSpeed != None
                         npc.SetValue(avSpeed, npc.GetBaseValue(avSpeed))
+                    EndIf
                 EndIf
                 npc.EvaluatePackage()
             EndIf
         EndIf
         i += 1
-        EndIf
     EndWhile
 EndFunction
 

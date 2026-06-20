@@ -402,9 +402,9 @@ Function ApplyEnvironmentToActors()
             ApplyTimeOfDayToActor(npc)
             If TerrainOn
                 ApplyTerrainToActor(npc, player)
+            EndIf
         EndIf
         i += 1
-        EndIf
     EndWhile
 EndFunction
 
@@ -464,7 +464,7 @@ Function ApplyTerrainToActor(Actor npc, Actor player)
     If heightDiff > 200.0
         ; NPC on high ground — enhanced detection
         Float curPerc = npc.GetValue(avPerc)
-        npc.SetValue(avPerc, Math.Min(curPerc * 1.3, 10.0))
+        npc.SetValue(avPerc, Math.Min(curPerc * 1.3, 100.0))
     ElseIf heightDiff < -200.0
         ; NPC in low ground — reduced detection
         Float curPerc = npc.GetValue(avPerc)

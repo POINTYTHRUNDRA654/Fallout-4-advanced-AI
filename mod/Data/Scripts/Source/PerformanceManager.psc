@@ -124,7 +124,7 @@ Event OnQuestInit()
         Return
     EndIf
 
-    _lastScanResult = new Actor[MaxActorsPerTick]
+    _lastScanResult = new Actor[20]
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     RegisterForRemoteEvent(Game.GetPlayer(), "OnCombatStateChanged")
     ScheduleTick(NormalInterval)

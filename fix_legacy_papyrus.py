@@ -248,6 +248,20 @@ def fix_null_conditional(lines):
 # ── Pass 7: rename 'state' identifier -> 'stateVal' ───────────────────────────
 
 def fix_state_identifier(lines):
+    _state_re = re.compile(r'(?<![.\w])state(?![.\w(])', re.IGNORECASE)
+
+    def _replace_outside_strings(line):
+        # Split on double-quoted string literals, apply regex only to non-string segments
+        result = []
+        # Alternate: even indices = code, odd indices = string contents (with quotes)
+        parts = re.split(r'("(?:[^"\\]|\\.)*")', line)
+        for idx, part in enumerate(parts):
+            if idx % 2 == 1:  # inside a quoted string — preserve verbatim
+                result.append(part)
+            else:
+                result.append(_state_re.sub('stateVal', part))
+        return ''.join(result)
+
     out = []
     for line in lines:
         stripped = line.strip()
@@ -255,8 +269,7 @@ def fix_state_identifier(lines):
         # Skip state machine block openers: ^State "Name"
         if re.match(r'^State\s+', stripped, re.IGNORECASE) and 'Property' not in stripped:
             out.append(line); continue
-        # Replace 'state' not preceded/followed by word chars, '.', or '('
-        out.append(re.sub(r'(?<![.\w])state(?![.\w(])', 'stateVal', line, flags=re.IGNORECASE))
+        out.append(_replace_outside_strings(line))
     return out
 
 # ── Pass 8: capitalize lowercase type names in function/event param lists ───────

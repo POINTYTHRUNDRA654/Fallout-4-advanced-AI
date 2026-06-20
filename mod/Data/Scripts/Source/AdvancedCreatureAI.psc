@@ -22,9 +22,9 @@ bool  Property EnrageBelowHP     = True   Auto; Rage stateVal at low HP; Rage st
 float Property EnrageThreshold   = 0.25   Auto; HP fraction for enrage; HP fraction for enrage; HP fraction for enrage; HP fraction for enrage
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-bool _isEnraged   = False
-bool _ambushArmed = False
-Actor _actor       = None
+bool _isEnraged
+bool _ambushArmed
+Actor _actor
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; INIT
@@ -39,6 +39,8 @@ Event OnAliasInit()
     If kwdAmbushReady != None && _actor.HasKeyword(kwdAmbushReady)
         ArmAmbush()
     EndIf
+
+    _f4aiTickHours = 1.0
 
     RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
     RegisterForHitEvent(_actor)
@@ -186,7 +188,7 @@ EndEvent
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
+Float _f4aiTickHours
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

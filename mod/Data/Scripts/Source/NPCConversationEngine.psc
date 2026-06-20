@@ -115,7 +115,7 @@ Function DoGameTimeTick()
     ; JsonUtil reads the JSON file written by the bridge
     If JsonUtil.JsonExists(ConversationFilePath)
         Int convCount = JsonUtil.GetIntField(ConversationFilePath, "ready")
-        If convCount
+        If convCount > 0
             StartConversations()
         EndIf
     EndIf
@@ -138,7 +138,7 @@ Function RequestConversations(String locationName, String locType)
         Actor npc = nearby[i]
         If npc != None && npc != player && !npc.IsDead() && !npc.IsInCombat() && npc.IsPlayerTeammate() == False
             ; Format: npc_id|npc_name|faction
-            String npcEntry = npc.GetActorBase().GetFormID() as String + "|" + npc.GetDisplayName() + "|" + GetActorFaction(npc)
+            String npcEntry = ("" + npc.GetActorBase().GetFormID()) + "|" + npc.GetDisplayName() + "|" + GetActorFaction(npc)
             If npcList == ""
                 npcList = npcEntry
             Else
@@ -184,7 +184,7 @@ Function StartConversations()
         String convId    = JsonUtil.GetStringField(ConversationFilePath, "conversations[" + i + "].conversation_id")
         String npcAName  = JsonUtil.GetStringField(ConversationFilePath, "conversations[" + i + "].npc_a_name")
         String npcBName  = JsonUtil.GetStringField(ConversationFilePath, "conversations[" + i + "].npc_b_name")
-        Bool delivered   = JsonUtil.GetIntField(ConversationFilePath, "conversations[" + i + "].delivered") as Bool
+        Bool delivered   = JsonUtil.GetIntField(ConversationFilePath, "conversations[" + i + "].delivered") > 0
 
         If !delivered && npcAName != "" && npcBName != ""
             ; Find the actual Actor refs by display name

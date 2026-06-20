@@ -246,15 +246,20 @@ echo.
 echo ==============================================================================
 if %ERRORS% EQU 0 (
     if %MOD_ERRORS% EQU 0 (
-        echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY.
-        echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY. >> "%LOG%"
+        if %STUB_ERRORS% EQU 0 (
+            echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY.
+            echo [F4AI] ALL SCRIPTS COMPILED AND DEPLOYED SUCCESSFULLY. >> "%LOG%"
+        ) else (
+            echo [F4AI] Core scripts OK. %STUB_ERRORS% runtime stub(s) FAILED ^(F4SE pex installed?^).
+            echo [F4AI] Core scripts OK. %STUB_ERRORS% runtime stub(s) FAILED. >> "%LOG%"
+        )
     ) else (
-        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED.
-        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED. >> "%LOG%"
+        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED. %STUB_ERRORS% stub(s) FAILED.
+        echo [F4AI] F4AI scripts OK. %MOD_ERRORS% mod script(s) FAILED. %STUB_ERRORS% stub(s) FAILED. >> "%LOG%"
     )
 ) else (
-    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED.
-    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED. >> "%LOG%"
+    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED. %STUB_ERRORS% stub(s) FAILED.
+    echo [F4AI] %ERRORS% F4AI script(s) FAILED. %MOD_ERRORS% mod script(s) FAILED. %STUB_ERRORS% stub(s) FAILED. >> "%LOG%"
 )
 echo See compile_log.txt for full details.
 echo ==============================================================================

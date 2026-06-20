@@ -395,7 +395,8 @@ EndFunction
 
 Function TransferGlowToPlayer(Actor player)
     If _playerIsGlowing
-        Return; Already glowing — refresh timer; Already glowing — refresh timer; Already glowing — refresh timer; Already glowing — refresh timer
+        _playerGlowStart = Utility.GetCurrentRealTime()
+        Return
     EndIf
 
     _playerIsGlowing = True

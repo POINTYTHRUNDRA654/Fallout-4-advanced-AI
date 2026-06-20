@@ -10,8 +10,7 @@ Output:
 """
 
 import argparse
-import json
-import os
+import re
 import shutil
 import sys
 import zipfile
@@ -25,6 +24,13 @@ BRIDGE_DIR  = ROOT / "bridge"
 SRC_DIR     = ROOT / "src"
 PACKAGING   = ROOT / "packaging" / "nexus" / "core-template"
 DIST_DIR    = ROOT / "dist" / "nexus"
+
+
+def read_version() -> str:
+    version_file = ROOT / "VERSION"
+    if version_file.exists():
+        return version_file.read_text(encoding="utf-8").strip()
+    return "0.0.0"
 
 # Files that must exist in staging before we can build
 REQUIRED_STAGING = [
@@ -84,29 +90,37 @@ def build_zip(channel: str) -> Path:
     date_str  = datetime.now().strftime("%Y%m%d")
     zip_name  = f"Fallout4_AdvancedAI_{channel}_{date_str}.zip"
     zip_path  = DIST_DIR / zip_name
+    version   = read_version()
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
 
-        # ── fomod/ metadata ──────────────────────────────────────────────────
+        # ── fomod/ metadata — inject current version into info.xml ───────────
         for f in (MOD_DIR / "fomod").iterdir():
-            if f.is_file():
+            if not f.is_file():
+                continue
+            if f.name == "info.xml":
+                content = f.read_text(encoding="utf-8")
+                # Replace whatever <Version>…</Version> is there with current VERSION
+                content = re.sub(r"<Version>[^<]*</Version>", f"<Version>{version}</Version>", content)
+                zf.writestr(f"fomod/{f.name}", content.encode("utf-8"))
+            else:
                 zf.write(f, f"fomod/{f.name}")
-                print(f"  [fomod] {f.name}")
+            print(f"  [fomod] {f.name}")
 
-        # ── Core: staging files (scripts, config, bats, exe if present) ─────
+        # ── Core: staging files (config, bats, exe if present) ───────────────
         for f in STAGING.rglob("*"):
             if f.is_file():
                 rel = f.relative_to(STAGING)
                 zf.write(f, f"Core/{rel}")
                 print(f"  [Core] {rel}")
 
-        # ── Core: Papyrus scripts from mod/ ──────────────────────────────────
-        scripts_src = MOD_DIR / "Data" / "Scripts" / "Source"
-        if scripts_src.exists():
-            for f in scripts_src.rglob("*.psc"):
+        # ── Core: compiled Papyrus scripts (.pex) from mod/Data/Scripts/ ─────
+        scripts_pex = MOD_DIR / "Data" / "Scripts"
+        if scripts_pex.exists():
+            for f in scripts_pex.rglob("*.pex"):
                 rel = f.relative_to(MOD_DIR)
                 zf.write(f, f"Core/{rel}")
-                print(f"  [Core/scripts] {f.name}")
+                print(f"  [Core/pex] {f.name}")
 
         # ── MCM_Helper: MCM config ───────────────────────────────────────────
         mcm_src = MOD_DIR / "Data" / "MCM"

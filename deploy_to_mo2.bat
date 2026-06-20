@@ -11,7 +11,7 @@ set FO4_DATA=E:\Steam\steamapps\common\Fallout 4\Data
 
 set SCRIPT_DIR=%~dp0
 set SOURCE_PEX=%SCRIPT_DIR%compiled_pex
-set DEST_SCRIPTS=%MO2_MOD_DIR%\Data\Scripts
+set DEST_SCRIPTS=%MO2_MOD_DIR%\Scripts
 set DEST_GAME_SCRIPTS=%FO4_DATA%\Scripts
 
 echo [F4AI] Deploying compiled scripts...

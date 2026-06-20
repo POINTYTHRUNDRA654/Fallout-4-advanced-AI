@@ -109,22 +109,18 @@ Function UpdatePredatorPreyChains(Actor[] creatures)
     Int i = 0
     While i < creatures.Length
         Actor predator = creatures[i]
-        If predator == None || predator.IsDead() || predator.IsInCombat()
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
-        EndIf
-
-        ; Find prey for this predator
-        Actor prey = FindPreyFor(predator, creatures)
-        If prey != None && !prey.IsDead() && !prey.IsInCombat()
-            Float dist = predator.GetDistance(prey)
-            If dist <= 2000.0
-                ; Predator initiates hunt
-                predator.StartCombat(prey)
-                EcoLog(predator.GetDisplayName() + " hunts " + prey.GetDisplayName() + " [" + dist + " units]")
+        If predator != None && !predator.IsDead() && !predator.IsInCombat()
+            ; Find prey for this predator
+            Actor prey = FindPreyFor(predator, creatures)
+            If prey != None && !prey.IsDead() && !prey.IsInCombat()
+                Float dist = predator.GetDistance(prey)
+                If dist <= 2000.0
+                    ; Predator initiates hunt
+                    predator.StartCombat(prey)
+                    EcoLog(predator.GetDisplayName() + " hunts " + prey.GetDisplayName() + " [" + dist + " units]")
+                EndIf
             EndIf
         EndIf
-
         i += 1
     EndWhile
 EndFunction
@@ -137,42 +133,38 @@ Actor Function FindPreyFor(Actor predator, Actor[] candidates)
     Int i = 0
     While i < candidates.Length
         Actor candidate = candidates[i]
-        If candidate == None || candidate == predator || candidate.IsDead()
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
-        EndIf
+        If candidate != None && candidate != predator && !candidate.IsDead()
+            Bool isPrey = False
 
-        Bool isPrey = False
+            ; Deathclaw — apex predator: hunts everything that isn't another Deathclaw
+            If kwdDeathclaw != None && predator.HasKeyword(kwdDeathclaw)
+                isPrey = !candidate.HasKeyword(kwdDeathclaw) && IsAnimal(candidate)
 
-        ; Deathclaw — apex predator: hunts everything that isn't another Deathclaw
-        If kwdDeathclaw != None && predator.HasKeyword(kwdDeathclaw)
-            isPrey = !candidate.HasKeyword(kwdDeathclaw) && IsAnimal(candidate)
+            ; Yao Guai — hunts Molerat, Radroach, Bloatfly; rivals Deathclaw
+            ElseIf kwdYaoGuai != None && predator.HasKeyword(kwdYaoGuai)
+                isPrey = (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadroach != None && candidate.HasKeyword(kwdRadroach)) || (kwdBrahmin  != None && candidate.HasKeyword(kwdBrahmin))
 
-        ; Yao Guai — hunts Molerat, Radroach, Bloatfly; rivals Deathclaw
-        ElseIf kwdYaoGuai != None && predator.HasKeyword(kwdYaoGuai)
-            isPrey = (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadroach != None && candidate.HasKeyword(kwdRadroach)) || (kwdBrahmin  != None && candidate.HasKeyword(kwdBrahmin))
+            ; Radscorpion — hunts Brahmin, Molerat
+            ElseIf kwdRadscorpion != None && predator.HasKeyword(kwdRadscorpion)
+                isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
 
-        ; Radscorpion — hunts Brahmin, Molerat
-        ElseIf kwdRadscorpion != None && predator.HasKeyword(kwdRadscorpion)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdMolerat != None && candidate.HasKeyword(kwdMolerat)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            ; Bloodbug — hunts Brahmin, Radstag
+            ElseIf kwdBloodbug != None && predator.HasKeyword(kwdBloodbug)
+                isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
 
-        ; Bloodbug — hunts Brahmin, Radstag
-        ElseIf kwdBloodbug != None && predator.HasKeyword(kwdBloodbug)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            ; Mirelurk — hunts anything near water; rivals Radscorpion
+            ElseIf kwdMirelurk != None && predator.HasKeyword(kwdMirelurk)
+                isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
+            EndIf
 
-        ; Mirelurk — hunts anything near water; rivals Radscorpion
-        ElseIf kwdMirelurk != None && predator.HasKeyword(kwdMirelurk)
-            isPrey = (kwdBrahmin != None && candidate.HasKeyword(kwdBrahmin)) || (kwdRadstag != None && candidate.HasKeyword(kwdRadstag))
-        EndIf
-
-        If isPrey
-            Float dist = predator.GetDistance(candidate)
-            If dist < bestDist
-                bestDist = dist
-                bestPrey = candidate
+            If isPrey
+                Float dist = predator.GetDistance(candidate)
+                If dist < bestDist
+                    bestDist = dist
+                    bestPrey = candidate
+                EndIf
             EndIf
         EndIf
-
         i += 1
     EndWhile
 
@@ -195,31 +187,24 @@ Function UpdateTerritoryDisputes(Actor[] creatures)
     Int i = 0
     While i < creatures.Length
         Actor creatureA = creatures[i]
-        If creatureA == None || creatureA.IsDead() || creatureA.IsInCombat()
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
-        EndIf
-
-        Int j = i + 1
-        While j < creatures.Length
-            Actor creatureB = creatures[j]
-            If creatureB == None || creatureB.IsDead() || creatureB.IsInCombat()
-                j += 1
-                ; TODO: 'Continue' removed — refactor loop to skip remaining body
-            EndIf
-
-            If AreRivals(creatureA, creatureB)
-                Float dist = creatureA.GetDistance(creatureB)
-                If dist <= 1000.0
-                    ; Territorial dispute — fight
-                    creatureA.StartCombat(creatureB)
-                    creatureB.StartCombat(creatureA)
-                    EcoLog("Territory dispute: " + creatureA.GetDisplayName() + " vs " + creatureB.GetDisplayName())
+        If creatureA != None && !creatureA.IsDead() && !creatureA.IsInCombat()
+            Int j = i + 1
+            While j < creatures.Length
+                Actor creatureB = creatures[j]
+                If creatureB != None && !creatureB.IsDead() && !creatureB.IsInCombat()
+                    If AreRivals(creatureA, creatureB)
+                        Float dist = creatureA.GetDistance(creatureB)
+                        If dist <= 1000.0
+                            ; Territorial dispute — fight
+                            creatureA.StartCombat(creatureB)
+                            creatureB.StartCombat(creatureA)
+                            EcoLog("Territory dispute: " + creatureA.GetDisplayName() + " vs " + creatureB.GetDisplayName())
+                        EndIf
+                    EndIf
                 EndIf
-            EndIf
-
-            j += 1
-        EndWhile
+                j += 1
+            EndWhile
+        EndIf
         i += 1
     EndWhile
 EndFunction
@@ -256,45 +241,29 @@ EndFunction
 ; PREY FLEE RESPONSE — Brahmin, Radstag sense predators and run
 ; ═══════════════════════════════════════════════════════════════════════════
 Function UpdatePreyFleeResponse(Actor[] creatures, Actor player)
-    Actor[] predators = new Actor[0]
-    Actor[] prey      = new Actor[0]
-
-    ; Sort into predators and prey
+    ; Nested loop — avoids dynamic array growth (arrays are fixed-size in Papyrus)
     Int i = 0
     While i < creatures.Length
-        Actor c = creatures[i]
-        If c == None || c.IsDead()
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
-        EndIf
-        If IsPredatorSpecies(c)
-            predators[predators.Length] = c
-        ElseIf IsPreySpecies(c)
-            prey[prey.Length] = c
+        Actor preyActor = creatures[i]
+        If preyActor != None && !preyActor.IsDead() && IsPreySpecies(preyActor) && !preyActor.IsInCombat()
+            Int j = 0
+            While j < creatures.Length
+                Actor predActor = creatures[j]
+                If predActor != None && !predActor.IsDead() && IsPredatorSpecies(predActor)
+                    Float dist = preyActor.GetDistance(predActor)
+                    If dist <= 800.0
+                        ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
+                        If avConf != None
+                            preyActor.SetValue(avConf, 0.0)
+                        EndIf
+                        preyActor.EvaluatePackage()
+                        EcoLog(preyActor.GetDisplayName() + " flees from " + predActor.GetDisplayName())
+                    EndIf
+                EndIf
+                j += 1
+            EndWhile
         EndIf
         i += 1
-    EndWhile
-
-    ; Make prey flee nearby predators
-    Int p = 0
-    While p < prey.Length
-        Actor preyActor = prey[p]
-        Int q = 0
-        While q < predators.Length
-            Actor predActor = predators[q]
-            Float dist = preyActor.GetDistance(predActor)
-            If dist <= 800.0 && !preyActor.IsInCombat()
-                ; Prey detects predator — flee
-                ActorValue avConf = Game.GetFormFromFile(0x000002E8, "Fallout4.esm") as ActorValue
-                If avConf != None
-                    preyActor.SetValue(avConf, 0.0); Coward — will flee; Coward — will flee; Coward — will flee; Coward — will flee
-                EndIf
-                preyActor.EvaluatePackage()
-                EcoLog(preyActor.GetDisplayName() + " flees from " + predActor.GetDisplayName())
-            EndIf
-            q += 1
-        EndWhile
-        p += 1
     EndWhile
 EndFunction
 

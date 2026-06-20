@@ -485,43 +485,39 @@ Function ApplyPressureWave(ObjectReference explRef, Float yield)
     Int i = 0
     While i < allAffected.Length
         Actor npc = allAffected[i]
-        If npc == None || npc.IsDead()
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
-        EndIf
+        If npc != None && !npc.IsDead()
+            Float dist = explRef.GetDistance(npc)
 
-        Float dist = explRef.GetDistance(npc)
+            If dist <= nearR
+                ; KNOCKDOWN — thrown off feet
+                If spStaggerNear != None
+                    spStaggerNear.Cast(explRef, npc)
+                EndIf
+                ; Concussion — temporary detection/hearing penalty
+                If spConcussion != None
+                    spConcussion.Cast(npc, npc)
+                EndIf
+                FireLog("Knockdown: " + npc.GetDisplayName() + " (" + dist + " units)")
 
-        If dist <= nearR
-            ; KNOCKDOWN — thrown off feet
-            If spStaggerNear != None
-                spStaggerNear.Cast(explRef, npc)
-            EndIf
-            ; Concussion — temporary detection/hearing penalty
-            If spConcussion != None
-                spConcussion.Cast(npc, npc)
-            EndIf
-            FireLog("Knockdown: " + npc.GetDisplayName() + " (" + dist + " units)")
+            ElseIf dist <= midR
+                ; STAGGER
+                If spStaggerMid != None
+                    spStaggerMid.Cast(explRef, npc)
+                EndIf
+                If spConcussion != None
+                    spConcussion.Cast(npc, npc)
+                EndIf
 
-        ElseIf dist <= midR
-            ; STAGGER
-            If spStaggerMid != None
-                spStaggerMid.Cast(explRef, npc)
-            EndIf
-            If spConcussion != None
-                spConcussion.Cast(npc, npc)
-            EndIf
-
-        ElseIf dist <= farR
-            ; FLINCH — barely affected, but hears it and may investigate
-            If spStaggerFar != None
-                spStaggerFar.Cast(explRef, npc)
-            EndIf
-            If !npc.IsInCombat()
-                npc.EvaluatePackage(); Investigate the explosion; Investigate the explosion; Investigate the explosion; Investigate the explosion
+            ElseIf dist <= farR
+                ; FLINCH — barely affected, but hears it and may investigate
+                If spStaggerFar != None
+                    spStaggerFar.Cast(explRef, npc)
+                EndIf
+                If !npc.IsInCombat()
+                    npc.EvaluatePackage()
+                EndIf
             EndIf
         EndIf
-
         i += 1
     EndWhile
 
@@ -537,34 +533,30 @@ Function CheckChainReactions(ObjectReference explRef, Float yield)
     Int i = 0
     While i < nearby.Length
         ObjectReference obj = nearby[i]
-        If obj == None || obj == explRef
-            i += 1
-            ; TODO: 'Continue' removed — refactor loop to skip remaining body
+        If obj != None && obj != explRef
+            String name = obj.GetDisplayName()
+
+            ; Vehicles — delayed massive explosion
+            If StringUtil.Find(name, "Car") >= 0 || StringUtil.Find(name, "Truck") >= 0 || StringUtil.Find(name, "Bus") >= 0 || StringUtil.Find(name, "Vehicle") >= 0
+                TriggerDelayedVehicleExplosion(obj)
+
+            ; Fuel / propane
+            ElseIf StringUtil.Find(name, "Fuel") >= 0 || StringUtil.Find(name, "Propane") >= 0 || StringUtil.Find(name, "Gas") >= 0
+                TriggerFuelExplosion(obj)
+
+            ; Ammo boxes — cook-off
+            ElseIf StringUtil.Find(name, "Ammo") >= 0 || StringUtil.Find(name, "Ammunition") >= 0
+                TriggerAmmoCookoff(obj)
+
+            ; Nuka-Cola machines
+            ElseIf StringUtil.Find(name, "Nuka") >= 0 && StringUtil.Find(name, "Machine") >= 0
+                TriggerNukaCoolaExplosion(obj)
+
+            ; Electrical panels — EMP
+            ElseIf StringUtil.Find(name, "Panel") >= 0 || StringUtil.Find(name, "Generator") >= 0 || StringUtil.Find(name, "Electrical") >= 0
+                ApplyEMPBurst(obj, 0.6)
+            EndIf
         EndIf
-
-        String name = obj.GetDisplayName()
-
-        ; Vehicles — delayed massive explosion
-        If StringUtil.Find(name, "Car") >= 0 || StringUtil.Find(name, "Truck") >= 0 || StringUtil.Find(name, "Bus") >= 0 || StringUtil.Find(name, "Vehicle") >= 0
-            TriggerDelayedVehicleExplosion(obj)
-
-        ; Fuel / propane
-        ElseIf StringUtil.Find(name, "Fuel") >= 0 || StringUtil.Find(name, "Propane") >= 0 || StringUtil.Find(name, "Gas") >= 0
-            TriggerFuelExplosion(obj)
-
-        ; Ammo boxes — cook-off
-        ElseIf StringUtil.Find(name, "Ammo") >= 0 || StringUtil.Find(name, "Ammunition") >= 0
-            TriggerAmmoCookoff(obj)
-
-        ; Nuka-Cola machines
-        ElseIf StringUtil.Find(name, "Nuka") >= 0 && StringUtil.Find(name, "Machine") >= 0
-            TriggerNukaCoolaExplosion(obj)
-
-        ; Electrical panels — EMP
-        ElseIf StringUtil.Find(name, "Panel") >= 0 || StringUtil.Find(name, "Generator") >= 0 || StringUtil.Find(name, "Electrical") >= 0
-            ApplyEMPBurst(obj, 0.6)
-        EndIf
-
         i += 1
     EndWhile
 EndFunction
@@ -602,7 +594,7 @@ Function TriggerNukaCoolaExplosion(ObjectReference nukaRef)
         nukaRef.PlaceAtMe(expNukaExplosion)
     EndIf
     If spRadiationBurst != None
-        spRadiationBurst.Cast(Game.GetPlayer(), nukaRef as Actor)
+        spRadiationBurst.Cast(Game.GetPlayer(), nukaRef)
     EndIf
 EndFunction
 
@@ -637,7 +629,7 @@ EndFunction
 Function ApplyNuclearBurst(ObjectReference explRef, Float yield)
     ; Nuclear explosion: massive pressure wave + persistent radiation zone
     If spRadiationBurst != None
-        spRadiationBurst.Cast(explRef, explRef as Actor)
+        spRadiationBurst.Cast(explRef, explRef)
     EndIf
     ; Log for bridge — creates persistent radiation zone for 3 game days
     Debug.Trace("[AAI] NUCLEAR_EXPLOSION|location=" + explRef.GetDisplayName() + "|yield=" + yield + "|rad_zone_days=3" + "|game_time=" + Utility.GetCurrentGameTime())

@@ -36,10 +36,10 @@ bool  Property PrioritizeArmor    = False Auto; Aim for armor pieces; Aim for ar
 bool  Property PrioritizeStealth  = False Auto; Hunt stealthed targets; Hunt stealthed targets; Hunt stealthed targets; Hunt stealthed targets
 
 ; ── State ─────────────────────────────────────────────────────────────────
-bool  _repairOnCooldown = False
-bool  _laserCharging    = False
-float _lastRepairTime   = 0.0
-Actor _actor             = None
+bool  _repairOnCooldown
+bool  _laserCharging
+float _lastRepairTime
+Actor _actor
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnAliasInit()
@@ -60,6 +60,8 @@ Event OnAliasInit()
     ElseIf csRobotPrecision != None
         _actor.SetCombatStyle(csRobotPrecision)
     EndIf
+
+    _f4aiTickHours = 1.0
 
     RegisterForRemoteEvent(_actor, "OnCombatStateChanged")
     RegisterForHitEvent(_actor)
@@ -150,11 +152,10 @@ Function CheckSelfRepair()
         Return
     EndIf
 
-    If (curHP / maxHP) <= SelfRepairThreshold
+    If (curHP / maxHP) <= SelfRepairThreshold && !_repairOnCooldown
         _actor.RestoreValue(avHP, SelfRepairAmount)
         _repairOnCooldown = True
-        Utility.Wait(SelfRepairCooldown)
-        _repairOnCooldown = False
+        StartTimer(SelfRepairCooldown, 99)
         Debug.Trace("[AAI-Robot] Self-repaired: " + _actor.GetDisplayName() + " +" + SelfRepairAmount + "HP")
     EndIf
 EndFunction
@@ -192,20 +193,22 @@ Event Actor.OnDeath(Actor akSender, Actor akKiller)
         Debug.Notification("SENTRY BOT SELF-DESTRUCT!")
     EndIf
 
-    ; Assaultron: head laser deactivates
-    If kwdAssaultron != None && _actor.HasKeyword(kwdAssaultron) && expSelfDestruct != None
-        _actor.PlaceAtMe(expSelfDestruct)
-    EndIf
 EndEvent
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
+Float _f4aiTickHours
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours
     StartTimerGameTime(afHours, 900)
 EndFunction
+
+Event OnTimer(Int aiTimerID)
+    If aiTimerID == 99
+        _repairOnCooldown = False
+    EndIf
+EndEvent
 
 Event OnTimerGameTime(Int aiTimerID)
     If aiTimerID == 900

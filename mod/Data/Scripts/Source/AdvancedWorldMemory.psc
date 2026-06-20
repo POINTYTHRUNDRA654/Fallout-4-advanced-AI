@@ -32,17 +32,17 @@ bool Property _debugMode                = False Auto
 GlobalVariable Property gPlaythroughID Auto
 
 ; ── State ─────────────────────────────────────────────────────────────────────
-String _playthroughID   = ""
-int    _combatCount     = 0
-int    _killCount       = 0
-int    _locationCount   = 0
-float  _lastCombatTime  = 0.0
+String _playthroughID
+int    _combatCount
+int    _killCount
+int    _locationCount
+float  _lastCombatTime
 
 ; Combat tracking (reset each fight)
-bool   _usedStealth     = False
-bool   _usedVATS        = False
-bool   _usedCover       = False
-String _weaponCategory  = "rifle"
+bool   _usedStealth
+bool   _usedVATS
+bool   _usedCover
+String _weaponCategory
 
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
@@ -55,6 +55,9 @@ Event OnQuestInit()
             gPlaythroughID.SetValue(Utility.GetCurrentGameTime())
         EndIf
     EndIf
+
+    _weaponCategory = "rifle"
+    _f4aiTickHours  = 1.0
 
     Actor player = Game.GetPlayer()
     RegisterForRemoteEvent(player, "OnPlayerLoadGame")
@@ -127,7 +130,12 @@ Function PlayerLeveledUp(Int aiNewLevel)
     ; Reputation boost with nearby friendly faction on level-up
     ; (Shows the player is growing in capability — factions notice)
     If TrackReputation
-        LogReputationEvent("Minutemen", 10.0, "PlayerLevelUp", Game.GetPlayer().GetCurrentLocation().GetName())
+        Location lvlLoc = Game.GetPlayer().GetCurrentLocation()
+        String lvlLocName = ""
+        If lvlLoc != None
+            lvlLocName = lvlLoc.GetName()
+        EndIf
+        LogReputationEvent("Minutemen", 10.0, "PlayerLevelUp", lvlLocName)
     EndIf
 EndFunction
 
@@ -178,11 +186,21 @@ EndFunction
 
 ; Call these from other scripts when the player does faction-affecting things
 Function PlayerHelpedFaction(String factionName, Float amount, String reason)
-    LogReputationEvent(factionName, amount, reason, Game.GetPlayer().GetCurrentLocation().GetName())
+    Location fhLoc = Game.GetPlayer().GetCurrentLocation()
+    String fhLocName = ""
+    If fhLoc != None
+        fhLocName = fhLoc.GetName()
+    EndIf
+    LogReputationEvent(factionName, amount, reason, fhLocName)
 EndFunction
 
 Function PlayerHarmedFaction(String factionName, Float amount, String reason)
-    LogReputationEvent(factionName, -amount, reason, Game.GetPlayer().GetCurrentLocation().GetName())
+    Location hmLoc = Game.GetPlayer().GetCurrentLocation()
+    String hmLocName = ""
+    If hmLoc != None
+        hmLocName = hmLoc.GetName()
+    EndIf
+    LogReputationEvent(factionName, -amount, reason, hmLocName)
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
@@ -197,7 +215,7 @@ EndFunction
 
 ; Example: companion drift when player does something immoral
 Function CompanionWitnessedImmoral(Actor companion, String eventDesc)
-    LogPersonalityDrift( companion.GetActorBase().GetFormID() as String, companion.GetDisplayName(), 0.02, -0.05, -0.03, -0.08, "witnessed_immoral_act: " + eventDesc ); Slightly more aggressive (hardened by witnessing) ; Less moral (compromised) ; Slight loyalty loss ; Trust in player drops; Slightly more aggressive (hardened by witnessing) ; Less moral (compromised) ; Slight loyalty loss ; Trust in player drops
+    LogPersonalityDrift( ("" + companion.GetActorBase().GetFormID()), companion.GetDisplayName(), 0.02, -0.05, -0.03, -0.08, "witnessed_immoral_act: " + eventDesc )
 EndFunction
 
 ; ════════════════════════════════════════════════════════════════════════════
@@ -267,8 +285,8 @@ EndFunction
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
-Int _f4aiLastPlayerLevel = 0
+Float _f4aiTickHours
+Int _f4aiLastPlayerLevel
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

@@ -49,19 +49,25 @@ Keyword Property kwdSuperMutant    Auto; ActorTypeSuperMutant; ActorTypeSuperMut
 Keyword Property kwdCompanionAff   Auto; CompanionAffinity keyword; CompanionAffinity keyword; CompanionAffinity keyword; CompanionAffinity keyword
 
 ; ── Internal State ───────────────────────────────────────────────────────────
-float _lastUpdateTime  = 0.0
-int   _totalOverridden = 0
-int   _sessionErrors   = 0
-bool  _initialized     = False
+float _lastUpdateTime
+int   _totalOverridden
+int   _sessionErrors
+bool  _initialized
 
 ; ════════════════════════════════════════════════════════════════════════════
 ; INITIALIZATION
 ; ════════════════════════════════════════════════════════════════════════════
 Event OnQuestInit()
+    _f4aiTickHours = 1.0
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
     ScheduleTick(AAI_UpdateInterval)
-    Utility.Wait(2.0); Let game finish loading; Let game finish loading; Let game finish loading; Let game finish loading
-    InitializeSystem()
+    StartTimer(2.0, 1)
+EndEvent
+
+Event OnTimer(Int aiTimerID)
+    If aiTimerID == 1
+        InitializeSystem()
+    EndIf
 EndEvent
 
 Event Actor.OnPlayerLoadGame(Actor akSender)
@@ -334,7 +340,7 @@ EndFunction
 
 ; ═══ F4AI FO4 compat ═══════════════════════════════════════════════════════
 ; FO4 has no RegisterForUpdateGameTime — game-time ticks run on StartTimerGameTime.
-Float _f4aiTickHours = 1.0
+Float _f4aiTickHours
 
 Function ScheduleTick(Float afHours)
     _f4aiTickHours = afHours

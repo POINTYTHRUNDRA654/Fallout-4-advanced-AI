@@ -173,8 +173,8 @@ Event OnQuestInit()
     _npcInfectionTimes = new float[10]
 
     RegisterForRemoteEvent(Game.GetPlayer(), "OnPlayerLoadGame")
-    RegisterForRemoteEvent(Game.GetPlayer(), "Actor.OnItemEquipped")
-    RegisterForRemoteEvent(Game.GetPlayer(), "Actor.OnItemUnequipped")
+    RegisterForRemoteEvent(Game.GetPlayer(), "OnItemEquipped")
+    RegisterForRemoteEvent(Game.GetPlayer(), "OnItemUnequipped")
     ScheduleTick(UpdateInterval)
 
     SporeLog("Spore Infection System initialized")
@@ -260,8 +260,8 @@ Function TriggerPlantFire(ObjectReference plant, Float distance, Actor player)
     EndIf
 
     ; Determine plant type and fire accordingly
-    Bool isTitan  = kwdTitanSpore != None && (plant.GetLinkedRef() as Actor).HasKeyword(kwdTitanSpore)
-    Bool isPuff   = kwdPuffball   != None && (plant.GetLinkedRef() as Actor).HasKeyword(kwdPuffball)
+    Bool isTitan  = kwdTitanSpore != None && plant.HasKeyword(kwdTitanSpore)
+    Bool isPuff   = kwdPuffball   != None && plant.HasKeyword(kwdPuffball)
 
     ; Visual burst effect
     If expSporeCloud != None
@@ -490,17 +490,14 @@ Function ApplyStageEffects(Actor akTarget, Int stage)
             spToApply = spBlind_2
         ElseIf stage >= 3
             spToApply = spBlind_3
+        EndIf
     EndIf
 
     If spToApply != None
         spToApply.Cast(akTarget, akTarget)
     EndIf
 
-    ; Universal HP drain by stage
-    ActorValue avHP = Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue
-    ; HP drain is handled by the spell's magic effect — not scripted per-tick
-    ; (using MagicEffect with Damage Health over time)
-    EndIf
+    ; Universal HP drain by stage — handled by the spell's magic effect, not scripted per-tick
 EndFunction
 
 Function ShowInfectionStageEffect(Int stage)
@@ -587,18 +584,11 @@ Function AttemptInfectionSpread()
     While i < nearby.Length
         Actor npc = nearby[i]
         If npc != None && !npc.IsDead() && npc != player
-            ; Skip immune types
-            If kwdRobot != None && npc.HasKeyword(kwdRobot)
-                i += 1
-                ; TODO: 'Continue' removed — refactor loop to skip remaining body
-            EndIf
-            If kwdSynth != None && npc.HasKeyword(kwdSynth)
-                i += 1
-                ; TODO: 'Continue' removed — refactor loop to skip remaining body
-            EndIf
-            ; Chance-based spread
-            If Utility.RandomFloat(0.0, 1.0) <= SpreadChancePerMinute
-                InfectNPC(npc, _playerSporeType)
+            Bool isImmune = (kwdRobot != None && npc.HasKeyword(kwdRobot)) || (kwdSynth != None && npc.HasKeyword(kwdSynth))
+            If !isImmune
+                If Utility.RandomFloat(0.0, 1.0) <= SpreadChancePerMinute
+                    InfectNPC(npc, _playerSporeType)
+                EndIf
             EndIf
         EndIf
         i += 1
@@ -641,24 +631,22 @@ Function UpdateNPCInfections(Float realNow)
         If npc != None
             If npc.IsDead()
                 _infectedNPCs[i] = None
-                i += 1
-                ; TODO: 'Continue' removed — refactor loop to skip remaining body
-            EndIf
+            Else
+                Float elapsed = realNow - _npcInfectionTimes[i]
 
-            Float elapsed = realNow - _npcInfectionTimes[i]
-
-            ; NPCs progress faster (less resistance than player)
-            If _npcStages[i] == 1 && elapsed > 60.0
-                _npcStages[i] = 2
-            ElseIf _npcStages[i] == 2 && elapsed > 180.0
-                _npcStages[i] = 3
-            ElseIf _npcStages[i] == 3 && elapsed > 300.0
-                ; NPC dies or recovers
-                If Utility.RandomInt(1, 100) <= 60
-                    npc.SetValue(Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue, 0.0)
-                    SporeLog("NPC died from infection: " + npc.GetDisplayName())
+                ; NPCs progress faster (less resistance than player)
+                If _npcStages[i] == 1 && elapsed > 60.0
+                    _npcStages[i] = 2
+                ElseIf _npcStages[i] == 2 && elapsed > 180.0
+                    _npcStages[i] = 3
+                ElseIf _npcStages[i] == 3 && elapsed > 300.0
+                    ; NPC dies or recovers
+                    If Utility.RandomInt(1, 100) <= 60
+                        npc.SetValue(Game.GetFormFromFile(0x00000015, "Fallout4.esm") as ActorValue, 0.0)
+                        SporeLog("NPC died from infection: " + npc.GetDisplayName())
+                    EndIf
+                    _infectedNPCs[i] = None
                 EndIf
-                _infectedNPCs[i] = None
             EndIf
         EndIf
         i += 1
