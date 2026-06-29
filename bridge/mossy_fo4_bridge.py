@@ -31,6 +31,40 @@ from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
+# ── Advanced AI subsystems (graceful degradation if not importable) ───────────
+_BRIDGE_DIR = Path(__file__).resolve().parent
+if str(_BRIDGE_DIR) not in sys.path:
+    sys.path.insert(0, str(_BRIDGE_DIR))
+
+try:
+    from learning_engine import (
+        record_tactic_outcome, get_best_tactic, build_combat_learning_context,
+        record_player_combat_action, get_player_combat_profile,
+        record_settlement_attack, get_settler_defense_recommendations,
+        get_attack_history_summary,
+    )
+    _LEARNING_ENGINE_OK = True
+except Exception as _le_err:
+    print(f"[Bridge] learning_engine not available: {_le_err}")
+    _LEARNING_ENGINE_OK = False
+
+try:
+    from wildlife_simulation import generate_wildlife_state
+    _WILDLIFE_SIM_OK = True
+except Exception as _ws_err:
+    print(f"[Bridge] wildlife_simulation not available: {_ws_err}")
+    _WILDLIFE_SIM_OK = False
+
+try:
+    from settlement_evolution import (
+        update_settlement, build_settlement_lore_context,
+        get_minuteman_commonwealth_overview,
+    )
+    _SETTLEMENT_EVO_OK = True
+except Exception as _se_err:
+    print(f"[Bridge] settlement_evolution not available: {_se_err}")
+    _SETTLEMENT_EVO_OK = False
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
@@ -91,8 +125,8 @@ FO4_GAME_PATH     = _find_fo4_game_path()
 # source folder. The bridge must watch Overwrites to see it.
 # Hydra reads (Exists / ReadAllText) go through MO2's VFS, which includes
 # Overwrites, so writing text_out.txt to Overwrites is visible to the game.
-_MO2_OVERWRITES_F4AI = Path(r"E:\Mod.Organizer-2.5.2 Overwrites\Data\F4AI")
-_MO2_MOD_F4AI        = Path(r"E:\Mod.Organizer-2.5.2 Game Mods\Fallout 4 Advanced AI - Mossy Industries\Data\F4AI")
+_MO2_OVERWRITES_F4AI = Path(r"E:\Mod.Organizer-2.5.2 Overwrites\F4AI")
+_MO2_MOD_F4AI        = Path(r"E:\Mod.Organizer-2.5.2 Game Mods\Fallout 4 Advanced AI - Mossy Industries\F4AI")
 
 def _find_f4ai_data_dir() -> Path:
     """Return the F4AI data directory the bridge should read/write.
@@ -100,7 +134,7 @@ def _find_f4ai_data_dir() -> Path:
     Priority: MO2 Overwrites (where Hydra writes land) → MO2 mod folder
     (non-Overwrites MO2 setups) → game Data folder (no MO2).
     """
-    if _MO2_OVERWRITES_F4AI.parent.parent.exists():   # E:\Mod.Organizer-2.5.2 Overwrites exists
+    if _MO2_OVERWRITES_F4AI.parent.exists():   # E:\Mod.Organizer-2.5.2 Overwrites exists
         _MO2_OVERWRITES_F4AI.mkdir(parents=True, exist_ok=True)
         return _MO2_OVERWRITES_F4AI
     if _MO2_MOD_F4AI.parent.exists():
@@ -108,9 +142,14 @@ def _find_f4ai_data_dir() -> Path:
         return _MO2_MOD_F4AI
     return FO4_GAME_PATH / "Data" / "F4AI"
 
-F4AI_DATA_DIR     = _find_f4ai_data_dir()
+F4AI_DATA_DIR     = _find_f4ai_data_dir()   # Overwrites\F4AI — where MO2 puts game writes
 BRIDGE_INPUT_PATH = F4AI_DATA_DIR / "bridge_input.json"
-TEXT_OUT_PATH     = F4AI_DATA_DIR / "text_out.txt"
+
+# Write text_out files to the mod folder, NOT Overwrites.
+# MO2's VFS makes the mod folder visible to the game just like Overwrites,
+# and files here don't block MO2 restart / require manual cleanup.
+_F4AI_WRITE_DIR  = _MO2_MOD_F4AI if _MO2_MOD_F4AI.parent.exists() else FO4_GAME_PATH / "Data" / "F4AI"
+TEXT_OUT_PATH    = _F4AI_WRITE_DIR / "text_out.txt"
 
 # Belt-and-suspenders: all locations to check for bridge_input.json.
 # Checked in order; first match wins.  Covers MO2 Overwrites, mod folder,
@@ -421,17 +460,145 @@ def generate_npc_dialogue(npc_id: str, player_input: str) -> dict:
         except Exception as exc:
             print(f"[Bridge/LLM] Inference error: {exc}")
 
-    # ── Fallback: KoboldCPP OpenAI-compat endpoint ────────────────────────────
+    # ── Fallback: KoboldCPP raw generate API with few-shot prompt ────────────────
+    # TinyLlama-Chat doesn't reliably follow ChatML instructions, but responds
+    # well to few-shot continuation format — examples prime it to stay in character.
     if _kobold_running():
         try:
-            r = requests.post(
-                f"http://127.0.0.1:{KOBOLD_PORT}/v1/chat/completions",
-                json={"model": "tinyllama", "messages": messages, "max_tokens": 60, "temperature": 0.75},
-                timeout=30,
-            )
-            r.raise_for_status()
-            text = r.json()["choices"][0]["message"]["content"].strip()
-            return {"ok": True, "text": text, "engine": "koboldcpp"}
+            identity  = mem.get("identity", {}) if mem.get("found") else {}
+            npc_label = identity.get("npc_name") or npc_id or "Settler"
+            npc_race  = (identity.get("npc_race") or "Human").lower()
+            location  = identity.get("location") or "the Commonwealth"
+
+            # Race-specific few-shot examples so the model knows the voice
+            _FEW_SHOT = {
+                "ghoul": (
+                    "Player: Are you okay?\n{name}: Okay? Ha. I've survived two hundred years of radiation. 'Okay' is relative.\n\n"
+                    "Player: What happened here?\n{name}: The bombs. That's what happened. Same answer for everything now.\n\n"
+                ),
+                "raider": (
+                    "Player: What do you want?\n{name}: Your caps, your gear, and maybe your life — depending on my mood.\n\n"
+                    "Player: I don't want trouble.\n{name}: Too bad. Trouble's all we got out here.\n\n"
+                ),
+                "robot": (
+                    "Player: Hello.\n{name}: Greetings, citizen. How may I assist you today?\n\n"
+                    "Player: What's going on?\n{name}: Running diagnostics. All systems nominal. Awaiting further instruction.\n\n"
+                ),
+                "default": (
+                    "Player: Morning.\n{name}: Yeah, another day in the wasteland. Keep your head down out there.\n\n"
+                    "Player: What do you think of the Institute?\n{name}: Those synths give me the creeps. Can't trust anything that looks human but isn't.\n\n"
+                ),
+            }
+            race_key  = npc_race if npc_race in _FEW_SHOT else "default"
+            examples  = _FEW_SHOT[race_key].format(name=npc_label)
+
+            # Phrases that mean TinyLlama broke character — reject and use fallback
+            _BAD_PHRASES = [
+                "i'm an ai", "i am an ai", "as an ai", "language model",
+                "here are some choices", "here are your choices",
+                "here are your options", "your options are",
+                "choice 1", "choice 2", "option 1", "option 2",
+                "[player", "[npc", "game:", "narrator:", "dialogue:",
+                "i got high", "i am high",
+            ]
+
+            # Race-keyed canned fallbacks — used when TinyLlama output is bad
+            _FALLBACKS = {
+                "ghoul": [
+                    "Ugh. What do you want?",
+                    "Keep moving, wastelander.",
+                    "I've seen worse. Not much worse, but still.",
+                ],
+                "raider": [
+                    "You've got five seconds to make this interesting.",
+                    "Back off if you know what's good for you.",
+                    "This territory's taken. Move along.",
+                ],
+                "robot": [
+                    "Citizen, state your business.",
+                    "How may I assist you today?",
+                    "Query received. Processing.",
+                ],
+                "super mutant": [
+                    "Human talk too much.",
+                    "What you want?",
+                    "Super Mutants not have time for this.",
+                ],
+                "default": [
+                    "Not now. Too much going on.",
+                    "Watch yourself out there.",
+                    "Stay sharp. It's dangerous.",
+                    "Can't talk long. Keep moving.",
+                    "Another day in the wasteland.",
+                ],
+            }
+
+            # If player_speech is empty (no STT), pick a varied greeting so the NPC
+            # has something concrete to respond to.
+            if not player_input or not player_input.strip():
+                import hashlib
+                _GREETINGS = [
+                    "Hey.", "Hello there.", "Got a minute?",
+                    "What's going on?", "Need to talk.", "Anything new?",
+                    "How's it going?", "What can you tell me?",
+                    "Staying safe out there?", "Any trouble nearby?",
+                ]
+                seed = int(hashlib.md5(npc_label.encode()).hexdigest(), 16) + int(time.time() // 30)
+                player_input = _GREETINGS[seed % len(_GREETINGS)]
+
+            import re as _re
+            import random
+
+            def _try_generate(temperature: float) -> str:
+                prompt = (
+                    f"The following is a short conversation in the Fallout 4 wasteland at {location}. "
+                    f"{npc_label} is a {npc_race} survivor who gives ONE short reply in 1-2 sentences. "
+                    f"{npc_label} never mentions AI, choices, or menus.\n\n"
+                    + examples
+                    + f"Player: {player_input}\n{npc_label}:"
+                )
+                resp = requests.post(
+                    f"http://127.0.0.1:{KOBOLD_PORT}/api/v1/generate",
+                    json={
+                        "prompt":        prompt,
+                        "max_length":    60,
+                        "temperature":   temperature,
+                        "top_p":         0.9,
+                        "rep_pen":       1.15,
+                        "stop_sequence": ["\nPlayer:", "\n\n", "<|", "1.", "2.", "Choice", "choice"],
+                    },
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                raw = resp.json().get("results", [{}])[0].get("text", "").strip()
+                # Hard-cut at any leaked Player: line
+                if "\nPlayer:" in raw:
+                    raw = raw.split("\nPlayer:")[0].strip()
+                # Strip narrative/action fragments
+                raw = _re.sub(r"\*[^*]+\*", "", raw).strip()
+                raw = _re.sub(r"\([^)]+\)", "", raw).strip()
+                # Truncate to first two sentences (TinyLlama sometimes rambles)
+                sentences = _re.split(r'(?<=[.!?])\s+', raw)
+                raw = " ".join(sentences[:2]).strip()
+                return raw
+
+            text = ""
+            for attempt_temp in (0.8, 0.95):
+                candidate = _try_generate(attempt_temp)
+                candidate_low = candidate.lower()
+                if candidate and not any(p in candidate_low for p in _BAD_PHRASES):
+                    text = candidate
+                    break
+                print(f"[Bridge] KoboldCPP output rejected (temp={attempt_temp}): {candidate[:80]!r}")
+
+            if not text:
+                fb_key = npc_race if npc_race in _FALLBACKS else "default"
+                seed2 = int(hashlib.md5(npc_label.encode()).hexdigest(), 16) + int(time.time() // 10)
+                text = _FALLBACKS[fb_key][seed2 % len(_FALLBACKS[fb_key])]
+                print(f"[Bridge] Using canned fallback for {npc_label}: {text!r}")
+
+            if text:
+                return {"ok": True, "text": text, "engine": "koboldcpp"}
         except Exception as exc:
             print(f"[Bridge] KoboldCPP error: {exc}")
 
@@ -666,7 +833,7 @@ def get_all_npcs() -> list:
 # Papyrus Log Reader
 # ─────────────────────────────────────────────────────────────────────────────
 
-AAI_LOG_PATTERN    = re.compile(r'\[AAI(?:-[A-Za-z]+)?\]\s*(.*)')
+AAI_LOG_PATTERN    = re.compile(r'\[(?:AAI(?:[-_][A-Za-z]+)?|F4AI[_-][A-Za-z_]+)\]\s*(.*)')
 AAI_STATUS_PATTERN = re.compile(
     r'AAI_STATUS\|enabled=(\w+)\|overridden=(\d+)\|errors=(\d+)\|'
     r'creatures=(\w+)\|npcs=(\w+)\|robots=(\w+)\|companions=(\w+)\|'
@@ -966,7 +1133,13 @@ def _read_world_state() -> dict:
         p = d / "world_state.json"
         if p.exists():
             try:
-                return json.loads(p.read_text(encoding="utf-8"))
+                raw = p.read_text(encoding="utf-8")
+                # Papyrus writes Python-style True/False — normalise to valid JSON
+                raw = raw.replace(": True", ": true").replace(": False", ": false")
+                data = json.loads(raw)
+                # Mark mod as active whenever we read a valid world state
+                _status["mod_enabled"] = True
+                return data
             except Exception:
                 pass
     return {}
@@ -1059,6 +1232,17 @@ def _build_full_context(payload: dict) -> str:
         elif eco_state == "prey_dominant" and pred_count == 0:
             parts.append("The area is relatively safe from large predators right now.")
 
+    # Settlement evolution context — settlers talk about things appropriate to their stage
+    if _SETTLEMENT_EVO_OK:
+        loc = location or payload.get("location", "")
+        if loc:
+            try:
+                lore = build_settlement_lore_context(loc)
+                if lore:
+                    parts.append(lore)
+            except Exception:
+                pass
+
     # Mod context (cached from plugin scan at startup)
     mod_ctx = build_mod_context()
     if mod_ctx:
@@ -1070,39 +1254,60 @@ def _build_full_context(payload: dict) -> str:
 def _call_mossy(payload: dict, dialogue_history: list | None = None) -> dict:
     """POST the game request to the Mossy desktop AI endpoint.
 
-    Mossy listens on http://127.0.0.1:8765/f4ai/bridge and expects Mossy-format
-    fields (npc_id, npc_role, player_input). It returns {"dialogue": "..."}.
-    We also accept text/response/content/npc_response for forward-compat.
-    Mossy uses Groq (free cloud API) as its AI backend.
+    Supports two endpoint formats:
+    - Custom F4AI format (default, /f4ai/bridge): sends npc_id/npc_role/player_input,
+      expects {"dialogue": "..."} back.
+    - OpenAI-compatible format (when endpoint contains /v1/): sends messages array,
+      expects {"choices": [{"message": {"content": "..."}}]} back.
+      Use this when mossy_endpoint points to 8787/v1/chat or similar.
     """
     cfg = _load_f4ai_config()
     if not cfg.get("enable_mossy_bridge", 1):
         return {"ok": False, "error": "Mossy bridge disabled in config.json"}
 
     endpoint = cfg.get("mossy_endpoint", "http://127.0.0.1:8765/f4ai/bridge")
-    timeout  = float(cfg.get("mossy_timeout", 15.0))
+    timeout  = float(cfg.get("mossy_timeout", 8.0))
 
-    # Transform from bridge_input.json format to Mossy's expected format.
-    # Mossy needs: npc_id, npc_name, npc_role, player_input, dialogue_history, context
     npc_name     = payload.get("npc_name", "Settler")
     npc_race     = (payload.get("npc_race") or "").lower()
     location     = payload.get("location", "The Commonwealth")
-    player_input = payload.get("player_speech") or payload.get("player_input") or ""
+    player_input = payload.get("player_speech") or payload.get("player_input") or "Hello."
+    context      = _build_full_context(payload)
 
-    mossy_payload = {
-        "npc_id":           npc_name.lower().replace(" ", "_"),
-        "npc_name":         npc_name,
-        "npc_role":         _RACE_TO_ROLE.get(npc_race, "default"),
-        "player_input":     player_input,
-        "dialogue_history": dialogue_history or [],
-        "context":          _build_full_context(payload),
-    }
+    if "/v1/" in endpoint:
+        # OpenAI-compatible endpoint (e.g. Mossy at /v1/chat, Ollama, LM Studio, etc.)
+        system_prompt = (
+            f"You are {npc_name}, a {npc_race or 'human'} survivor in Fallout 4's Commonwealth. "
+            f"Location: {location}. {context} "
+            "Respond in character with 1-3 sentences of natural dialogue. "
+            "No narration, no asterisks, no quotation marks — just the spoken line."
+        )
+        messages = [{"role": "system", "content": system_prompt}]
+        for entry in (dialogue_history or [])[-6:]:
+            role = "user" if entry.get("speaker") == "player" else "assistant"
+            messages.append({"role": role, "content": entry.get("line", "")})
+        messages.append({"role": "user", "content": player_input})
+        mossy_payload = {
+            "model":       cfg.get("mossy_model", "llama3"),
+            "messages":    messages,
+            "max_tokens":  200,
+            "temperature": float(cfg.get("ai_temperature", 0.7)),
+        }
+    else:
+        # Legacy custom F4AI format (Mossy /f4ai/bridge endpoint)
+        mossy_payload = {
+            "npc_id":           npc_name.lower().replace(" ", "_"),
+            "npc_name":         npc_name,
+            "npc_role":         _RACE_TO_ROLE.get(npc_race, "default"),
+            "player_input":     player_input,
+            "dialogue_history": dialogue_history or [],
+            "context":          context,
+        }
 
     try:
         r = requests.post(endpoint, json=mossy_payload, timeout=timeout)
         r.raise_for_status()
         data = r.json()
-        # Mossy returns {"dialogue": "..."} — also accept text/response/npc_response/content
         text = (data.get("dialogue") or
                 data.get("npc_response") or
                 data.get("response") or
@@ -1110,7 +1315,35 @@ def _call_mossy(payload: dict, dialogue_history: list | None = None) -> dict:
                 data.get("content") or
                 ((data.get("choices") or [{}])[0].get("message") or {}).get("content", ""))
         if text and str(text).strip():
-            return {"ok": True, "text": str(text).strip(), "engine": "mossy"}
+            text = str(text).strip()
+            # Reject non-dialogue AI meta-responses and broken model output
+            _RELAY_BAD = [
+                "write a ", "write an ", "as an ai", "i am an ai", "language model",
+                "happy to help", "i'd be happy", "i'd be glad", "how can i assist",
+                "horror tale", "horror genre", "science fiction", "1970s",
+                "500-word", "first-person narrative", "conversation between",
+                "protagonist who", "creative writing", "write a story",
+                "doctor and a patient", "treatment options", "chronic illness",
+                "here are some", "here are your", "choice 1", "option 1",
+                # system-prompt echo detection (fragments from buildNpcSystemPrompt)
+                "speak in character", "keep responses under", "be terse, gritty",
+                "era-appropriate", "post-nuclear commonwealth. context:",
+                "hardworking settler", "cautious but hopeful",
+                "battle-hardened", "mechanical precision", "following directives",
+                "centuries of radiation", "lives by violence",
+                # context echo detection
+                "location:", "context:", "weather:", "time of day:",
+            ]
+            text_lower = text.lower()
+            bad = any(b in text_lower for b in _RELAY_BAD)
+            # detect prompt echo: response starts with the player's own input
+            player_in = (payload.get("player_speech") or payload.get("player_input") or "").strip().lower()
+            if player_in and len(player_in) > 4 and text_lower.startswith(player_in):
+                bad = True
+            if bad:
+                print(f"[Bridge/Mossy] Relay returned non-dialogue content — falling to Ollama: {text[:60]!r}")
+                return {"ok": False, "error": f"Relay non-dialogue: {text[:60]!r}"}
+            return {"ok": True, "text": text, "engine": "mossy"}
         return {"ok": False, "error": f"Mossy returned empty body: {data}"}
     except requests.exceptions.ConnectionError:
         return {"ok": False, "error": "Mossy not running — start the Mossy AI launcher first"}
@@ -1120,8 +1353,7 @@ def _call_mossy(payload: dict, dialogue_history: list | None = None) -> dict:
         return {"ok": False, "error": f"Mossy error: {exc}"}
 
 _TEXT_OUT_CANDIDATES = [
-    TEXT_OUT_PATH,                         # MO2 Overwrites (primary)
-    _MO2_MOD_F4AI / "text_out.txt",        # mod folder (Hydra may resolve here via VFS)
+    _F4AI_WRITE_DIR / "text_out.txt",                  # mod folder (primary — never Overwrites)
     FO4_GAME_PATH / "Data" / "F4AI" / "text_out.txt",  # bare game Data (no MO2)
 ]
 
@@ -1147,79 +1379,183 @@ def _write_text_out(text: str):
               + ", ".join(p.parent.name for p in written))
 
 def _call_ollama(payload: dict, dialogue_history: list | None = None) -> dict:
-    """POST to Ollama's OpenAI-compatible endpoint (http://127.0.0.1:11434).
-
-    Install Ollama from https://ollama.com then run: ollama pull llama3.1:8b
-    Ollama auto-detects NVIDIA GPU and uses CUDA — no config needed.
-    Recommended models (best to fastest): llama3.1:8b, mistral:7b, phi4-mini
-    """
+    """POST to Ollama's OpenAI-compatible endpoint (http://127.0.0.1:11434)."""
     npc_name     = payload.get("npc_name", "Settler")
-    npc_race     = (payload.get("npc_race") or "").lower()
+    npc_race     = (payload.get("npc_race") or "human").lower()
     location     = payload.get("location", "The Commonwealth")
-    player_input = payload.get("player_speech") or payload.get("player_input") or "Hello."
+    player_input = (payload.get("player_speech") or payload.get("player_input") or "").strip()
     npc_form_id  = payload.get("npc_form_id", "0")
 
-    # Persona gives each generic NPC a distinct, consistent voice
-    persona     = _get_npc_persona(npc_form_id)
-    full_ctx    = _build_full_context(payload)
+    # "Stranger" means Papyrus didn't fill in a real name — use a generic label
+    if not npc_name or npc_name.lower() in ("stranger", "unknown", "none", ""):
+        npc_name = f"{npc_race.title() or 'Settler'} (Diamond City)"
 
+    # Sanitise player_input — reject anything that looks like a creative writing prompt
+    _BAD_INPUT = ["write a story", "write me a", "tell me a story", "once upon",
+                  "narrative", "protagonist", "1970s", "horror tale"]
+    if any(b in player_input.lower() for b in _BAD_INPUT):
+        player_input = "Hello there."
+
+    if not player_input:
+        player_input = "Hello."
+
+    persona  = _get_npc_persona(npc_form_id)
+
+    # Keep context short — long context confuses smaller models
+    weather  = payload.get("weather", "")
+    ctx_bits = [f"Location: {location}."]
+    if weather:
+        ctx_bits.append(f"Weather: {weather}.")
+    short_ctx = " ".join(ctx_bits)
+
+    # Hard, explicit system prompt — leaves no ambiguity about the task
     system = (
-        f"You are {npc_name}, a survivor in the post-apocalyptic Commonwealth of Fallout 4. "
-        f"{persona} "
-        f"{full_ctx} "
-        "Reply in character in 1-2 short sentences. Never break character or mention AI."
+        f"You are roleplaying as {npc_name}, an NPC in Fallout 4.\n"
+        f"Race: {npc_race}. {persona}\n"
+        f"{short_ctx}\n"
+        "RULES (follow all of them):\n"
+        "- Speak only ONE or TWO short sentences as the character.\n"
+        "- Stay in the Fallout 4 world. Nuclear war. Year 2287. Boston ruins.\n"
+        "- Do NOT write stories, narratives, introductions, or descriptions.\n"
+        "- Do NOT use asterisks, brackets, or stage directions.\n"
+        "- Do NOT break character or mention AI, writing, or the real world.\n"
+        "- Just say the spoken line the NPC would say. Nothing else."
     )
 
-    # Check which model Ollama has available — prefer larger/better models
-    preferred = ["llama3.1:8b", "llama3:8b", "mistral:7b", "gemma3:9b",
-                 "phi4-mini", "phi3:mini", "llama3.2:3b", "tinyllama"]
-    model = "llama3.1:8b"
+    # Per-role model preference — best fit for each NPC type.
+    # Falls back through the list until one is installed.
+    _ROLE_MODELS: dict[str, list[str]] = {
+        # Companions: need consistent personality and longer context awareness
+        "companion":     ["gemma2:9b", "llama3.1:8b", "llama3:latest", "mistral:7b"],
+        # Settlers / Minutemen: fast, plain Commonwealth speech
+        "settler":       ["llama3.1:8b", "llama3:latest", "gemma2:9b", "mistral:7b"],
+        # Raiders and ghouls: terse, dark, menacing
+        "raider":        ["mistral:7b", "llama3.1:8b", "llama3:latest", "gemma2:9b"],
+        "ghoul":         ["mistral:7b", "llama3.1:8b", "gemma2:9b"],
+        # Robots: mechanical, directive-following
+        "robot":         ["llama3:latest", "llama3.1:8b", "mistral:7b", "gemma2:9b"],
+        # Super mutants: short, aggressive, broken syntax
+        "super mutant":  ["mistral:7b", "llama3.1:8b", "llama3:latest"],
+        # Default: best general-purpose available
+        "default":       ["llama3.1:8b", "gemma2:9b", "llama3:latest", "mistral:7b",
+                          "phi4-mini", "phi3:mini", "llama3.2:3b", "tinyllama"],
+    }
+
+    npc_role_key = _RACE_TO_ROLE.get(npc_race, "default")
+    role_prefs   = _ROLE_MODELS.get(npc_role_key, _ROLE_MODELS["default"])
+    model        = role_prefs[0]  # default if Ollama unreachable
     try:
         r = requests.get("http://127.0.0.1:11434/api/tags", timeout=2)
         if r.ok:
             available = [m["name"] for m in r.json().get("models", [])]
-            model = next((m for m in preferred if any(m in a for a in available)), model)
+            # Pick first preferred model that's actually installed
+            model = next((p for p in role_prefs if any(p in a for a in available)),
+                         # last resort: any installed model
+                         next((a for a in available), model))
     except Exception:
         pass
 
-    # Build message list: system + conversation history + current input
-    messages = [{"role": "system", "content": system}]
-    for d in (dialogue_history or []):
+    # Few-shot priming messages so the model understands the expected format
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user",      "content": "Hey."},
+        {"role": "assistant", "content": "Another day in the wasteland. What do you need?"},
+        {"role": "user",      "content": "What do you think of the Brotherhood?"},
+        {"role": "assistant", "content": "Those suits of theirs make them cocky. Don't trust anyone who hoards tech that well."},
+    ]
+
+    # Add real conversation history (last 4 turns max to stay focused)
+    for d in (dialogue_history or [])[-4:]:
         role = "assistant" if d.get("speaker") == "npc" else "user"
-        line = d.get("line", "")
+        line = d.get("line", "").strip()
         if line:
             messages.append({"role": role, "content": line})
+
     messages.append({"role": "user", "content": player_input})
 
-    try:
-        r = requests.post(
+    # Phrases that mean the model broke character
+    _BAD_PHRASES = [
+        "i'm an ai", "i am an ai", "as an ai", "language model",
+        "write a story", "first-person narrative", "protagonist",
+        "horror tale", "1970s", "bell-bottoms", "once upon",
+        "here are some", "here are your", "choice 1", "option 1",
+        "[stranger", "[npc", "*(", "asterisk",
+    ]
+
+    _FALLBACKS = {
+        "ghoul":        ["Ugh. What do you want?", "Keep moving.", "I've survived worse than you."],
+        "raider":       ["Back off.", "You got five seconds.", "This territory's mine."],
+        "robot":        ["State your business.", "How may I assist?", "Query received."],
+        "super mutant": ["Human talk too much.", "What you want?", "Go away, smoothskin."],
+        "default":      ["Not now.", "Watch yourself.", "Stay sharp out there.",
+                         "Another day in the wasteland.", "Can't talk long."],
+    }
+
+    def _try_ollama(temp: float) -> str:
+        resp = requests.post(
             "http://127.0.0.1:11434/v1/chat/completions",
             json={
                 "model":       model,
                 "messages":    messages,
-                "max_tokens":  80,
-                "temperature": 0.75,
+                "max_tokens":  60,
+                "temperature": temp,
                 "stream":      False,
+                "stop":        ["\n\n", "Player:", "NPC:", "###", "---"],
             },
-            timeout=30,
+            timeout=90,  # cold model load can take 45-60s on first call
         )
-        r.raise_for_status()
-        text = r.json()["choices"][0]["message"]["content"].strip()
-        if text:
-            return {"ok": True, "text": text, "engine": f"ollama/{model}"}
-        return {"ok": False, "error": "Ollama returned empty response"}
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
+        # Strip stage directions and narration
+        import re as _re
+        raw = _re.sub(r"\*[^*]+\*", "", raw).strip()
+        raw = _re.sub(r"\[[^\]]+\]", "", raw).strip()
+        # Truncate to two sentences
+        sentences = _re.split(r"(?<=[.!?])\s+", raw)
+        return " ".join(sentences[:2]).strip()
+
+    try:
+        for attempt_temp in (0.6, 0.85):
+            candidate = _try_ollama(attempt_temp)
+            if candidate and not any(b in candidate.lower() for b in _BAD_PHRASES):
+                return {"ok": True, "text": candidate, "engine": f"ollama/{model}"}
+            print(f"[Bridge/Ollama] Rejected (temp={attempt_temp}): {candidate[:80]!r}")
+
+        # All attempts bad — use canned fallback
+        fb_key = npc_race if npc_race in _FALLBACKS else "default"
+        try:
+            fb_idx = int(npc_form_id) % len(_FALLBACKS[fb_key])
+        except (ValueError, TypeError):
+            fb_idx = 0
+        fallback = _FALLBACKS[fb_key][fb_idx]
+        print(f"[Bridge/Ollama] Using fallback for {npc_name}: {fallback!r}")
+        return {"ok": True, "text": fallback, "engine": f"ollama/{model}/fallback"}
+
     except requests.exceptions.ConnectionError:
-        return {"ok": False, "error": "Ollama not running — install from https://ollama.com"}
+        return {"ok": False, "error": "Ollama not running"}
     except Exception as exc:
         return {"ok": False, "error": f"Ollama error: {exc}"}
 
 
 def _auto_respond(payload: dict):
-    """Route an NPC dialogue request: Mossy → Ollama → KoboldCPP → fallback message."""
+    """Route an NPC dialogue request: Ollama(warm) → Mossy relay → Ollama(cold) → KoboldCPP → fallback."""
     npc_name      = payload.get("npc_name", "Unknown NPC")
     player_speech = payload.get("player_speech", "") or "Hello."
 
-    # 1. Mossy (Groq cloud via Mossy desktop app) — primary, best quality
+    # 0. Fast-path: Ollama model already in VRAM — bypass relay (KoboldCPP may be broken)
+    try:
+        ps = requests.get("http://127.0.0.1:11434/api/ps", timeout=1.5)
+        if ps.ok and ps.json().get("models"):
+            result = _call_ollama(payload)
+            if result.get("ok"):
+                _write_text_out(result["text"])
+                print(f"[Bridge] Ollama (warm/direct): {result['text'][:100]}")
+                return
+            print(f"[Bridge] Ollama warm-path failed: {result.get('error')}")
+    except Exception as _pe:
+        pass  # Ollama not responding — fall through to relay
+
+    # 1. Mossy relay (KoboldCPP or Ollama via relay) — filtered for bad output
     result = _call_mossy(payload)
     if result.get("ok"):
         _write_text_out(result["text"])
@@ -1252,13 +1588,169 @@ def _auto_respond(payload: dict):
     print("[Bridge] No AI engine available — wrote fallback in-game message.")
 
 def _get_npc_text_out_paths(npc_form_id: str) -> list:
-    """Return all candidate text_out paths for a specific NPC form ID."""
+    """Return candidate text_out paths for a specific NPC form ID.
+
+    Always writes to the mod folder, never Overwrites — keeps Overwrites clean.
+    """
     fname = f"text_out_{npc_form_id}.txt"
     return [
-        F4AI_DATA_DIR / fname,
-        _MO2_MOD_F4AI / fname,
+        _F4AI_WRITE_DIR / fname,
         FO4_GAME_PATH / "Data" / "F4AI" / fname,
     ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TTS — text-to-speech WAV generation for NPC voice
+# ─────────────────────────────────────────────────────────────────────────────
+# To enable:
+#   1. Set "enable_tts": 1 in config.json
+#   2. Set "tts_voice_path" to the WAV the CK Sound Descriptor references
+#   3. Install an engine:  pip install edge-tts pydub   OR  pip install pyttsx3
+#   4. Create the Sound Descriptor in the CK (see README / guide step 1-2)
+
+def _get_tts_wav_path() -> Path | None:
+    """Return the WAV output path from config, or None when TTS is disabled."""
+    cfg = _load_config()
+    if not cfg.get("enable_tts", 0):
+        return None
+    raw = cfg.get("tts_voice_path", "").strip()
+    if not raw:
+        # Auto-derive: write alongside other F4AI data in the game Data folder
+        return FO4_GAME_PATH / "Data" / "Sound" / "Voice" / "F4AI" / "npc_voice.wav"
+    return Path(raw)
+
+
+def _generate_tts_wav(text: str, npc_race: str = "human") -> bool:
+    """Generate a WAV file from *text* and overwrite the TTS voice path.
+
+    Engine priority:
+      1. edge-tts  — free Microsoft neural voices, needs internet
+                     requires: pip install edge-tts pydub
+      2. pyttsx3   — offline Windows SAPI5, robotic but zero-dependency
+                     requires: pip install pyttsx3
+    Returns True if the WAV was written successfully.
+    """
+    voice_path = _get_tts_wav_path()
+    if voice_path is None:
+        return False
+
+    cfg = _load_config()
+    engine_pref = cfg.get("tts_engine", "edge-tts").lower()
+
+    # Voice selection for edge-tts — choose based on NPC race for flavour
+    _EDGE_VOICES = {
+        "ghoul":        "en-US-ChristopherNeural",  # older, worn
+        "super mutant": "en-US-GuyNeural",
+        "robot":        "en-US-GuyNeural",
+        "synth":        "en-US-GuyNeural",
+        "default":      "en-US-GuyNeural",
+    }
+    voice_name = (cfg.get("tts_voice") or "").strip() or \
+                 _EDGE_VOICES.get(npc_race.lower(), _EDGE_VOICES["default"])
+
+    voice_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # If the target is .xwm, we generate WAV first then convert
+    target_is_xwm = voice_path.suffix.lower() == ".xwm"
+    wav_path = voice_path.with_suffix(".wav") if target_is_xwm else voice_path
+
+    def _wav_to_xwm(wav: Path, xwm: Path) -> bool:
+        """Convert WAV → XWM using xWMAEncode.exe (shipped with Fallout 4 Tools)."""
+        xwma_exe = cfg.get("xwmaencode_path", "").strip()
+        if not xwma_exe:
+            xwma_exe = str(FO4_GAME_PATH / "Tools" / "LipGen" / "LipGenerator" / "xWMAEncode.exe")
+        if not Path(xwma_exe).exists():
+            print(f"[Bridge/TTS] xWMAEncode not found at {xwma_exe} — playing WAV directly")
+            return False
+        try:
+            result = subprocess.run(
+                [xwma_exe, str(wav), str(xwm)],
+                capture_output=True, timeout=15,
+            )
+            if xwm.exists():
+                # Also mirror to MO2 mod folder so VFS picks it up
+                mo2_xwm = (_MO2_MOD_F4AI.parent / "Sound" / "Voice" / "F4AI" / xwm.name)
+                try:
+                    mo2_xwm.parent.mkdir(parents=True, exist_ok=True)
+                    import shutil
+                    shutil.copy2(xwm, mo2_xwm)
+                except Exception:
+                    pass
+                print(f"[Bridge/TTS] XWM encoded → {xwm.name}")
+                return True
+        except Exception as exc:
+            print(f"[Bridge/TTS] xWMAEncode error: {exc}")
+        return False
+
+    # ── edge-tts (primary) ────────────────────────────────────────────────────
+    if engine_pref in ("edge-tts", "edge"):
+        try:
+            import asyncio
+            import edge_tts  # pip install edge-tts
+
+            async def _edge_run() -> Path:
+                communicate = edge_tts.Communicate(text, voice_name)
+                tmp = voice_path.with_suffix(".tmp.mp3")
+                await communicate.save(str(tmp))
+                return tmp
+
+            tmp_mp3 = asyncio.run(_edge_run())
+
+            # Convert MP3 → 16-bit PCM WAV (FO4-compatible)
+            converted = False
+            try:
+                from pydub import AudioSegment  # pip install pydub
+                audio = AudioSegment.from_mp3(str(tmp_mp3))
+                audio = audio.set_channels(1).set_frame_rate(44100).set_sample_width(2)
+                audio.export(str(wav_path), format="wav")
+                converted = True
+            except ImportError:
+                pass
+
+            if not converted:
+                try:
+                    result = subprocess.run(
+                        ["ffmpeg", "-y", "-i", str(tmp_mp3),
+                         "-ar", "44100", "-ac", "1", "-sample_fmt", "s16",
+                         str(wav_path)],
+                        capture_output=True, timeout=15,
+                    )
+                    converted = result.returncode == 0
+                except Exception:
+                    pass
+
+            if tmp_mp3.exists():
+                tmp_mp3.unlink(missing_ok=True)
+
+            if converted:
+                if target_is_xwm:
+                    _wav_to_xwm(wav_path, voice_path)
+                print(f"[Bridge/TTS] edge-tts ({voice_name}) → {voice_path.name}")
+                return True
+            print("[Bridge/TTS] edge-tts: MP3→WAV failed — install pydub (pip install pydub) or ffmpeg")
+        except ImportError:
+            print("[Bridge/TTS] edge-tts not installed — pip install edge-tts pydub")
+        except Exception as exc:
+            print(f"[Bridge/TTS] edge-tts error: {exc}")
+
+    # ── pyttsx3 fallback (offline) ────────────────────────────────────────────
+    try:
+        import pyttsx3  # pip install pyttsx3
+        engine = pyttsx3.init()
+        rate = 120 if "robot" in npc_race.lower() else 145
+        engine.setProperty("rate", rate)
+        engine.save_to_file(text, str(wav_path))
+        engine.runAndWait()
+        if target_is_xwm:
+            _wav_to_xwm(wav_path, voice_path)
+        print(f"[Bridge/TTS] pyttsx3 → {voice_path.name}")
+        return True
+    except ImportError:
+        print("[Bridge/TTS] No TTS engine available — pip install edge-tts pydub  OR  pip install pyttsx3")
+    except Exception as exc:
+        print(f"[Bridge/TTS] pyttsx3 error: {exc}")
+
+    return False
+
 
 def _write_npc_text_out(text: str, npc_form_id: str):
     """Write NPC response to per-NPC text_out file (all candidate locations)."""
@@ -1295,6 +1787,17 @@ def _handle_npc_request(found_path: Path):
     location     = payload.get("location", "?")
     print(f"[Bridge] Request — NPC={npc_name_str} loc={location} id={npc_form_id}")
 
+    # Delete any stale response files from previous requests BEFORE generating.
+    # Without this, Papyrus finds the old text_out.txt immediately on the next
+    # poll and shows the previous response instead of waiting for a new one.
+    for _stale in _get_npc_text_out_paths(npc_form_id) + list(_TEXT_OUT_CANDIDATES):
+        try:
+            if _stale.exists():
+                _stale.unlink()
+                print(f"[Bridge] Cleared stale {_stale.name}")
+        except Exception:
+            pass
+
     with _pending_lock:
         global _pending_request
         _pending_request = {
@@ -1318,18 +1821,36 @@ def _handle_npc_request(found_path: Path):
     def _run_ai_chain():
         try:
             history = _get_dialogue_history_for_mossy(npc_form_id)
-            result  = _call_mossy(payload, dialogue_history=history)
+
+            # 0. Fast-path: Ollama already in VRAM — bypass relay and broken KoboldCPP
+            try:
+                ps = requests.get("http://127.0.0.1:11434/api/ps", timeout=1.5)
+                if ps.ok and ps.json().get("models"):
+                    result = _call_ollama(payload, dialogue_history=history)
+                    if result.get("ok"):
+                        _ai_result[0] = result["text"]
+                        print(f"[Bridge] Ollama (warm) → {npc_name_str}: {result['text'][:80]}")
+                        return
+            except Exception:
+                pass
+
+            # 1. Mossy relay (KoboldCPP/Ollama via relay) — filtered for bad output
+            result = _call_mossy(payload, dialogue_history=history)
             if result.get("ok"):
                 _ai_result[0] = result["text"]
                 print(f"[Bridge] Mossy → {npc_name_str}: {result['text'][:80]}")
                 return
             print(f"[Bridge] Mossy unavailable: {result['error']}")
+
+            # 2. Ollama direct (cold load)
             result = _call_ollama(payload, dialogue_history=history)
             if result.get("ok"):
                 _ai_result[0] = result["text"]
                 print(f"[Bridge] {result.get('engine','Ollama')} → {npc_name_str}: {result['text'][:80]}")
                 return
             print(f"[Bridge] Ollama unavailable: {result['error']}")
+
+            # 3. Local GGUF / KoboldCPP
             result = generate_npc_dialogue(npc_name_str, player_speech)
             if result.get("ok"):
                 _ai_result[0] = result["text"]
@@ -1349,7 +1870,16 @@ def _handle_npc_request(found_path: Path):
 
     # ── Write response FIRST — SQLite errors must never block this ────────────
     _write_npc_text_out(response_text, npc_form_id)
-    _write_text_out(response_text)  # legacy single-file fallback
+    # Note: legacy _write_text_out() intentionally omitted here — per-NPC file
+    # is sufficient and writing the legacy path causes stale reads on the next request.
+
+    # ── TTS audio (non-blocking — generated in parallel with memory writes) ───
+    npc_race_str = payload.get("npc_race", "human")
+    threading.Thread(
+        target=_generate_tts_wav,
+        args=(response_text, npc_race_str),
+        daemon=True,
+    ).start()
 
     # ── Persist to memory DB (best-effort, non-blocking) ─────────────────────
     try:
@@ -1481,6 +2011,13 @@ def _handle_social_event(path: Path):
     season      = data.get("season", "")
 
     print(f"[Bridge] Social — {name_a} ↔ {name_b} [{rel_label}] at {location}")
+
+    # Don't call AI while a player NPC request is pending — avoid saturating KoboldCPP
+    with _pending_lock:
+        is_pending = _pending_request is not None and not _pending_request.get("responded", True)
+    if is_pending:
+        print(f"[Bridge] Social skipped — player request pending")
+        return
 
     # Pick behavior based on relationship score
     if rel_score <= -50.0:
@@ -1810,6 +2347,10 @@ def _handle_combat_event(path: Path):
       hp < flee_threshold → flee
       hp < 0.4 and event=start → take_cover
       hp recovering (update, not start) → regroup
+
+    Also feeds learning_engine:
+      - Records tactic outcomes when combat ends
+      - Uses learned history to prefer the historically best tactic
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -1818,25 +2359,59 @@ def _handle_combat_event(path: Path):
         print(f"[Bridge/Combat] Bad {path.name}: {exc}")
         return
 
-    event_type   = data.get("combat_event", "update")
-    npc_id       = data.get("npc_id", "")
-    hp_pct       = float(data.get("hp_pct", 1.0))
-    flee_thr     = float(data.get("flee_threshold", 0.25))
+    event_type    = data.get("combat_event", "update")
+    npc_id        = data.get("npc_id", "")
+    npc_race      = data.get("npc_race", "unknown")
+    hp_pct        = float(data.get("hp_pct", 1.0))
+    flee_thr      = float(data.get("flee_threshold", 0.25))
     prefers_cover = bool(data.get("prefers_cover", False))
+    location      = data.get("location", "")
+    last_tactic   = data.get("last_tactic", "")
+    outcome       = data.get("outcome", "")  # "win"/"loss"/"draw" when event_type=="end"
+
+    # Record tactic outcome when combat ends — learning engine stores win/loss rates
+    if event_type == "end" and last_tactic and outcome and _LEARNING_ENGINE_OK:
+        try:
+            # Normalize Papyrus outcome values ("win"/"loss"/"draw") to learning_engine format
+            _OUTCOME_MAP = {"win": "success", "loss": "fail", "draw": "fail", "killed": "fail",
+                            "success": "success", "fail": "fail"}
+            normalized = _OUTCOME_MAP.get(outcome.lower(), "fail")
+            record_tactic_outcome(
+                enemy_type=npc_race,
+                tactic=last_tactic,
+                outcome=normalized,
+                location=location,
+            )
+        except Exception as le_err:
+            print(f"[Bridge/Combat] LearningEngine record error: {le_err}")
+        return
 
     if event_type == "end" or hp_pct < 0:
-        return  # no directive on combat end
+        return
 
+    # Try to get a learned best tactic (fall back to rule-based below)
+    learned_directive: str | None = None
+    if _LEARNING_ENGINE_OK and event_type == "start":
+        try:
+            learned = get_best_tactic(enemy_type=npc_race)
+            if learned and learned != "default":
+                learned_directive = learned
+                print(f"[Bridge/Combat] {npc_id} using learned tactic: {learned}")
+        except Exception as le_err:
+            print(f"[Bridge/Combat] LearningEngine tactic error: {le_err}")
+
+    # Rule-based fallback (always runs; learned_directive may override below)
     directive: str | None = None
-
     if hp_pct <= flee_thr:
         directive = "flee"
     elif hp_pct < 0.4 and event_type == "start":
-        directive = "take_cover"
+        directive = learned_directive or "take_cover"
     elif hp_pct < 0.5 and prefers_cover:
         directive = "take_cover"
     elif hp_pct >= 0.7 and event_type == "update":
         directive = "regroup"
+    elif learned_directive and event_type == "start":
+        directive = learned_directive
 
     if directive:
         _write_directive("combat_directive.json", {
@@ -1861,6 +2436,10 @@ def _handle_settlement_event(path: Path):
       defense < 50  → rally_defenders (manageable)
       defense >= 50 → prioritize_gate (well-defended, just tighten up)
       triangle AND under attack → always raise_alarm
+
+    Also feeds:
+      - learning_engine: logs attack so defense adaptations accumulate over time
+      - settlement_evolution: updates stage so NPCs talk and behave at the right level
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -1869,12 +2448,60 @@ def _handle_settlement_event(path: Path):
         print(f"[Bridge/Settlement] Bad {path.name}: {exc}")
         return
 
-    ws_id      = int(data.get("settlement_id", 0))
-    ws_name    = data.get("settlement_name", "Settlement")
-    defense    = int(data.get("defense", 0))
-    population = int(data.get("population", 0))
-    is_triangle = bool(data.get("is_triangle", False))
+    ws_id          = int(data.get("settlement_id", 0))
+    ws_name        = data.get("settlement_name", "Settlement")
+    defense        = int(data.get("defense", 0))
+    population     = int(data.get("population", 0))
+    food           = int(data.get("food", 0))
+    water          = int(data.get("water", 0))
+    happiness      = int(data.get("happiness", 50))
+    is_triangle    = bool(data.get("is_triangle", False))
+    attacker_type  = data.get("attacker_type", "Raiders")
+    attack_dir     = data.get("attack_direction", "")
+    casualties     = int(data.get("casualties", 0))
+    mm_rank        = int(data.get("minuteman_rank", 0))
+    attacks_done   = int(data.get("attacks_survived", 0))
+    structures     = data.get("structures", {})  # {"wall": true, "radio_beacon": true, ...}
 
+    # ── 1. Log the attack in learning_engine for future defense recommendations ──
+    if _LEARNING_ENGINE_OK:
+        try:
+            record_settlement_attack(
+                settlement_name=ws_name,
+                attacker_type=attacker_type,
+                attack_direction=attack_dir,
+                casualties=casualties,
+                structures_lost=0,
+                outcome="repelled",
+                defense_score=defense,
+                population=population,
+            )
+        except Exception as le_err:
+            print(f"[Bridge/Settlement] LearningEngine record error: {le_err}")
+
+    # ── 2. Update settlement_evolution stage ──────────────────────────────────
+    if _SETTLEMENT_EVO_OK:
+        try:
+            evo = update_settlement(
+                settlement_name=ws_name,
+                population=population,
+                defense=defense,
+                food=food,
+                water=water,
+                happiness=happiness,
+                attacks_survived=attacks_done,
+                minuteman_rank=mm_rank,
+                structures=structures,
+            )
+            if evo.get("stage_changed"):
+                print(
+                    f"[Bridge/Settlement] {ws_name} EVOLVED: "
+                    f"Stage {evo['previous_stage']} → {evo['stage']} ({evo['stage_name']})"
+                )
+        except Exception as se_err:
+            print(f"[Bridge/Settlement] EvolutionEngine error: {se_err}")
+
+    # ── 3. Immediate attack directive (rule-based) ────────────────────────────
     if defense < 20:
         directive = "call_aid"
         if is_triangle:
@@ -1884,10 +2511,21 @@ def _handle_settlement_event(path: Path):
     else:
         directive = "prioritize_gate"
 
+    # Attach any pending defense recommendations from the learning engine
+    defense_advice = ""
+    if _LEARNING_ENGINE_OK:
+        try:
+            recs = get_settler_defense_recommendations(ws_name)[:2]
+            if recs:
+                defense_advice = "; ".join(r.get("recommendation", "") for r in recs)
+        except Exception:
+            pass
+
     _write_directive("settlement_directive.json", {
         "directive": directive,
         "settlement_id": ws_id,
         "aid_from": ws_name,
+        "defense_advice": defense_advice,
     })
     print(f"[Bridge/Settlement] {ws_name} (defense={defense}, triangle={is_triangle}) → {directive}")
 
@@ -2005,6 +2643,49 @@ def _handle_world_event(path: Path):
         pass
 
 
+_last_wildlife_tick = 0.0
+_WILDLIFE_TICK_INTERVAL = 120.0  # regenerate WildlifeState.json every 2 minutes
+
+
+def _tick_wildlife():
+    """Regenerate WildlifeState.json from current world state + mod list."""
+    global _last_wildlife_tick
+    if not _WILDLIFE_SIM_OK:
+        return
+    now = time.time()
+    if now - _last_wildlife_tick < _WILDLIFE_TICK_INTERVAL:
+        return
+    _last_wildlife_tick = now
+
+    try:
+        world = _read_world_state()
+        # Pass current game hour/day and location to wildlife sim
+        game_day  = int(world.get("game_day", 1))
+        game_hour = int(world.get("game_hour", 12))
+        location  = world.get("location", "The Commonwealth")
+        has_gunfire = bool(world.get("combat_active", False))
+        # Detect relevant mods in load order for wildlife awareness
+        mods_lower = build_mod_context().lower()
+        mod_tags: list[str] = []
+        if "settlement" in mods_lower:
+            mod_tags.append("vegetation")
+        if "horizon" in mods_lower:
+            mod_tags.append("survival_mode")
+
+        state = generate_wildlife_state(
+            game_hour=game_hour,
+            game_day=game_day,
+            location=location,
+            has_gunfire=has_gunfire,
+            mod_tags=mod_tags,
+        )
+        season = state.get("season", "?")
+        birds  = state.get("bird_count", 0)
+        print(f"[Bridge/Wildlife] Tick → {location} | {season} | {birds} bird species active")
+    except Exception as wt_err:
+        print(f"[Bridge/Wildlife] Tick error: {wt_err}")
+
+
 def watch_bridge_input():
     """Poll for per-NPC bridge_input_<id>.json files; dispatch each in its own thread."""
     print(f"[Bridge] Primary watch path: {F4AI_DATA_DIR}")
@@ -2018,73 +2699,69 @@ def watch_bridge_input():
     ]
 
     while True:
-        try:
-            for watch_dir in watch_dirs:
+        for watch_dir in watch_dirs:
+            try:
                 if not watch_dir.exists():
                     continue
                 # Per-NPC files: bridge_input_<formID>.json
                 for candidate in list(watch_dir.glob("bridge_input_*.json")):
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_npc_request, args=(candidate,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # Legacy single file (bridge_input.json) — handles old saves / non-PTT triggers
                 legacy = watch_dir / "bridge_input.json"
                 if legacy.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_npc_request, args=(legacy,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # NPC-to-NPC social events from F4AI_NPCDirector
                 social = watch_dir / "social_event.json"
                 if social.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_social_event, args=(social,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # Creature ecosystem events from F4AI_EcosystemMonitor
                 eco_event = watch_dir / "ecosystem_event.json"
                 if eco_event.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_ecosystem_event, args=(eco_event,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # NPC combat state from F4AI_CombatMonitor
                 combat_event = watch_dir / "combat_event.json"
                 if combat_event.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_combat_event, args=(combat_event,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # Settlement attack from F4AI_SettlementMonitor
                 settle_event = watch_dir / "settlement_event.json"
                 if settle_event.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_settlement_event, args=(settle_event,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # Minuteman network attack from F4AI_MinutemanNetwork
                 net_event = watch_dir / "network_event.json"
                 if net_event.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_network_event, args=(net_event,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # Player like/dislike feedback from F4AI_FeedbackMonitor
                 feedback = watch_dir / "training_feedback.json"
                 if feedback.exists():
-                    t = threading.Thread(
+                    threading.Thread(
                         target=_handle_training_feedback, args=(feedback,), daemon=True
-                    )
-                    t.start()
+                    ).start()
                 # WorldMonitor push events (informational, just clean up)
                 world_ev = watch_dir / "world_event.json"
                 if world_ev.exists():
                     threading.Thread(
                         target=_handle_world_event, args=(world_ev,), daemon=True
                     ).start()
-        except Exception as exc:
-            print(f"[Bridge] Input watcher error: {exc}")
+            except Exception as exc:
+                print(f"[Bridge] Watch error for {watch_dir.name}: {exc}")
+
+        # Periodic wildlife state regeneration (every 2 min, non-blocking)
+        _tick_wildlife()
+
         time.sleep(0.25)
 
 def watch_papyrus_log():
@@ -2143,7 +2820,12 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
         # ── Status ──────────────────────────────────────────────────────────
         if path == "/status":
-            self.send_json({**_status, "connected": True})
+            # Check world_state.json freshness — mod is active if file exists
+            world = _read_world_state()
+            status_out = {**_status, "connected": True}
+            if world:
+                status_out["world_state"] = world
+            self.send_json(status_out)
 
         # ── Log stream (last N lines) ────────────────────────────────────────
         elif path == "/log":
@@ -2174,6 +2856,58 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     self.send_json({"pending": True, **_pending_request})
                 else:
                     self.send_json({"pending": False})
+
+        # ── Settlement evolution overview ────────────────────────────────────
+        elif path == "/settlements":
+            if _SETTLEMENT_EVO_OK:
+                world     = _read_world_state()
+                mm_rank   = int(world.get("minuteman_rank", 0))
+                overview  = get_minuteman_commonwealth_overview(mm_rank)
+                self.send_json(overview)
+            else:
+                self.send_json({"error": "settlement_evolution module not loaded"}, 503)
+
+        elif path == "/settlements/lore":
+            name = params.get("name", [""])[0]
+            if not name:
+                self.send_json({"error": "name required"}, 400)
+            elif _SETTLEMENT_EVO_OK:
+                self.send_json({"lore": build_settlement_lore_context(name)})
+            else:
+                self.send_json({"error": "settlement_evolution module not loaded"}, 503)
+
+        # ── Learning engine — enemy tactic history ───────────────────────────
+        elif path == "/learning/tactics":
+            npc_type = params.get("type", ["raider"])[0]
+            if _LEARNING_ENGINE_OK:
+                tactic  = get_best_tactic(enemy_type=npc_type)
+                context = build_combat_learning_context(enemy_type=npc_type)
+                self.send_json({"npc_type": npc_type, "best_tactic": tactic, "history": context})
+            else:
+                self.send_json({"error": "learning_engine module not loaded"}, 503)
+
+        elif path == "/learning/settlement":
+            name = params.get("name", [""])[0]
+            if _LEARNING_ENGINE_OK and name:
+                summary = get_attack_history_summary(settlement_name=name)
+                recs    = get_settler_defense_recommendations(settlement_name=name)
+                self.send_json({"summary": summary, "recommendations": recs})
+            else:
+                self.send_json({"error": "learning_engine not loaded or name required"}, 503)
+
+        # ── Wildlife state passthrough ───────────────────────────────────────
+        elif path == "/wildlife/state":
+            try:
+                _mm = Path(r"H:\Mossy Memory")
+                _wf_path = (_mm / "WildlifeState.json") if _mm.exists() else (
+                    Path.home() / "Documents" / "My Games" / "Fallout4" / "WildlifeState.json"
+                )
+                if _wf_path.exists():
+                    self.send_json(json.loads(_wf_path.read_text(encoding="utf-8")))
+                else:
+                    self.send_json({"error": "WildlifeState.json not yet generated"}, 404)
+            except Exception as wfe:
+                self.send_json({"error": str(wfe)}, 500)
 
         # ── Ping ────────────────────────────────────────────────────────────
         elif path == "/ping":
@@ -2285,7 +3019,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
                     return
             self.send_json({"ok": False, "error": "llama-cpp-python not available"}, 503)
 
-        # ── Mossy sends the NPC reply back; bridge writes text_out.txt ─────────
+        # ── Mossy sends the NPC reply back; bridge writes text_out files ────────
         elif path == "/request/respond":
             text = body.get("text", "")
             if not text:
@@ -2295,6 +3029,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
             with _pending_lock:
                 if _pending_request:
                     _pending_request["responded"] = True
+                    npc_form_id = (_pending_request.get("payload") or {}).get("npc_form_id", "")
+                    if npc_form_id and npc_form_id != "0":
+                        _write_npc_text_out(text, npc_form_id)
             print(f"[Bridge] Mossy responded: {text[:80]}")
             self.send_json({"ok": True})
 
@@ -2352,6 +3089,31 @@ def _startup_cleanup():
                 except Exception as exc:
                     print(f"[Bridge] Could not remove {stale}: {exc}")
 
+def _prewarm_ollama():
+    """Load preferred Ollama model into VRAM at bridge startup so the first NPC request is instant."""
+    import time as _t
+    _t.sleep(3)  # let the server start fully first
+    try:
+        r = requests.get("http://127.0.0.1:11434/api/tags", timeout=3)
+        if not r.ok:
+            return
+        available = [m["name"] for m in r.json().get("models", [])]
+        preferred = ["llama3.1:8b", "llama3:8b", "mistral:7b", "gemma2:9b", "llama3:latest"]
+        model = next((p for p in preferred if any(p in a for a in available)), None)
+        if not model:
+            return
+        print(f"[Bridge/Ollama] Pre-warming {model} (cold VRAM load)…")
+        requests.post(
+            "http://127.0.0.1:11434/v1/chat/completions",
+            json={"model": model, "messages": [{"role": "user", "content": "Ready."}],
+                  "max_tokens": 3, "stream": False},
+            timeout=90,
+        )
+        print(f"[Bridge/Ollama] {model} loaded and ready.")
+    except Exception as exc:
+        print(f"[Bridge/Ollama] Pre-warm skipped: {exc}")
+
+
 def _preload_llm_background():
     """Warm up TinyLlama in a background thread so the first game request is fast."""
     if not _LLAMA_AVAILABLE:
@@ -2363,9 +3125,8 @@ def main():
     print("=" * 60)
     print(f"  Mossy FO4 Advanced AI Bridge v{BRIDGE_VERSION}")
     print("=" * 60)
-    print(f"[Bridge] F4AI data dir: {F4AI_DATA_DIR}")
-    print(f"[Bridge] bridge_input : {BRIDGE_INPUT_PATH}")
-    print(f"[Bridge] text_out     : {TEXT_OUT_PATH}")
+    print(f"[Bridge] Read  (bridge_input): {F4AI_DATA_DIR}")
+    print(f"[Bridge] Write (text_out)    : {_F4AI_WRITE_DIR}")
 
     # Init memory database
     init_memory_db()
@@ -2376,6 +3137,10 @@ def main():
     # Remove any leftover text_out.txt from the previous session
     _startup_cleanup()
 
+    # Pre-warm Ollama model into VRAM so the first NPC request doesn't stall on cold load
+    ollama_warm_thread = threading.Thread(target=_prewarm_ollama, daemon=True)
+    ollama_warm_thread.start()
+
     # Pre-load TinyLlama so the first in-game request doesn't wait on model load
     preload_thread = threading.Thread(target=_preload_llm_background, daemon=True)
     preload_thread.start()
@@ -2384,8 +3149,15 @@ def main():
     log_thread = threading.Thread(target=watch_papyrus_log, daemon=True)
     log_thread.start()
 
-    # Start bridge_input.json watcher in background
-    input_thread = threading.Thread(target=watch_bridge_input, daemon=True)
+    # Start bridge_input.json watcher in background with watchdog restart
+    def _watcher_watchdog():
+        while True:
+            try:
+                watch_bridge_input()
+            except Exception as exc:
+                print(f"[Bridge] Watcher crashed: {exc} — restarting in 2s")
+            import time as _t; _t.sleep(2)
+    input_thread = threading.Thread(target=_watcher_watchdog, daemon=True)
     input_thread.start()
 
     # Start HTTP server

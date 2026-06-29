@@ -12,6 +12,7 @@ echo.
 :: Mossy installs Python internally — no separate install required.
 set MOSSY_PYTHON=
 for %%P in (
+    "%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe"
     "%LOCALAPPDATA%\Programs\Mossy\resources\python\python.exe"
     "%APPDATA%\Mossy\python\python.exe"
     "%LOCALAPPDATA%\mossy-ai\python\python.exe"

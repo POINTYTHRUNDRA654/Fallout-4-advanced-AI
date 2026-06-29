@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from paths import MEMORY_BASE
+from fo4_knowledge import build_social_system_prompt, get_faction_context
 
 RELATIONS_MEMORY_DIR = MEMORY_BASE / "relationships"
 
@@ -67,16 +68,19 @@ def process_social_event(event: dict, query_fn) -> dict:
         for h in recent
     )
 
+    # Build lore-grounded social prompt with faction knowledge
+    social_context = build_social_system_prompt(name_a, faction_a, name_b, faction_b)
     prompt = (
-        f"You are directing a conversation between two Fallout 4 NPCs.\n\n"
-        f"{name_a} ({race_a}, {faction_a}) and {name_b} ({race_b}, {faction_b})\n"
-        f"Location: {location} | {time_of_day} | {season} | Weather: {weather}\n"
-        f"Relationship: {rel_label} (score: {rel_score:.0f})\n"
-        f"Last topic: {last_topic if last_topic else 'none'}\n"
-        f"Conversation history:\n{history_text if history_text else 'First meeting.'}\n\n"
-        "Decide how these two NPCs interact right now. Choose a behavior type and write "
-        "brief, in-character dialogue lines. Keep each line under 15 words. "
-        "Be lore-appropriate for Fallout 4.\n\n"
+        f"{social_context}\n\n"
+        f"CURRENT ENCOUNTER:\n"
+        f"{name_a} ({race_a}) and {name_b} ({race_b}) are together at {location}\n"
+        f"Time: {time_of_day} | Season: {season} | Weather: {weather}\n"
+        f"Their relationship: {rel_label} (score: {rel_score:.0f} / 100)\n"
+        f"Last conversation topic: {last_topic if last_topic else 'never talked before'}\n"
+        f"Recent interaction history:\n{history_text if history_text else 'This is their first meeting.'}\n\n"
+        "Direct how these two NPCs interact right now. Consider their factions and personalities.\n"
+        "Write brief, naturalistic dialogue — each line under 15 words, wasteland vernacular.\n"
+        "Choose a behavior that fits the faction dynamic (e.g., BoS and Railroad would be tense).\n\n"
         "Respond ONLY with valid JSON:\n"
         '{"behavior": "converse|greet|warn|argue|threaten|trade|comfort|ignore", '
         '"topic": "...", "line_a": "...", "line_b": "...", '

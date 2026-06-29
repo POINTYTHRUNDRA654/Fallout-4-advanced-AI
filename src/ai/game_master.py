@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from fo4_knowledge import FO4_WORLD_BRIEF, get_location_context, MOSSY_INDUSTRIES_IDENTITY
 
 
 def query_local_llm(prompt: str) -> str:
@@ -28,13 +29,14 @@ def process_split_script_to_audio(raw_script: str, actor_a: str, actor_b: str) -
 
 def generate_internpc_scene(actor_a: str, actor_b: str, location: str) -> dict[str, str]:
     """Generate one two-line inter-NPC scene in a single model call."""
+    location_ctx = get_location_context(location)
     system_prompt = (
-        "You are a scenario script writer for Fallout 4. "
-        f"Write a short, immersive, two-sentence conversation between {actor_a} and {actor_b}. "
-        f"They are standing near each other in {location}. "
-        "Format output exactly as:\n"
-        f"{actor_a}: [Line]\n"
-        f"{actor_b}: [Line]"
+        f"WORLD CONTEXT:\n{FO4_WORLD_BRIEF}\n\n"
+        f"LOCATION:\n{location_ctx}\n\n"
+        f"MOSSY INDUSTRIES MOD CONTEXT:\n{MOSSY_INDUSTRIES_IDENTITY}\n\n"
+        f"TASK: Write a short, immersive two-line exchange between {actor_a} and {actor_b}.\n"
+        "Rules: each line under 15 words, wasteland vernacular, no player involvement.\n"
+        f"Format exactly as:\n{actor_a}: [Line]\n{actor_b}: [Line]"
     )
     raw_script = query_local_llm(system_prompt)
     return process_split_script_to_audio(raw_script, actor_a, actor_b)

@@ -19,6 +19,7 @@ NPCs are talking about real things that happened in the world.
 import json
 import os
 import re
+import sys
 import time
 import random
 import datetime
@@ -27,6 +28,20 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from typing import Optional
+
+# Import FO4 knowledge base from src/ sibling directory
+_SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+from fo4_knowledge import (  # noqa: E402
+    FO4_WORLD_BRIEF,
+    build_conversation_location_context,
+    get_faction_context,
+)
+from ai.memory_store import (  # noqa: E402
+    save_npc_conversation,
+    build_npc_pair_history_string,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
@@ -145,42 +160,59 @@ def build_conversation_prompt(npc_a: dict, npc_b: dict,
     if not world_summary:
         world_summary = "- Nothing notable has happened recently\n"
 
-    prompt = f"""You are writing dialogue for a Fallout 4 video game mod.
-Generate a realistic, in-character conversation between two NPCs in the post-apocalyptic Commonwealth.
+    # Enrich with FO4 knowledge
+    location_ctx  = build_conversation_location_context(location, location_type)
+    faction_a_ctx = get_faction_context(npc_a.get('npc_faction', 'none'))
+    faction_b_ctx = get_faction_context(npc_b.get('npc_faction', 'none'))
 
-LOCATION: {location} ({location_type})
-TIME: Game world - hundreds of years after nuclear war. People are rough, practical, guarded.
+    name_a = npc_a.get('npc_name', 'Settler')
+    name_b = npc_b.get('npc_name', 'Guard')
 
-NPC A: {npc_a.get('npc_name', 'Settler')}
-  - Faction: {npc_a.get('npc_faction', 'None')}
-  - Personality: aggression={npc_a.get('aggression', 0.5):.0%}, morality={npc_a.get('morality', 0.5):.0%}
-  - Current mood: {npc_a.get('emotional_state', 'neutral')}
-  - Trust in player: {npc_a.get('trust_player', 0):.0%}
+    # Load past conversations between these two NPCs from memory store
+    past_convos = build_npc_pair_history_string(name_a, name_b, limit=3)
 
-NPC B: {npc_b.get('npc_name', 'Guard')}
-  - Faction: {npc_b.get('npc_faction', 'None')}
-  - Personality: aggression={npc_b.get('aggression', 0.5):.0%}, morality={npc_b.get('morality', 0.5):.0%}
-  - Current mood: {npc_b.get('emotional_state', 'neutral')}
+    prompt = f"""You are writing immersive dialogue for a Fallout 4 mod (Mossy Industries Advanced AI).
+Generate a realistic, in-character conversation between two NPCs who live in the Commonwealth.
+These NPCs have a shared history — they remember past conversations and should reference them naturally.
+
+WORLD: {FO4_WORLD_BRIEF}
+
+{location_ctx}
+
+NPC A: {name_a}
+  {faction_a_ctx}
+  Personality: aggression={npc_a.get('aggression', 0.5):.0%}, morality={npc_a.get('morality', 0.5):.0%}
+  Current mood: {npc_a.get('emotional_state', 'neutral')}
+
+NPC B: {name_b}
+  {faction_b_ctx}
+  Personality: aggression={npc_b.get('aggression', 0.5):.0%}, morality={npc_b.get('morality', 0.5):.0%}
+  Current mood: {npc_b.get('emotional_state', 'neutral')}
+
+THEIR CONVERSATION HISTORY (what they've talked about before):
+{past_convos}
 
 RECENT WORLD EVENTS THEY MAY KNOW ABOUT:
 {world_summary}
 
-CONVERSATION TOPIC: {topic_seed}
+CONVERSATION TOPIC TODAY: {topic_seed}
 
 RULES:
 - 4 to 6 lines total (alternating speakers)
-- Lines should be SHORT — 1-2 sentences each, like real overheard dialogue
-- Use wasteland dialect — gruff, practical, sometimes dark humor
-- Reference the world events naturally if relevant (don't force it)
-- No player character involvement — this is between the two NPCs
-- Make it feel like you're OVERHEARING a real conversation, not watching a scene
-- Each NPC speaks in their own voice based on personality
+- SHORT lines — 1-2 sentences each, like real overheard dialogue
+- Use each NPC's faction personality and dialect (see faction context above)
+- Wasteland vernacular — gruff, practical, sometimes dark humor
+- If they've spoken before, let it show — pick up threads, reference past topics naturally
+- Reference world events if relevant (don't force it)
+- No player character — this is between the two NPCs only
+- Feel overheard, not performed
+- If their factions are opposed (e.g., BoS meets Railroad), let the tension show
 
 OUTPUT FORMAT (exactly):
-A: [dialogue line]
-B: [dialogue line]
-A: [dialogue line]
-B: [dialogue line]
+{name_a}: [line]
+{name_b}: [line]
+{name_a}: [line]
+{name_b}: [line]
 (etc.)
 """
     return prompt
@@ -387,25 +419,20 @@ def generate_location_conversations(location: str, location_type: str,
     return result
 
 def _store_conversation_history(conv: dict):
-    """Persist generated conversation to dialogue_history table."""
-    conn = sqlite3.connect(MEMORY_DB_PATH)
-    c = conn.cursor()
-    now = datetime.datetime.now().isoformat()
-
-    for line in conv.get("lines", []):
-        speaker_id = conv["npc_a_id"] if line["speaker_id"] == "npc_a" else conv["npc_b_id"]
-        c.execute("""
-            INSERT OR IGNORE INTO npc_identities (npc_id, npc_name, first_met, last_seen)
-            VALUES (?,?,?,?)
-        """, (speaker_id, line["speaker_name"], now, now))
-
-        c.execute("""
-            INSERT INTO dialogue_history (npc_id, speaker, topic, line)
-            VALUES (?,?,?,?)
-        """, (speaker_id, "npc", conv["topic"], line["line"]))
-
-    conn.commit()
-    conn.close()
+    """Persist generated conversation to the Mossy memory store so NPCs remember it."""
+    lines_for_store = [
+        {"speaker": line.get("speaker_name", "?"), "text": line.get("line", "")}
+        for line in conv.get("lines", [])
+    ]
+    save_npc_conversation(
+        npc_a_id=conv.get("npc_a_id", ""),
+        npc_a_name=conv.get("npc_a_name", ""),
+        npc_b_id=conv.get("npc_b_id", ""),
+        npc_b_name=conv.get("npc_b_name", ""),
+        location=conv.get("location", ""),
+        topic=conv.get("topic", ""),
+        lines=lines_for_store,
+    )
 
 def mark_conversation_delivered(conversation_id: str):
     """Mark a conversation as delivered after Papyrus confirms playback."""

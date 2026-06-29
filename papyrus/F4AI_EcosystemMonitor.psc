@@ -16,9 +16,25 @@ Scriptname F4AI:F4AI_EcosystemMonitor extends ReferenceAlias
 String Property EcoInputPath  = "Data/F4AI/ecosystem_event.json"    Auto Const
 String Property EcoOutputPath = "Data/F4AI/ecosystem_directive.json" Auto Const
 Float  Property ScanRadius    = 5000.0 Auto
-Float  Property ScanInterval  = 60.0   Auto
-Bool   Property EnableEcoAI   = true   Auto
+Float  Property ScanInterval  = 120.0  Auto
+Bool   Property EnableEcoAI   = false  Auto
 Int    Property _loopGen      = 0      Auto Hidden  ; incremented each InitMonitor to kill stale loops
+; Race cache — resolved once per session in InitMonitor, eliminating per-actor Game.GetForm() latent calls
+Race   Property _rHuman      = None  Auto Hidden
+Race   Property _rGhoul      = None  Auto Hidden
+Race   Property _rSynth      = None  Auto Hidden
+Race   Property _rCompanion  = None  Auto Hidden
+Race   Property _rDeathclaw  = None  Auto Hidden
+Race   Property _rMirelurk1  = None  Auto Hidden
+Race   Property _rMirelurk2  = None  Auto Hidden
+Race   Property _rRadscorp   = None  Auto Hidden
+Race   Property _rYaoGuai    = None  Auto Hidden
+Race   Property _rBrahmin    = None  Auto Hidden
+Race   Property _rDog        = None  Auto Hidden
+Race   Property _rBloatfly   = None  Auto Hidden
+Race   Property _rRadroach   = None  Auto Hidden
+Race   Property _rStingwing  = None  Auto Hidden
+Race   Property _rBloodbug   = None  Auto Hidden
 
 ; ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +43,8 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
+    _loopGen += 1000
+    Utility.Wait(3.0)
     InitMonitor()
 EndEvent
 
@@ -34,6 +52,25 @@ Function InitMonitor()
     _loopGen += 1
     Int myGen = _loopGen
     Utility.Wait(1.0)
+    if (myGen != _loopGen)
+        return
+    endif
+    ; Resolve all race forms once per session — done here so scan loop never calls Game.GetForm()
+    _rHuman     = Game.GetForm(0x00013746) as Race
+    _rGhoul     = Game.GetForm(0x0001D4B5) as Race
+    _rSynth     = Game.GetForm(0x000EAFDF) as Race
+    _rCompanion = Game.GetForm(0x0002C4C6) as Race
+    _rDeathclaw = Game.GetForm(0x000F81ED) as Race
+    _rMirelurk1 = Game.GetForm(0x000B2BF2) as Race
+    _rMirelurk2 = Game.GetForm(0x000B2BF5) as Race
+    _rRadscorp  = Game.GetForm(0x0017B2A0) as Race
+    _rYaoGuai   = Game.GetForm(0x000B2BF4) as Race
+    _rBrahmin   = Game.GetForm(0x00020198) as Race
+    _rDog       = Game.GetForm(0x000A82AB) as Race
+    _rBloatfly  = Game.GetForm(0x00109473) as Race
+    _rRadroach  = Game.GetForm(0x0001CF74) as Race
+    _rStingwing = Game.GetForm(0x001092C3) as Race
+    _rBloodbug  = Game.GetForm(0x00109476) as Race
     if (myGen != _loopGen)
         return
     endif
@@ -290,42 +327,30 @@ EndFunction
 
 Bool Function IsHumanoid(Actor a)
     Race r = a.GetRace()
-    if (r == Game.GetForm(0x00013746) as Race)
-        return true
-    endif
-    if (r == Game.GetForm(0x0001D4B5) as Race)
-        return true
-    endif
-    if (r == Game.GetForm(0x000EAFDF) as Race)
-        return true
-    endif
-    if (r == Game.GetForm(0x0002C4C6) as Race)
-        return true
-    endif
-    return false
+    return (r == _rHuman || r == _rGhoul || r == _rSynth || r == _rCompanion)
 EndFunction
 
 String Function GetSpeciesTag(Actor creature)
     Race r = creature.GetRace()
-    if (r == Game.GetForm(0x000F81ED) as Race)
+    if (r == _rDeathclaw)
         return "Deathclaw"
-    elseif (r == Game.GetForm(0x000B2BF2) as Race || r == Game.GetForm(0x000B2BF5) as Race)
+    elseif (r == _rMirelurk1 || r == _rMirelurk2)
         return "Mirelurk"
-    elseif (r == Game.GetForm(0x0017B2A0) as Race)
+    elseif (r == _rRadscorp)
         return "Radscorpion"
-    elseif (r == Game.GetForm(0x000B2BF4) as Race)
+    elseif (r == _rYaoGuai)
         return "Yao Guai"
-    elseif (r == Game.GetForm(0x00020198) as Race)
+    elseif (r == _rBrahmin)
         return "Brahmin"
-    elseif (r == Game.GetForm(0x000A82AB) as Race)
+    elseif (r == _rDog)
         return "Dog"
-    elseif (r == Game.GetForm(0x00109473) as Race)
+    elseif (r == _rBloatfly)
         return "Bloatfly"
-    elseif (r == Game.GetForm(0x0001CF74) as Race)
+    elseif (r == _rRadroach)
         return "Radroach"
-    elseif (r == Game.GetForm(0x001092C3) as Race)
+    elseif (r == _rStingwing)
         return "Stingwing"
-    elseif (r == Game.GetForm(0x00109476) as Race)
+    elseif (r == _rBloodbug)
         return "Bloodbug"
     endif
     return ""

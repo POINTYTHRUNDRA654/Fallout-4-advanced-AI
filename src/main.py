@@ -18,6 +18,8 @@ from pathlib import Path
 import requests
 
 from tts import check_lipgen_eligibility, execute_headless_lipgen, normalize_audio_for_lipgen
+from fo4_knowledge import build_npc_system_prompt
+from ai.memory_store import save_dialogue_turn, build_history_string, set_npc_fact
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
@@ -167,6 +169,8 @@ def load_user_config() -> dict:
     defaults = {
         "ai_temperature": 0.7,
         "enable_memory": 1,
+        "enable_voice_input": 0,
+        "voice_history_turns": 8,
         "speech_speed": 1.0,
         "enable_mossy_bridge": 1,
         "mossy_endpoint": MOSSY_DEFAULT_ENDPOINT,
@@ -412,8 +416,9 @@ def process_game_event() -> None:
 
     npc          = context.get("npc_name", "Settler")
     npc_race     = context.get("npc_race", "")
+    npc_faction  = context.get("npc_faction", "")
     location     = context.get("location", "The Commonwealth")
-    player_input = context.get("player_speech") or "[Greets you silently]"
+    player_input = context.get("player_speech") or ""
     config       = load_user_config()
 
     mossy_enabled  = _is_enabled(config.get("enable_mossy_bridge", 1))
@@ -426,17 +431,34 @@ def process_game_event() -> None:
     plugin_endpoints = normalize_plugin_endpoints(config.get("plugin_endpoints", []))
     plugin_timeout   = float(config.get("plugin_timeout", request_timeout))
 
-    history_string = ""
-    if config.get("enable_memory") == 1:
-        memory = load_or_create_memory(npc)
-        for turn in memory.get("conversations", []):
-            history_string += f"Player: {turn['p']}\nYou: {turn['n']}\n"
+    # ── Voice input — capture player speech via microphone if enabled ──────────
+    voice_input_enabled = _is_enabled(config.get("enable_voice_input", 0))
+    if voice_input_enabled and not player_input:
+        try:
+            from stt import FalloutVoiceReceiver
+            _f4ai(f"Voice mode: listening for player to speak to {npc}...")
+            receiver = FalloutVoiceReceiver()
+            spoken = receiver.listen_and_transcribe()
+            if spoken:
+                player_input = spoken
+                _f4ai(f"Voice captured: '{player_input}'")
+            else:
+                player_input = "[Greets you silently]"
+        except Exception as stt_err:
+            print(f"[STT Error] {stt_err}")
+            player_input = player_input or "[Greets you silently]"
+    elif not player_input:
+        player_input = "[Greets you silently]"
 
-    system_prompt = (
-        f"You are the companion {npc} in Fallout 4. "
-        f"You are currently located at {location}. "
-        "Respond in character with one short sentence."
-    )
+    # ── Persistent conversation history from SQLite (H:\\Mossy Memory) ─────────
+    history_string = ""
+    history_turns  = int(config.get("voice_history_turns", 8))
+    if _is_enabled(config.get("enable_memory", 1)):
+        history_string = build_history_string(npc, limit=history_turns)
+        # Track last known location for this NPC
+        set_npc_fact(npc, "last_seen_location", location)
+
+    system_prompt = build_npc_system_prompt(npc, npc_race, npc_faction, location)
 
     if plugin_enabled and plugin_endpoints:
         pre_payload = {
@@ -525,7 +547,17 @@ def process_game_event() -> None:
                     rel_wav = str(audio_wav_path)
                 execute_headless_lipgen(rel_wav, ai_response, ck_exe=str(CK_32_EXE))
 
-    if config.get("enable_memory") == 1:
+    if _is_enabled(config.get("enable_memory", 1)):
+        # Persist to SQLite for long-term cross-session memory
+        emotion_name = {0: "neutral", 1: "angry", 2: "sad", 3: "whisper"}.get(emotion_id, "neutral")
+        save_dialogue_turn(
+            npc_name=npc,
+            player_line=player_input,
+            npc_line=ai_response,
+            location=location,
+            emotion=emotion_name,
+        )
+        # Legacy JSON rolling window kept for backwards compat with any Papyrus readers
         update_npc_memory(npc, player_input, ai_response)
 
     output_payload = {

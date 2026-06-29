@@ -35,7 +35,15 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
-    InitMonitor()
+    _loopGen += 1000
+    Int myGen = _loopGen
+    Utility.Wait(3.0)
+    if (myGen != _loopGen)
+        return
+    endif
+    if (EnableWorldAI)
+        MonitorLoop(myGen)
+    endif
 EndEvent
 
 Function InitMonitor()
@@ -45,6 +53,9 @@ Function InitMonitor()
         GameHour       = Game.GetForm(0x00000039) as GlobalVariable
         GameDaysPassed = Game.GetForm(0x0000010D) as GlobalVariable
         SC_Season      = Game.GetFormFromFile(0x002B1E3D, "Seasons.esm") as GlobalVariable
+        if (myGen != _loopGen)
+            return
+        endif
         WriteWorldState()
         MonitorLoop(myGen)
     endif

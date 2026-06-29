@@ -133,26 +133,29 @@ Function WaitForVoiceReturn(Actor targetNPC)
     String npcTextOutPath = GetNPCTextOutPath(targetNPC)
     Int checksCompleted = 0
     String responseText = ""
-    ; Poll by reading directly — avoids relying on Exists which can lag behind VFS
+    ; Poll per-NPC file first; also check legacy text_out.txt as fallback so Mossy's
+    ; /request/respond callback (which writes legacy path) still reaches the player.
     While (responseText == "" && checksCompleted < 300)
         responseText = Hydra:IO:File.ReadAllText(npcTextOutPath)
         if (responseText == "")
-            Utility.WaitMenuMode(0.2)
-            checksCompleted += 1
+            responseText = Hydra:IO:File.ReadAllText(TextOutPath)
+            if (responseText != "")
+                Hydra:IO:File.Delete(TextOutPath)
+            else
+                Utility.WaitMenuMode(0.2)
+                checksCompleted += 1
+            endif
         endif
     EndWhile
     Hydra:IO:File.Delete(npcTextOutPath)
 
     if (responseText != "")
-        String displayText = Hydra:Strings.Truncate(responseText, 220)
-        Debug.Notification(npcName + ": " + displayText)
+        String displayText = Hydra:Strings.Truncate(responseText, 512)
+        Debug.MessageBox(npcName + ": " + displayText)
 
         if (F4AI_VoiceSound != None)
             F4AI_VoiceSound.Play(targetNPC)
         endif
-
-        Float displayTime = 2.5 + (Hydra:Strings.Size(responseText) as Float) / 13.0
-        Utility.WaitMenuMode(displayTime)
     else
         Debug.Notification("[F4AI] No response — is the bridge running?")
     endif

@@ -23,7 +23,7 @@ String Property InterNpcInputPath = "Data/F4AI/internpc_input.json"   Auto Const
 Float  Property ScanRadius        = 2000.0 Auto
 Float  Property ScanInterval      = 45.0   Auto
 Float  Property ConvoCooldown     = 120.0  Auto  ; seconds before same pair talks again
-Bool   Property EnableNPCAI       = true   Auto
+Bool   Property EnableNPCAI       = false  Auto
 Int    Property _loopGen          = 0      Auto Hidden  ; incremented each InitMonitor to kill stale loops
 
 ; ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -33,12 +33,23 @@ Event OnInit()
 EndEvent
 
 Event OnPlayerLoadGame()
-    InitMonitor()
+    EnableNPCAI = false  ; override saved value — must be explicitly re-enabled via holotape
+    _loopGen += 1000  ; kill OnInit loops and zombie stacks — no old myGen can match
+    Int myGen = _loopGen
+    Utility.Wait(3.0) ; let old stacks reach their gen check and exit
+    if (myGen != _loopGen)
+        return
+    endif
+    ; EnableNPCAI is false so MonitorLoop won't run — NPC social AI is off by default on load
 EndEvent
 
 Function InitMonitor()
     _loopGen += 1
     Int myGen = _loopGen
+    Utility.Wait(1.0)
+    if (myGen != _loopGen)
+        return
+    endif
     if (EnableNPCAI)
         MonitorLoop(myGen)
     endif

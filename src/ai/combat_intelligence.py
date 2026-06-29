@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from paths import MEMORY_BASE
+from fo4_knowledge import build_combat_system_prompt, get_combat_context
 
 COMBAT_MEMORY_DIR = MEMORY_BASE / "combat"
 
@@ -76,16 +77,21 @@ def process_combat_event(event: dict, query_fn) -> dict:
         save_combat_memory(npc_id, memory)
         return {"npc_id": npc_id, "directive": "none", "learned_flee_threshold": flee_thr, "prefers_cover": cover}
 
-    # Build decision prompt
+    # Build decision prompt — enriched with FO4 race/faction knowledge
+    combat_context = build_combat_system_prompt(npc_name, npc_race, location)
     prompt = (
-        f"You are a tactical AI directing {npc_name} ({npc_race}) in Fallout 4 combat.\n"
-        f"Location: {location}\n"
-        f"Current HP: {hp_pct:.0%} | Flee threshold: {flee_thr:.0%} | Prefers cover: {cover}\n"
+        f"{combat_context}\n"
+        f"CURRENT SITUATION:\n"
+        f"HP: {hp_pct:.0%} | Flee threshold: {flee_thr:.0%} | Prefers cover: {cover}\n"
         f"Fighting: {target}\n"
         f"Recent combat history:\n{history_text if history_text else 'No history yet.'}\n\n"
-        f"Choose ONE directive: flee, take_cover, regroup, change_target, or hold.\n"
-        f"Also output: learned_flee_threshold (0.0-1.0), prefers_cover (true/false).\n"
-        f"Respond ONLY with valid JSON: "
+        f"Based on this NPC's race behavior and current situation, choose ONE directive:\n"
+        f"  flee — retreat immediately (HP critical or enemy overwhelming)\n"
+        f"  take_cover — find cover and wait for opening\n"
+        f"  regroup — fall back to squad position\n"
+        f"  change_target — switch to a more vulnerable target\n"
+        f"  hold — stay in position and keep fighting\n\n"
+        f"Respond ONLY with valid JSON:\n"
         f'{{\"directive\": \"...\", \"learned_flee_threshold\": 0.0, \"prefers_cover\": false, \"reason\": \"...\"}}'
     )
 
